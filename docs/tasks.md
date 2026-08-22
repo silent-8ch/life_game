@@ -1,13 +1,15 @@
 # Task board
 
-Three lanes now: **1** (data, editor, tests), **A** (engine and rendering) and **art**, each
-committing to their own branch (`agent1`, `agentA`, `art`) and merging to `main`. Agent 1 is
-session `life-game-22`; agent A is `life-game2-78`; art is a background agent spawned by
-planning. Planning is `live-game-planning-89`, which owns this file and lands it on `main` —
-that is how the board reaches all of you. This file is the shared state: who owns what, what is in flight, what is
+Two agents in this repo — **1** (data, editor, tests) and **A** (engine and rendering) — each
+committing to their own branch (`agent1`, `agentA`) and merging to `main`. Agent 1 is session
+`life-game-22`; agent A is `life-game2-78`. Planning is `live-game-planning-89`, which owns
+this file and lands it on `main` — that is how the board reaches both of you.
+
+**Art is a third lane, worked outside this repo by the user's own agent.** Neither of you owns
+`public/sprites/**` any more, and neither of you generates art. See the art section. This file is the shared state: who owns what, what is in flight, what is
 done, and what is broken.
 
-Last audited against the repo at `806c3c5`.
+Last audited against the repo at `f1fb960`.
 
 ---
 
@@ -25,7 +27,7 @@ the work left touches one of them.
 | `resources/js/components/editor/**`, `resources/js/lib/editor/**` | **1** |
 | `resources/js/lib/engine/**` | **A** |
 | `resources/js/components/game/**` | **A** |
-| `public/sprites/**` | **art** — moved out of A's lane, see below |
+| `public/sprites/**` | **art**, outside — do not write here |
 | `docs/**`, `docs/tools/**` | **1** — except `docs/tasks.md`, which is planning's |
 | `tests/**` | whoever wrote the code — one new file per feature, so conflicts are unlikely |
 | `tests/Pest.php`, `.ai/rules/**` | **1**, and say so first — both are shared |
@@ -58,9 +60,9 @@ before merging, but it is no longer the only evidence — `composer ci:check` is
 branch is green and `main` is not, that difference is the interesting thing and it goes on this
 board.
 
-**`main` at `d87c27c` is green, verified here** — the whole gate, run against `main`: eslint, prettier, tsc, pint and phpstan all pass, Pest
-**306 of 306, 2283 assertions, 33s**. `806c3c5` on top of it is the scan harness and has not
-been re-run here yet.
+**`main` at `f1fb960` is green, verified here.** The whole gate, run against `main` rather
+than against a branch: eslint, prettier, tsc, pint and phpstan all pass, Pest **320 of 320,
+2333 assertions, 37s**.
 
 ---
 
@@ -68,11 +70,12 @@ been re-run here yet.
 
 | ID | Task | Status | Depends on | Notes |
 | --- | --- | --- | --- | --- |
-| 1-05 | Slopes — data model | **wip — start here** | — | **Unblocks A-04.** Four columns on `level_sectors`, PHP `floorAt`/`ceilingAt` on `LevelSector`, validation sampling corners, and hinge survival through `splitEdge`/`weldCorners`/`carveRooms` in `lib/editor/`. Note A-04 also waits on A-09's `player.ts` cut — see ISSUE-26 — so land this when it is ready and do not hold it for A. Plan: `plan-slopes-and-stats.md` part 1. |
+| 1-04 | Prop rendering — editor | **wip** | 1-03 | Inspector controls conditional on mode; prop texture picker; map-view glyphs for cross and billboard props. Grows `inspector.tsx`, which is fine — see ISSUE-27, the growth is real in lines and mild in structure. |
+| 1-10 | Pull the wall panel's derivations into `lib/editor/` | **next after 1-04** | — | The half of ISSUE-27 that can be made safe **today, without Vitest**. `twin`, `across`, `partner`, `portalEnds` and `openDoorway` are computed in the inspector's head at 232–306 and used **only** between 1071 and 1140, inside the wall panel — agent 1 checked every use. They are pure functions of `(level, selection)`, so they move to `lib/editor/` and get Node-harness tests with no runner needed. That is the part most likely to break silently in a move, pinned before anything moves. Do this whether or not the full split ever happens. |
 | 1-03 | Prop rendering — data model | **landed** `d87c27c` | — | **Unblocks A-03, and A is idle waiting on it.** Migration for `render`, `plane_count`, `uv_mode`, `texture_alt`, `alt_flag`, `animation_frames`, `animation_fps`. `LevelAssets::props()` scanning a new `public/sprites/props`. Payload, TS types, validation, writer, `newProp`. **Land the types half as soon as it is green rather than holding it for the editor** — 1-04 is a separate task on purpose. Plan: `plan-prop-rendering.md`. |
 | 1-04 | Prop rendering — editor | todo | 1-03 | Inspector controls conditional on mode; prop texture picker; map-view glyphs for cross and billboard props. |
 | 1-06 | Slopes — editor | todo | 1-05 | Inspector hinge picker and rise field; side view drawing the section slanted. |
-| 1-08 | React component test runner | todo | — | **Decided: Vitest + Testing Library** (ISSUE-6). Adds two dev dependencies — that approval is on the record here, so take it rather than re-asking. Wire it into `composer ci:check` alongside `types:check`, and land one real test on `inspector.tsx` in the same branch so the harness is proven, not just installed. Say so here before you touch `package.json`. |
+| 1-08 | React component test runner | todo — **now also gates ISSUE-27** | — | **Decided: Vitest + Testing Library** (ISSUE-6). The inspector split cannot be evidenced without it, so this is no longer only a coverage task. Adds two dev dependencies — that approval is on the record here, so take it rather than re-asking. Wire it into `composer ci:check` alongside `types:check`, and land one real test on `inspector.tsx` in the same branch so the harness is proven, not just installed. Say so here before you touch `package.json`. |
 | 1-07 | Normal-map generator | todo | — | Unblocked: **ISSUE-7 is decided — normal maps are committed to the repo**, not generated at build time. So `docs/tools/make_normals.py` is a one-shot authoring tool whose output is checked in, and it must never overwrite a hand-fixed map in place. Standalone otherwise. Plan: `plan-lighting.md`. |
 
 ## Agent A — engine and rendering
@@ -84,17 +87,23 @@ been re-run here yet.
 | A-09 | Split `level-viewport.tsx` | **go — in progress, harness first** | — | It splits, and more cleanly than `build-level.ts` did: 1017 lines of which **878 are one `useEffect`**. Seams, in A's cutting order 3 → 1 → 5 → 4 → 2, smallest risk first: `view.ts` (scene/camera/renderer/fog and `reach`, ~95); `player.ts` (spawn, movement, collision, portal crossing, camera placement and the `updateMatrixWorld` mirrors depend on, ~245 — the valuable one, and four engine rules describe its ordering with nothing pinning them); the `?debug` probe wiring (~85); `snapshot-post.ts` (~90, the only piece that touches the network); `input.ts` (~200, pure DOM, all noise no risk). ~200 lines left in the .tsx, which is what a component should be. **Obstacle:** everything closes over shared mutable state, same as `buildLevel` — one session object made up front is the answer — and `createTouchControls` is built after `step()` uses it while its callbacks call `stop()`/`takeInHand()` declared above. That knot gets broken deliberately. **Verification, and this is the condition:** A-01 was safe because the whole built scene could be diffed; this has no equivalent, and the suite touches none of it. `?at=` makes a spot reproducible, `?debug` paints every wall a legend colour, and `window.scanRow(row)` returns the runs of surfaces across a row of the real frame as JSON. A dozen fixed spots across the three levels, several rows each, before and after, diffed — built **before** any cut and run between each. **The user has said go, and said go to the harness as the condition, not as a nicety.** Build it first, run it between every cut, and land it as something the project keeps — it is the readback this codebase has never had, and it outlives the split. |
 | A-05 | Hand poses — wiring | blocked | **ISSUE-1** | `POSES` gains `reach` and `grip`; `DRAWN` gains twelve handedness entries; `hands.update()` takes a focus argument fed from `lookedAtSlug()`. Cannot start until the art exists. Plan: `plan-hand-poses.md`. |
 
-## Art — sprites and cards
+## Art — outside this repo
 
-A third lane, opened because the two art issues had an owner called "art" who was nobody, and
-ISSUE-1 has sat there through two generation rounds. It touches `public/sprites/**` only.
+Worked by the user's own agent, not by either of you, and **not by planning either**: a lane
+was briefly spawned here and stopped, because duplicating work already in flight is ISSUE-13
+and once was enough. There is also no image-generation tool in this environment, so it could
+not have done the job in any case.
 
-| ID | Task | Status | Depends on | Notes |
-| --- | --- | --- | --- | --- |
-| ART-01 | Prop starter set, ~40 sprites | **wip — start here** | — | **A-03 is pointed at an empty folder until this exists.** `public/sprites/props/` currently holds a `.gitkeep`. Brief is `docs/handoff-prop-sprites.md`: soft, realistic, muted, matching the surface textures and the photoreal people — **not** the first-person hands, which are chunky pixel art and the outlier. 128 px per metre so size follows the real object, hard alpha only, straight-on front elevation, one generation per file. Every file passes `pnginspect.py` for colour type 6 and the exact dimensions from the table. |
-| ART-02 | The 24 missing hand cards | todo | ART-01 | ISSUE-1. `back`, `back-fist`, `palm`, `palm-fist` for all six people. **Read the existing filenames first** — two rounds have now regenerated `edge`/`edge-open`, which already existed, instead of the four that are missing. ISSUE-2 applies: the generator must produce fists at the same scale as open hands rather than leaning on `normalise_hand.py`, which corrects the scale by throwing away drawn resolution. |
-| ART-03 | A batch gate for props | todo | ART-01 | `verify_hands.py` is hand-specific, so props have no gate. Write the equivalent under `docs/tools/` once the real sizes have settled. This is the one script the art lane may add. |
+| ID | Task | Status | Notes |
+| --- | --- | --- | --- |
+| ART-01 | Prop starter set, ~40 sprites | **wip, outside** | Covered by the user's agent. Brief is `docs/handoff-prop-sprites.md`. Arrives as a **branch**; planning audits and merges it like any other lane. **A-03 renders nothing until it lands** — `public/sprites/props/` holds a `.gitkeep` today. |
+| ART-02 | The 24 missing hand cards | **unowned** | ISSUE-1, and **nobody is working it**. The outside agent is on props only. This blocks A-05 completely, and it has now failed twice in a way that reading the folder first would have prevented. Flagged to the user; do not start it without being told to. |
+| ART-03 | A batch gate for props | todo, whoever | `verify_hands.py` is hand-specific, so props have no gate at all. Worth writing under `docs/tools/` once the real sizes have settled — but it is not blocking, and neither agent should pick it up ahead of their own lane. |
 
+**When the art branch appears, planning verifies before merging.** Every file gets
+`pnginspect.py` against the size table in the brief: colour type 6, exact dimensions, hard
+alpha. That check is not a formality — the hand set was ruined by generating several sprites
+in one image and cutting them up, which measures wrong and looks fine.
 ## Parked
 
 **Sound** — `agent1-footsteps` (`69389d9`), 1-09 and A-07. Parked by the user. The branch holds
@@ -149,7 +158,7 @@ and strike an entry rather than deleting it when it closes.
 
 | ID | Issue | Severity | Owner | Status |
 | --- | --- | --- | --- | --- |
-| ISSUE-1 | **24 of 36 hand cards missing.** `back`, `back-fist`, `palm`, `palm-fist` for all six people. Two generation rounds have both regenerated `edge`/`edge-open`, which already existed, instead. Blocks A-05. | high | art | open → ART-02 |
+| ISSUE-1 | **24 of 36 hand cards missing**, and **still nobody is working it**. `back`, `back-fist`, `palm`, `palm-fist` for all six people; two rounds have both regenerated `edge`/`edge-open`, which already existed. The outside art agent is on props only. A-05 cannot start at all until this is owned. | high | — | **open, unowned — needs the user** |
 | ISSUE-2 | **Hand art is inconsistently scaled between poses.** Fists came back drawn 1.3×–2.5× larger than open hands, for every person. The normaliser corrects it but throws away drawn resolution. Spec updated in `handoff-hand-art.md`; needs the generator to comply. | medium | art | open → ART-02 |
 | ISSUE-3 | **Ceiling surface normals point up**, same as floors. Invisible while unlit and double-sided; every ceiling would light as a floor. | medium | A | **closed** `952576b` |
 | ISSUE-4 | **`.ai/rules/engine.md` contradicts itself** on sprite mirroring — and all three versions were wrong, not just two of them. There is no one rule; there is a table per person. | medium | A | **closed** `ea5ad72` |
@@ -168,11 +177,13 @@ and strike an entry rather than deleting it when it closes.
 | ISSUE-17 | **Unmerged work sitting on agent 1's local branches.** `agent1-undo-redo` has since landed as `81924ee`. What is left unmerged is `agent1-footsteps`, which is ISSUE-16, and `agent1-split-build-level`, which is ISSUE-13. | medium | 1 | **closed** |
 | ISSUE-18 | **Both agents were mid-flight when this board was rewritten**, the same mistake that caused ISSUE-13. | medium | — | **closed** — both reported in. A had only A-08, landed. 1 had 1-01 and 1-02, done and pushed. Nothing was dropped or duplicated. |
 | ISSUE-19 | **`level-viewport.tsx` is the last big contention file in A's lane** — 1017 lines, 878 of them in one `useEffect`. A scoped it: the seams are real and cleaner than `build-level.ts`'s were. | medium | A | **go — → A-09**, harness first |
-| ISSUE-28 | **The art tasks had an owner who was nobody.** ISSUE-1 and ISSUE-2 were assigned to "art", which was neither agent, so two generation rounds happened with no one accountable for reading the brief first — and both regenerated cards that already existed. The prop brief has been finished and unassigned the whole time. `A-03` would have landed a renderer pointed at an empty folder. **Fixed: a third lane, `art`, owning `public/sprites/**` and nothing else.** The lesson is narrower than it looks — an owner column that names a role rather than an agent reads as assigned and is not. | high | — | **closed** — art lane opened |
+| ISSUE-28 | **The art tasks had an owner who was nobody.** ISSUE-1 and ISSUE-2 were assigned to "art", which was neither agent, so two generation rounds happened with no one accountable for reading the brief first — and both regenerated cards that already existed. The prop brief has been finished and unassigned the whole time. `A-03` would have landed a renderer pointed at an empty folder. Partly fixed: the props half is owned outside this repo by the user's own agent. **The hands half is still nobody** — see ISSUE-1. The lesson is narrower than it looks: an owner column naming a role rather than an agent reads as assigned and is not, and the fix is not a lane, it is a name. | high | — | **partly closed** |
 | ISSUE-29 | **Planning sent agent A to a test file that does not exist.** A-10's instruction said the wedge numbers were pinned in `ConstantsMatchTest`; they are in `CollisionLimitsTest`. A caught it only because it went to cite the file and could not find it. That is the same failure as ISSUE-4 and ISSUE-21 — a confident pointer written without opening the thing pointed at — committed by the coordinator, in the same breath as ruling on other people's. Recorded because a board that only catches other people's errors is a board nobody should trust. | medium | — | closed |
 | ISSUE-26 | **A-04 and A-09 edit the same lines, and nobody has noticed yet because neither has started.** `plan-slopes-and-stats.md` puts the slopes substitution at `level-viewport.tsx:608-622` — "the only place the player's floor comes from" — plus `:683` and `:701` for the mark/recall circles. That is precisely cut 1 of A-09, the `player.ts` extraction. A-04 unblocks the moment agent 1 lands 1-05, which is one task away, and A-09 runs for a while. **Ruling: A-09's `player.ts` cut lands first, and A-04 is written against `player.ts`, not against the .tsx.** A-09's order already puts `view.ts` before `player.ts`; that stands, it is small. If 1-05 lands before the `player.ts` cut does, A-04 waits — a feature written into a file being gutted is the merge nobody should be asked to do. This is ISSUE-13 seen coming instead of found afterwards. | high | A | open — ruled |
-| ISSUE-27 | **`inspector.tsx` is the same problem in agent 1's lane, one step further out.** 1156 lines, the last file on ISSUE-11, and both 1-04 and 1-06 add controls to it — `plan-slopes-and-stats.md` puts the hinge picker "under the existing Floor/Ceiling pair" and the stats override block in the same file. So it gets bigger twice before anything makes it smaller. Not asked yet, deliberately: 1-03 is the critical path and A is idle behind it, so scoping a refactor now would be the wrong order. **When 1-03 lands, agent 1 gets the question agent A got about the viewport** — are the seams real, and what is the evidence a split changed nothing. | medium | 1 | open — queued behind 1-03 |
+| ISSUE-27 | **`inspector.tsx` splits, but the evidence to prove a split changed nothing does not exist yet.** Agent 1 mapped it rather than guessing: four modes behind early returns plus four shared pieces, and the head's five derived values that look like shared state are used *only* inside the wall panel, so the head shrinks to three. The last 500-line block wants dividing into level, room and wall panels — that is where the real size is. **Ruling, and it is agent 1's reasoning not mine: this depends on 1-08.** The derived logic is pure and testable today under the Node harness; the JSX is not, and it is most of the file — a moved panel can drop a prop, change a handler's identity or reorder a controlled input, and nothing in the project would notice. So the pure half is pulled out now as **1-10** and the JSX waits for Vitest. Against the urgency: 1-04 and 1-06 add conditional, self-contained panels, so the file gets longer without getting more tangled. | medium | 1 | open — depends on 1-08, pure half → 1-10 |
+| ISSUE-32 | **`headroom()` changed meaning in 1-05.** With no arguments it now returns the *smallest* gap anywhere in the room rather than the difference of two base heights, so an existing caller gets a different number the moment a room is sloped. Agent 1 flagged it rather than letting it pass silently, which was right. Checked here: **the only three callers are tests, and all three assert a room is tall enough** — `LevelGeometryTest:143`, `TheHouseTest:115` and 1-05's own — for which the smallest gap is not merely safe but the correct reading. So the hazard is smaller than feared and the flag was still the right call: a semantic change to an existing method is worth announcing even when it turns out to improve every caller. Watch it if a non-test caller ever appears. | low | 1 | closed — checked |
 | ISSUE-25 | **Two rules-file entries in a row have been false rather than stale** — the sprite mirroring sections (ISSUE-4) and the clearance figure (ISSUE-21). Both were confidently written, both were quoted back as guarantees, and both were caught only because somebody measured while doing something else. Stale pointers announce themselves; false statements do not. The pattern to copy is the one both fixes landed on: **name the test, not the number.** Worth a pass over the rest of `.ai/rules/**` for figures written as prose, but not now and not ahead of A-09. | medium | — | open — watching |
+| ISSUE-31 | **Planning spawned an art agent while the user already had one working.** Stopped within minutes and nothing of it reached the repo, but it is ISSUE-13's exact shape — two workers on one job because the person coordinating did not know what was already in flight — and this time the coordinator caused it. The board can only route around work it knows about. **Anything being worked outside this repo needs a line here, even a vague one**, or planning will assign it again. | medium | — | closed |
 | ISSUE-30 | **Below about six degrees, wall clearance stops being a clearance.** There is nowhere in a three-degree wedge within thirteen metres of the apex to stand a circle of `PLAYER_RADIUS` clear of both walls, so the solver does not settle the player there at all — it pushes them out through the corner. Geometry, not a bug, and neither agent had it before A measured it during A-10. Worth knowing before somebody authors a sharp room, and worth an authoring warning in the editor if sharp rooms ever become common. | low | — | open — noted |
 | ISSUE-24 | **Nothing can read back what the engine actually draws.** ISSUE-12 accepted that; this challenged it. | medium | A | **closed** `806c3c5` — `?scan`, `public/scan.html`, `tests/js/scan-diff.mjs`. Draws its own 30 frames at a fixed 1/60 rather than waiting on the browser: real seconds move the people along their walk between runs, and **a backgrounded tab gets no animation frames at all and never times out**. Two full runs byte-identical; moving `WALL_INSET` by 2 cm moves all fourteen spots, naming the room through a portal pane by column. Sixteen spots after the corner-stare and portal-boundary additions. |
 | ISSUE-21 | **`.ai/rules/engine.md` stated a false collision clearance** — 0.28 m written as a floor, where one measurement of one approach was all it ever was. Found by 1 doing 1-02, left alone because the file is A's, fixed by A. The lasting form of the answer is that no such number belongs in prose at all. | medium | A | **closed** `594d337` |
