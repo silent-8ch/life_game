@@ -30,6 +30,7 @@ import {
 import { createHands, HELD_ITEMS } from '@/lib/engine/hands';
 import type { HeldItem } from '@/lib/engine/hands';
 import type { PortalSurface } from '@/lib/engine/portal-surface';
+import { createPortals, crossPortal } from '@/lib/engine/portals';
 import {
     createProbeBackdrop,
     paintWalls,
@@ -37,7 +38,6 @@ import {
     spotFromSearch,
     wantsProbeBackdrop,
 } from '@/lib/engine/probe-backdrop';
-import { createPortals, crossPortal } from '@/lib/engine/portals';
 import { boundsOf, sectorAt } from '@/lib/engine/sectors';
 import { createSky } from '@/lib/engine/sky';
 import type { SkyDome } from '@/lib/engine/sky';

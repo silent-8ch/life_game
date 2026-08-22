@@ -6,6 +6,7 @@ use App\Models\Level;
 use App\Models\LevelSector;
 use App\Models\LevelVertex;
 use App\Models\User;
+use App\Services\PersonStats;
 use Database\Seeders\LifeSeeder;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Testing\AssertableInertia;
@@ -474,4 +475,92 @@ it('turns away somebody there are no sheets for', function (): void {
     $this->actingAs($this->editor)
         ->put(route('levels.editor.update', $this->level), $map)
         ->assertSessionHasErrors('playerSprite');
+});
+
+/**
+ * A complete SPECIAL block, as the Inspector sends one.
+ *
+ * @return array<string, int>
+ */
+function drawnStats(int $each = 5): array
+{
+    return array_fill_keys(PersonStats::ATTRIBUTES, $each);
+}
+
+it('keeps a person their own stats when they are given some', function (): void {
+    $map = drawnMap();
+    $map['things'][0]['stats'] = [...drawnStats(), 'luck' => 9, 'strength' => 2];
+
+    $this->actingAs($this->editor)
+        ->put(route('levels.editor.update', $this->level), $map)
+        ->assertRedirect();
+
+    $krystal = $this->level->fresh('things')->things->firstWhere('slug', 'krystal');
+
+    expect($krystal->stats)->toBe([...drawnStats(), 'luck' => 9, 'strength' => 2])
+        ->and($krystal->stats()['luck'])->toBe(9);
+
+    $this->actingAs($this->editor)
+        ->get(route('levels.editor', $this->level))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('level.things.0.stats.luck', 9)
+            ->where('level.things.0.inheritedStats.luck', PersonStats::STARTING['krystal']['luck'])
+        );
+});
+
+it('leaves a person with nothing of their own when none were sent', function (): void {
+    $this->actingAs($this->editor)
+        ->put(route('levels.editor.update', $this->level), drawnMap())
+        ->assertRedirect();
+
+    $krystal = $this->level->fresh('things')->things->firstWhere('slug', 'krystal');
+
+    expect($krystal->stats)->toBeNull()
+        ->and($krystal->stats())->toBe(PersonStats::STARTING['krystal']);
+
+    $this->actingAs($this->editor)
+        ->get(route('levels.editor', $this->level))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('level.things.0.stats', null)
+        );
+});
+
+it('turns away half a stat block', function (): void {
+    $map = drawnMap();
+    $stats = drawnStats();
+    unset($stats['luck']);
+    $map['things'][0]['stats'] = $stats;
+
+    $this->actingAs($this->editor)
+        ->put(route('levels.editor.update', $this->level), $map)
+        ->assertSessionHasErrors('things.0.stats');
+});
+
+it('turns away a stat nobody has heard of', function (): void {
+    $map = drawnMap();
+    $stats = drawnStats();
+    unset($stats['luck']);
+    $map['things'][0]['stats'] = [...$stats, 'lukc' => 5];
+
+    $this->actingAs($this->editor)
+        ->put(route('levels.editor.update', $this->level), $map)
+        ->assertSessionHasErrors('things.0.stats');
+});
+
+it('turns away a stat past the top of the range', function (): void {
+    $map = drawnMap();
+    $map['things'][0]['stats'] = [...drawnStats(), 'strength' => 11];
+
+    $this->actingAs($this->editor)
+        ->put(route('levels.editor.update', $this->level), $map)
+        ->assertSessionHasErrors('things.0.stats.strength');
+});
+
+it('turns away a crate with a personality', function (): void {
+    $map = drawnMap();
+    $map['things'][1]['stats'] = drawnStats();
+
+    $this->actingAs($this->editor)
+        ->put(route('levels.editor.update', $this->level), $map)
+        ->assertSessionHasErrors('things.1.stats');
 });

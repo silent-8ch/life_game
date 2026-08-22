@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\ThingKind;
 use App\Models\Interaction;
 use App\Models\InteractionCondition;
 use App\Models\InteractionEffect;
@@ -21,6 +22,8 @@ class LevelPayload
      */
     public function forEngine(Level $level): array
     {
+        $stats = app(PersonStats::class);
+
         $level->loadMissing([
             'sectors.edges.vertex',
             'things.interactions.requiredItem',
@@ -38,6 +41,7 @@ class LevelPayload
             'ceilingHeight' => $level->ceiling_height,
             'spriteStyle' => LevelAssets::STYLE,
             'playerSprite' => $level->player_sprite,
+            'playerStats' => $stats->for($level->player_sprite),
             'wallColor' => $level->wall_color,
             'floorColor' => $level->floor_color,
             'accentColor' => $level->accent_color,
@@ -74,6 +78,7 @@ class LevelPayload
                 'kind' => $thing->kind->value,
                 'sprite' => $thing->sprite,
                 'behaviour' => $thing->behaviour,
+                'stats' => $thing->kind === ThingKind::Actor ? $thing->stats() : null,
                 'speed' => $thing->speed,
                 'texture' => $thing->texture,
                 'x' => $thing->x,
@@ -109,10 +114,16 @@ class LevelPayload
 
         $payload = $this->forEngine($level);
         $written = $level->things->keyBy('slug');
+        $stats = app(PersonStats::class);
 
         $payload['things'] = array_map(
             fn (array $thing): array => [
                 ...$thing,
+                // The raw override, so the Inspector can tell a person who has
+                // been given their own numbers from one who is simply their
+                // sprite, and offer to hand them back.
+                'stats' => $written[$thing['slug']]->stats,
+                'inheritedStats' => $stats->for($written[$thing['slug']]->sprite),
                 'interactions' => $this->interactionsFor($written[$thing['slug']]),
             ],
             $payload['things'],

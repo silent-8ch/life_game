@@ -10,6 +10,7 @@ use App\Enums\Verb;
 use App\Models\Item;
 use App\Models\Level;
 use App\Services\LevelAssets;
+use App\Services\PersonStats;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -79,6 +80,12 @@ class UpdateLevelMapRequest extends FormRequest
             'things.*.kind' => ['required', Rule::enum(ThingKind::class)],
             'things.*.sprite' => ['nullable', 'string', Rule::in($assets->sprites())],
             'things.*.behaviour' => ['nullable', Rule::enum(ActorBehaviour::class)],
+
+            // A person's own numbers, or nothing at all and they get their
+            // sprite's. All seven or none: a half-written block reads fine in
+            // the editor and surprises you two months later.
+            'things.*.stats' => ['nullable', 'array', 'size:'.count(PersonStats::ATTRIBUTES)],
+            'things.*.stats.*' => ['required', 'integer', 'between:'.PersonStats::MINIMUM.','.PersonStats::MAXIMUM],
             'things.*.speed' => ['required', 'numeric', 'between:0,10'],
             'things.*.texture' => ['nullable', 'string', $textures],
             'things.*.x' => ['required', 'numeric', 'between:-512,512'],
@@ -161,6 +168,8 @@ class UpdateLevelMapRequest extends FormRequest
                             'A person needs a sprite to be drawn from.'
                         );
                     }
+
+                    $this->checkStats($validator, $index, $thing);
                 }
 
                 $this->checkItemsExist($validator, $things);
@@ -175,6 +184,48 @@ class UpdateLevelMapRequest extends FormRequest
                 }
             },
         ];
+    }
+
+    /**
+     * A stat block belongs to a person, and it names the seven attributes and
+     * nothing else. A typo is turned away rather than stored, since nothing
+     * reads these yet and a misspelled key would sit there unnoticed.
+     *
+     * @param  array<string, mixed>  $thing
+     */
+    private function checkStats(Validator $validator, int|string $index, array $thing): void
+    {
+        $stats = $thing['stats'] ?? null;
+
+        if ($stats === null) {
+            return;
+        }
+
+        if (($thing['kind'] ?? null) !== ThingKind::Actor->value) {
+            $validator->errors()->add(
+                "things.{$index}.stats",
+                'Only a person has stats.'
+            );
+
+            return;
+        }
+
+        if (! is_array($stats)) {
+            return;
+        }
+
+        $named = array_keys($stats);
+        sort($named);
+
+        $wanted = PersonStats::ATTRIBUTES;
+        sort($wanted);
+
+        if ($named !== $wanted) {
+            $validator->errors()->add(
+                "things.{$index}.stats",
+                'A stat block names exactly: '.implode(', ', PersonStats::ATTRIBUTES).'.'
+            );
+        }
     }
 
     /**

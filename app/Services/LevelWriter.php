@@ -106,6 +106,7 @@ class LevelWriter
                 'kind' => $thing['kind'],
                 'sprite' => $thing['sprite'] ?? null,
                 'behaviour' => $thing['behaviour'] ?? null,
+                'stats' => $thing['stats'] ?? null,
                 'speed' => $thing['speed'],
                 'texture' => $thing['texture'] ?? null,
                 'x' => $thing['x'],

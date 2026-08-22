@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\ThingKind;
+use App\Services\PersonStats;
 use Database\Factories\LevelThingFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Collection;
@@ -23,6 +24,7 @@ use Illuminate\Support\Carbon;
  * @property ThingKind $kind
  * @property string|null $sprite
  * @property string|null $behaviour
+ * @property array<string, int>|null $stats
  * @property float $speed
  * @property string|null $texture
  * @property float $x
@@ -47,6 +49,7 @@ use Illuminate\Support\Carbon;
     'kind',
     'sprite',
     'behaviour',
+    'stats',
     'speed',
     'texture',
     'x',
@@ -71,6 +74,7 @@ class LevelThing extends Model
     {
         return [
             'kind' => ThingKind::class,
+            'stats' => 'array',
             'speed' => 'float',
             'x' => 'float',
             'z' => 'float',
@@ -81,6 +85,18 @@ class LevelThing extends Model
             'angle' => 'float',
             'is_solid' => 'boolean',
         ];
+    }
+
+    /**
+     * What this person is made of. Their own block if they were given one,
+     * and otherwise whatever their sprite starts with — all or nothing, never
+     * a half of each.
+     *
+     * @return array<string, int>
+     */
+    public function stats(): array
+    {
+        return $this->stats ?? app(PersonStats::class)->for($this->sprite);
     }
 
     /**

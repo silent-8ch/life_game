@@ -28,3 +28,10 @@ Two copies of the heights exist by necessity, one either side of the wire: `Leve
 `LevelWriter::writeThings()` deletes and recreates a level's things on every save, so their interactions go with them. The editor therefore has to send the full tree every time — `things.*.interactions` in the map payload — or they are gone. Item slugs in `requiredItem` and in give/remove effects are resolved against the level's own game and validated in `UpdateLevelMapRequest::checkItemsExist()`.
 
 `LevelPayload::forEngine()` ships only `verbs` per thing: `[{verb, item}]`, deduped. Conditions and effects go out solely from `forEditor()`, which the map editor alone gets. Never widen that — the player has no business seeing what unlocks a door.
+
+## Starting stats live in PersonStats, and a person's block is all-or-nothing
+`PersonStats::STARTING` is the one place a person's starting SPECIAL block is written down, the same way `LevelAssets::HEIGHTS` is for their height, and it must cover every key of `HEIGHTS` (pinned by `PersonStatsTest`). The seven names are mirrored on the other side of the wire in `resources/js/types/game.ts` (`Stats`) and `components/editor/inspector.tsx` (`ATTRIBUTES`); change one and change the others.
+
+`level_things.stats` is a per-person override: null means "use the sprite's block", and a value must be all seven keys — there is no partial merge. `LevelThing::stats()` resolves it. `forEngine` ships the resolved block per actor plus a top-level `playerStats`; `forEditor` replaces `stats` with the raw override and adds `inheritedStats`, because the editor sends `things.*.stats` straight back and a resolved block there would silently turn every person into an override.
+
+Nothing reads the numbers yet. No derived values, no condition or effect type, no mutable store — that boundary is deliberate.

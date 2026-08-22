@@ -4,6 +4,7 @@ use App\Models\Game;
 use App\Models\GameState;
 use App\Models\Level;
 use App\Services\LevelAssets;
+use App\Services\PersonStats;
 use Database\Seeders\LifeSeeder;
 use Database\Seeders\TheHouseSeeder;
 use Inertia\Testing\AssertableInertia;
@@ -74,7 +75,7 @@ it('sends every thing as a box with a kind', function (): void {
             ->has('level.things.0', fn (AssertableInertia $thing) => $thing
                 ->hasAll([
                     'slug', 'name', 'description', 'kind',
-                    'sprite', 'behaviour', 'speed', 'texture',
+                    'sprite', 'behaviour', 'stats', 'speed', 'texture',
                     'x', 'z', 'elevation', 'width', 'depth', 'height',
                     'angle', 'isSolid', 'verbs',
                 ])
@@ -154,4 +155,59 @@ it('ignores a level that is not part of the game', function (): void {
 
     $this->get(route('games.show', ['game' => $game, 'level' => 'no-such-level']))
         ->assertInertia(fn (AssertableInertia $page) => $page->where('level.slug', 'tech-demo'));
+});
+
+it('sends the numbers a person starts with, resolved', function (): void {
+    $this->get(route('games.show', $this->game))
+        ->assertInertia(function (AssertableInertia $page): void {
+            /** @var array<int, array<string, mixed>> $things */
+            $things = $page->toArray()['props']['level']['things'];
+
+            $people = array_values(array_filter(
+                $things,
+                fn (array $thing): bool => $thing['kind'] === 'actor',
+            ));
+
+            expect($people)->not->toBeEmpty();
+
+            foreach ($people as $person) {
+                expect($person['stats'])
+                    ->toBe(PersonStats::STARTING[$person['sprite']], $person['slug']);
+            }
+
+            // Furniture is never asked what it is made of.
+            foreach ($things as $thing) {
+                if ($thing['kind'] !== 'actor') {
+                    expect($thing['stats'])->toBeNull();
+                }
+            }
+        });
+});
+
+it('sends what the player themselves starts with', function (): void {
+    $this->get(route('games.show', $this->game))
+        ->assertInertia(function (AssertableInertia $page): void {
+            $level = $page->toArray()['props']['level'];
+
+            expect($level['playerStats'])
+                ->toBe(PersonStats::STARTING[$level['playerSprite']]);
+        });
+});
+
+it('hands a person their own numbers over their sprite\'s', function (): void {
+    $level = Level::query()->where('slug', 'tech-demo')->sole();
+    $person = $level->things()->where('kind', 'actor')->firstOrFail();
+
+    $person->update(['stats' => [...PersonStats::STARTING[$person->sprite], 'luck' => 10]]);
+
+    $this->get(route('games.show', $this->game))
+        ->assertInertia(function (AssertableInertia $page) use ($person): void {
+            /** @var array<int, array<string, mixed>> $things */
+            $things = $page->toArray()['props']['level']['things'];
+
+            $sent = collect($things)->firstWhere('slug', $person->slug);
+
+            expect($sent['stats']['luck'])->toBe(10)
+                ->and($sent['stats'])->toHaveCount(count(PersonStats::ATTRIBUTES));
+        });
 });

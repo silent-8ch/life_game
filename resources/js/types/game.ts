@@ -152,6 +152,20 @@ export type Sky = {
     layers: number[];
 };
 
+/**
+ * What a person is made of: SPECIAL, in canonical order. Nothing reads these
+ * yet — they are defined and shipped, and what they do comes later.
+ */
+export type Stats = {
+    strength: number;
+    perception: number;
+    endurance: number;
+    charisma: number;
+    intelligence: number;
+    agility: number;
+    luck: number;
+};
+
 /** A box in the level, positioned by its centre on the floor plan. */
 export type LevelThing = {
     slug: string;
@@ -162,6 +176,17 @@ export type LevelThing = {
     sprite: string | null;
     /** How an actor moves: still, wander. */
     behaviour: string | null;
+    /**
+     * A person's own numbers, or null to take their sprite's. While playing,
+     * this is the resolved block; in the map editor it is the override alone,
+     * which is what a save sends back.
+     */
+    stats: Stats | null;
+    /**
+     * What their sprite starts with, whether or not they override it. Only the
+     * map editor is sent this, to show what is being inherited.
+     */
+    inheritedStats?: Stats;
     speed: number;
     texture: string | null;
     x: number;
@@ -191,6 +216,8 @@ export type Level = {
     spriteStyle: string;
     /** Which of them the player themselves is drawn from. */
     playerSprite: string;
+    /** What the player starts with, from whoever they are drawn from. */
+    playerStats: Stats;
     wallColor: string;
     floorColor: string;
     accentColor: string;
