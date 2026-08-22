@@ -235,3 +235,15 @@ A mouth covers the height of the room that owns it, and that room's floor can si
 So the far face builds `sector.floorHeight` → `max(sector.ceilingHeight, beyond.ceilingHeight)`, not to its own ceiling. Pinned by `tests/Unit/MouthSealTest.php`, which also checks it stays one surface rather than two stacked in the same plane.
 
 It shows worst through the portal: inside `CLIP_MINIMUM` of a mouth the tilted near plane is dropped, and the pane's camera then sees straight out through the band — sky above and below the far room, exactly when the pane is hugged across the whole screen. **Do not** try to keep the tilt through that range by pushing the plane forward instead of dropping it: it was tried, and it wedges the GPU hard enough that the page stops painting while its scripts carry on. Close the geometry instead.
+
+## Regenerated edge hands are consistently left-handed
+All six `-edge-open` and `-edge` cards were regenerated independently as LEFT hands from the fixed real character references. In `DRAWN`, both `walk` and `run` therefore map to `-1` for every person. The existing back/back-fist mapping remains independently measured.
+
+## Open edge hands use the right-side orientation
+The regenerated `-edge-open` cards look correct only when their unmirrored drawing is assigned to the right side (`DRAWN.walk = 1`) for all six people. Their edge-on fists remain assigned left (`DRAWN.run = -1`). This visual engine mapping takes precedence over the handedness wording used during generation.
+
+## Open edge orientation is per person
+For regenerated `-edge-open` cards, the unmirrored side is Paul/Wade/Luke = left (`walk: -1`) and Krystal/Luna/William = right (`walk: 1`). All regenerated edge fists currently use left (`run: -1`). These values were checked in-game; do not infer them from prompt handedness.
+
+## Open edge orientation is per person
+For regenerated `-edge-open` cards, the in-game checked unmirrored side is Paul/Wade/William = left (`walk: -1`) and Krystal/Luna/Luke = right (`walk: 1`). All regenerated edge fists currently use left (`run: -1`). Do not infer these values from prompt handedness.
