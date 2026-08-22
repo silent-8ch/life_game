@@ -88,13 +88,8 @@ describe('several rooms at once', () => {
         // be invisible until somebody painted a room with textured walls.
         const { handlers } = showTwoRooms();
 
-        // Queried by text rather than by label: TexturePicker renders its
-        // label as a bare span with nothing tying it to the control, so
-        // getByLabelText cannot see it. That is an accessibility gap in the
-        // component — a screen reader announces an unlabelled button — and it
-        // is reported rather than worked around silently.
-        expect(screen.getByText('Every wall in them')).toBeInTheDocument();
-        expect(screen.getByText('Wall texture')).toBeInTheDocument();
+        expect(screen.getByLabelText('Every wall in them')).toBeInTheDocument();
+        expect(screen.getByLabelText('Wall texture')).toBeInTheDocument();
 
         expect(handlers.onChangeRoomWalls).not.toHaveBeenCalled();
     });

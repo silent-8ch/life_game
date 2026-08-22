@@ -45,12 +45,10 @@ describe('a prop', () => {
         // Fitting is per-face, and a billboard or a cross is one face already.
         showThing(prop({ render: 'box' }));
 
-        // By text, not by label: Toggle renders as a plain button with the
-        // label as its content and no aria-pressed, so neither getByLabelText
-        // nor toBeChecked can see it. Reported as an accessibility gap rather
-        // than papered over — its state is invisible to a screen reader too.
         expect(
-            screen.getByText('Stretch the texture to fit each face'),
+            screen.getByRole('button', {
+                name: 'Stretch the texture to fit each face',
+            }),
         ).toBeInTheDocument();
     });
 
@@ -58,7 +56,9 @@ describe('a prop', () => {
         showThing(prop({ render: 'cross' }));
 
         expect(
-            screen.queryByText('Stretch the texture to fit each face'),
+            screen.queryByRole('button', {
+                name: 'Stretch the texture to fit each face',
+            }),
         ).not.toBeInTheDocument();
     });
 
@@ -128,15 +128,45 @@ describe('a person', () => {
         expect(screen.getByLabelText('Behaviour')).toBeInTheDocument();
     });
 
+    it('reads as off while a person is inheriting their sprite s stats', () => {
+        showThing(person({ stats: null }));
+
+        // Explicitly false rather than merely not-true: `.not.toBePressed()`
+        // also passes when the attribute is missing altogether, which is the
+        // state this test exists to rule out.
+        expect(
+            screen.getByRole('button', { name: 'Override stats' }),
+        ).toHaveAttribute('aria-pressed', 'false');
+    });
+
+    it('reads as on once they have their own', () => {
+        showThing(
+            person({
+                stats: {
+                    strength: 5,
+                    perception: 5,
+                    endurance: 5,
+                    charisma: 5,
+                    intelligence: 5,
+                    agility: 5,
+                    luck: 5,
+                },
+            }),
+        );
+
+        expect(
+            screen.getByRole('button', { name: 'Override stats' }),
+        ).toBePressed();
+    });
+
     it('takes over a complete stat block, never half of one', () => {
         // Null means "whatever their sprite starts with", and switching the
         // override on has to hand back all seven attributes: a partial block is
         // refused at save, and half a stat block is not a meaningful thing to
-        // store. Asserted through what the click sends rather than through the
-        // control's state, which the markup does not expose.
+        // store.
         const { handlers } = showThing(person({ stats: null }));
 
-        fireEvent.click(screen.getByText('Override stats'));
+        fireEvent.click(screen.getByRole('button', { name: 'Override stats' }));
 
         const [change] = handlers.onChangeThing.mock.calls[0];
 
@@ -161,7 +191,7 @@ describe('a person', () => {
             }),
         );
 
-        fireEvent.click(screen.getByText('Override stats'));
+        fireEvent.click(screen.getByRole('button', { name: 'Override stats' }));
 
         expect(handlers.onChangeThing).toHaveBeenCalledWith({ stats: null });
     });

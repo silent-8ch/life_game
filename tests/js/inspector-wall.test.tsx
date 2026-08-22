@@ -139,7 +139,7 @@ describe('one wall', () => {
     it('changes the wall rather than the room it belongs to', () => {
         const { handlers } = showSharedWall();
 
-        fireEvent.click(screen.getByText('Mirror'));
+        fireEvent.click(screen.getByRole('button', { name: 'Mirror' }));
 
         expect(handlers.onChangeEdge).toHaveBeenCalledWith({ isMirror: true });
         expect(handlers.onChangeSector).not.toHaveBeenCalled();

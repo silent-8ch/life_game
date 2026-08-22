@@ -98,6 +98,11 @@ export function Toggle({
     return (
         <button
             type="button"
+            // A toggle button rather than a plain one, so a screen reader
+            // announces whether it is on. Without this its whole state is
+            // carried by a border colour, which is no state at all to anybody
+            // not looking at it.
+            aria-pressed={checked}
             onClick={() => onChange(!checked)}
             className={cn(
                 'rounded border px-2 py-1 text-xs',

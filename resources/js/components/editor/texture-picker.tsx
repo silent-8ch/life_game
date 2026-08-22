@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { cn } from '@/lib/utils';
 
 /**
@@ -31,18 +31,30 @@ export default function TexturePicker({
     const [open, setOpen] = useState(false);
     const [search, setSearch] = useState('');
 
+    // The label is a span rather than a <label> because what it names is a
+    // button that opens a grid, not a form field — so it is tied on by id
+    // instead. Without this a screen reader reaches an unlabelled button and
+    // says only what is written on its face, which for an unset picker is the
+    // word "None".
+    const labelId = useId();
+
     const shown = textures.filter((texture) =>
         texture.replaceAll('-', ' ').includes(search.toLowerCase()),
     );
 
     return (
         <div className="relative">
-            <span className="mb-1 block text-[11px] tracking-wider text-slate-400 uppercase">
+            <span
+                id={labelId}
+                className="mb-1 block text-[11px] tracking-wider text-slate-400 uppercase"
+            >
                 {label}
             </span>
 
             <button
                 type="button"
+                aria-labelledby={labelId}
+                aria-expanded={open}
                 onClick={() => setOpen(!open)}
                 className="flex w-full items-center gap-2 rounded border border-slate-700 bg-slate-900 p-1.5 text-left text-sm text-slate-200 hover:border-slate-500"
             >
