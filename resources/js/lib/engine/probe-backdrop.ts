@@ -28,6 +28,19 @@ const SQUARE = 16;
 const INK = '#ff00d4';
 const PAPER = '#00ff66';
 
+/**
+ * The backdrop's own two colours, rounded to the levels a readback rounds to.
+ *
+ * They have to be kept out of the legend. `nearestLevel` snaps 255,0,212 to
+ * 255,0,204 and leaves 0,255,102 alone, and both of those are colours the
+ * painter would otherwise hand to a wall — so a scan across open sky came back
+ * as thirty alternating nine-pixel runs of two real, named, wrong walls. Not
+ * failing to see the backdrop: **naming walls that are not there**, which is
+ * the worst thing a measuring tool can do. Found by the art session, and I had
+ * already misread one of my own scans because of it.
+ */
+const BACKDROP_COLOURS = ['255,0,204', '0,255,102'];
+
 export type ProbeBackdrop = {
     texture: THREE.Texture;
     dispose: () => void;
@@ -126,6 +139,14 @@ export function paintWalls(group: THREE.Object3D): WallPaint[] {
     const painted: WallPaint[] = [];
     const spent = new Set<string>();
 
+    // Counted separately from `painted`, because a wall can be passed over —
+    // the backdrop's two colours are reserved — and deriving the step from how
+    // many have been painted would then hand the next wall the same colour,
+    // find it spent, and pass over that one too. Every wall after the first
+    // skip would go unpainted, and a readback of unpainted walls is a readback
+    // of nothing at all.
+    let step = 0;
+
     group.traverse((object) => {
         const flat = object.userData.flat as
             { sector: string; height: number } | undefined;
@@ -165,14 +186,27 @@ export function paintWalls(group: THREE.Object3D): WallPaint[] {
         // walls that meet are never two colours a screenshot could confuse.
         // Stepped from one, so nothing is painted the reserved black that
         // floors and ceilings take.
-        const step = painted.length + 1;
-        const red = LEVELS[(step * 5) % 6];
-        const green = LEVELS[Math.floor(step / 6) % 6];
-        const blue = LEVELS[Math.floor(step / 36) % 6];
+        let red = 0;
+        let green = 0;
+        let blue = 0;
+        let key = '';
 
-        const key = `${red},${green},${blue}`;
+        // Walk on until a colour is free. The backdrop's two are reserved: a
+        // wall wearing one is a wall a readback calls sky, or sky it calls that
+        // wall — which is worse than not seeing the backdrop at all, since it
+        // names something that is not there.
+        do {
+            step += 1;
+            red = LEVELS[(step * 5) % 6];
+            green = LEVELS[Math.floor(step / 6) % 6];
+            blue = LEVELS[Math.floor(step / 36) % 6];
+            key = `${red},${green},${blue}`;
+        } while (
+            step <= LEVELS.length ** 3 &&
+            (spent.has(key) || BACKDROP_COLOURS.includes(key))
+        );
 
-        if (spent.has(key)) {
+        if (spent.has(key) || BACKDROP_COLOURS.includes(key)) {
             // More faces than colours. Better to leave the extra ones unpainted
             // than to hand back a colour that means two things.
             return;
@@ -223,6 +257,13 @@ export type ScanRun = {
     css: string;
     /** The wall that colour belongs to, or null for anything unpainted. */
     wall: PaintedWall | null;
+    /**
+     * The backdrop showing through, which is where the sky would be if debug
+     * mode drew one. Named rather than left as unpainted, because "nothing is
+     * drawn here" and "you are looking out of the level" are different answers
+     * and the second is usually the one being asked about.
+     */
+    backdrop?: true;
 };
 
 /**
@@ -287,6 +328,7 @@ export function scanRow(
             to: column + 1,
             css: key,
             wall: byColour.get(key) ?? null,
+            ...(BACKDROP_COLOURS.includes(key) ? { backdrop: true } : {}),
         });
     }
 
