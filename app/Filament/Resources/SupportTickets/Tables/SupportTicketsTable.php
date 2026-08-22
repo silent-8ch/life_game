@@ -39,7 +39,7 @@ class SupportTicketsTable
                     ->description(fn (SupportTicket $ticket): ?string => $ticket->level === null
                         ? 'that level has since been deleted'
                         : null),
-                TextColumn::make('standing_in')
+                TextColumn::make('standing_in_slug')
                     ->label('Room')
                     ->placeholder('outside every room')
                     ->searchable(),

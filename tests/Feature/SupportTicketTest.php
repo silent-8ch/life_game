@@ -43,7 +43,22 @@ function aTicket(array $changes = []): array
             'yaw' => 135.0,
             'pitch' => -8.5,
         ],
-        'standingIn' => 'hall',
+        // The room as `describeSpot()` describes it, which is what the engine
+        // already assembles for a snapshot. The textures are the point: a
+        // ticket that records the room's name and not what it is made of
+        // cannot diagnose a wrong or missing surface, which is the class of
+        // fault that cost three sessions in one evening.
+        'standingIn' => [
+            'slug' => 'hall',
+            'name' => 'Hall',
+            'floorHeight' => 0.0,
+            'ceilingHeight' => 3.0,
+            'isSky' => false,
+            'isWater' => false,
+            'wallTexture' => 'cream-plaster-wall',
+            'floorTexture' => 'oak-floor',
+            'ceilingTexture' => null,
+        ],
         'lookingAt' => 'crate',
         'holding' => null,
         'running' => false,
@@ -390,4 +405,121 @@ it('can say how much disk the pictures are holding', function (): void {
     SupportTicket::sole()->delete();
 
     expect(SupportTicket::bytesHeld())->toBe(0);
+});
+
+it('keeps what the room is made of, not only what it is called', function (): void {
+    // The whole reason `standingIn` widened from a slug to the room. A green
+    // grid was chased across three sessions and four hours; `floorTexture`
+    // being null in the room the reporter stood in would have answered it in
+    // one line, and the endpoint was throwing that away to fit a string column.
+    Storage::fake('local');
+
+    $this->postJson(route('games.tickets.store', $this->game), aTicket());
+
+    $room = SupportTicket::sole()->standing_in;
+
+    expect($room['floorTexture'])->toBe('oak-floor')
+        ->and($room['wallTexture'])->toBe('cream-plaster-wall')
+        // Null is a real answer here rather than a missing one — it is exactly
+        // the reading that would have ended that hunt.
+        ->and($room['ceilingTexture'])->toBeNull()
+        // Under the spot, not the room's base heights: on a sloped room those
+        // agree only along the hinge wall.
+        ->and($room['floorHeight'])->toEqual(0.0)
+        ->and($room['ceilingHeight'])->toEqual(3.0)
+        ->and($room['isSky'])->toBeFalse();
+});
+
+it('still keeps the room slug where it can be sorted and filtered', function (): void {
+    // Widening must not cost the one thing the old column could do. The admin
+    // table shows tickets by room, and a JSON column cannot be indexed for
+    // that here.
+    Storage::fake('local');
+
+    $this->postJson(route('games.tickets.store', $this->game), aTicket());
+
+    expect(SupportTicket::sole()->standing_in_slug)->toBe('hall')
+        ->and(SupportTicket::query()->where('standing_in_slug', 'hall')->count())
+        ->toBe(1);
+});
+
+it('takes a ticket from somebody standing outside every room', function (): void {
+    // Reachable: rooms do not tile the plane, and falling out of one is itself
+    // worth reporting. It must not read as a malformed ticket.
+    Storage::fake('local');
+
+    $this->postJson(
+        route('games.tickets.store', $this->game),
+        aTicket(['standingIn' => null])
+    )->assertCreated();
+
+    $ticket = SupportTicket::sole();
+
+    expect($ticket->standing_in)->toBeNull()
+        ->and($ticket->standing_in_slug)->toBeNull();
+});
+
+it('turns down a room with no name to call it by', function (): void {
+    // The slug is what the admin table hangs on and what a person searches
+    // for. A room object without one is half a reading.
+    Storage::fake('local');
+
+    $this->postJson(
+        route('games.tickets.store', $this->game),
+        aTicket(['standingIn' => ['name' => 'Hall', 'floorTexture' => 'oak-floor']])
+    )->assertJsonValidationErrors(['standingIn.slug']);
+});
+
+it('records what was being edited when the report came from the editor', function (): void {
+    // Every other context column is a play concept — standing in, looking at,
+    // holding, running — so without this an editor ticket is a note, a level
+    // and two pictures: the "where but not what" problem moved out of playing
+    // and into the editor rather than solved.
+    Storage::fake('local');
+
+    $this->postJson(route('games.tickets.store', $this->game), aTicket([
+        'source' => 'editor',
+        'standingIn' => null,
+        'at' => null,
+        'editorState' => [
+            'tool' => 'select',
+            'selection' => 'hall',
+            'rooms' => 12,
+            'history' => 4,
+            'unsaved' => true,
+            'grid' => 0.25,
+        ],
+        'shots' => [
+            'ui' => UploadedFile::fake()->image('ui.png', 900, 600),
+        ],
+    ]))->assertCreated();
+
+    $state = SupportTicket::sole()->editor_state;
+
+    // `unsaved` is the one that earns its place: the same complaint means a
+    // different thing against unsaved work than against what the server holds.
+    expect($state['unsaved'])->toBeTrue()
+        ->and($state['tool'])->toBe('select')
+        ->and($state['selection'])->toBe('hall')
+        ->and($state['history'])->toBe(4);
+});
+
+it('takes a picture of the interface, which is what a UI fault looks like', function (): void {
+    // The editor button exists for UI issues, and `map` and `section` both
+    // draw the *level*. Without a kind for the interface, a child reporting
+    // "this panel is broken" had to send two pictures of the floor plan and
+    // was forbidden from sending a picture of the panel.
+    Storage::fake('local');
+
+    $this->postJson(route('games.tickets.store', $this->game), aTicket([
+        'source' => 'editor',
+        'standingIn' => null,
+        'at' => null,
+        'shots' => [
+            'ui' => UploadedFile::fake()->image('ui.png', 1200, 800),
+        ],
+    ]))->assertCreated();
+
+    expect(SupportTicket::sole()->shots()->where('kind', 'ui')->exists())
+        ->toBeTrue();
 });

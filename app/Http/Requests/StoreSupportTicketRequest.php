@@ -55,6 +55,12 @@ class StoreSupportTicketRequest extends FormRequest
         // than a scene, so it has neither of the first two to offer.
         'map',
         'section',
+        // The editor's own interface. The button exists for UI faults — a panel
+        // that will not open, a button that does nothing — and `map` and
+        // `section` both draw the *level*, so without this a child reporting
+        // "this panel is broken" had to send two pictures of the floor plan and
+        // had no way to send a picture of the panel.
+        'ui',
     ];
 
     public function authorize(): bool
@@ -85,10 +91,48 @@ class StoreSupportTicketRequest extends FormRequest
             'at.yaw' => ['required_with:at', 'numeric', 'between:-3600,3600'],
             'at.pitch' => ['required_with:at', 'numeric', 'between:-90,90'],
 
-            'standingIn' => ['nullable', 'string', 'max:255'],
+            // The room as the engine described it, not just its name. A slug
+            // says where somebody was; these say what they were looking at,
+            // and the difference is the green-grid hunt that cost three
+            // sessions when `floorTexture: null` would have answered it.
+            //
+            // Sent as `describeSpot()` returns it, so the client posts a
+            // snapshot rather than translating one.
+            'standingIn' => ['nullable', 'array'],
+            'standingIn.slug' => ['required_with:standingIn', 'string', 'max:255'],
+            'standingIn.name' => ['nullable', 'string', 'max:255'],
+            // Under the exact spot, not the room's base heights — on a sloped
+            // room those agree only along the hinge wall.
+            'standingIn.floorHeight' => ['nullable', 'numeric', 'between:-1024,1024'],
+            'standingIn.ceilingHeight' => ['nullable', 'numeric', 'between:-1024,1024'],
+            'standingIn.isSky' => ['nullable', 'boolean'],
+            'standingIn.isWater' => ['nullable', 'boolean'],
+            'standingIn.wallTexture' => ['nullable', 'string', 'max:255'],
+            'standingIn.floorTexture' => ['nullable', 'string', 'max:255'],
+            'standingIn.ceilingTexture' => ['nullable', 'string', 'max:255'],
+
             'lookingAt' => ['nullable', 'string', 'max:255'],
             'holding' => ['nullable', 'string', 'max:64'],
             'running' => ['sometimes', 'boolean'],
+
+            // What was happening in the editor, which is the editing rather
+            // than a position. Every other context field here is a play
+            // concept, so without this an editor ticket is a note, a level and
+            // two pictures — the "where but not what" problem moved from
+            // playing into the editor rather than solved.
+            //
+            // `unsaved` is the one that earns its place: a fault reported with
+            // unsaved changes in hand is a different fault from the same words
+            // reported against what the server holds.
+            'editorState' => ['nullable', 'array'],
+            'editorState.tool' => ['nullable', 'string', 'max:64'],
+            'editorState.selection' => ['nullable', 'string', 'max:255'],
+            'editorState.rooms' => ['nullable', 'integer', 'min:0'],
+            'editorState.history' => ['nullable', 'integer', 'min:0'],
+            'editorState.unsaved' => ['nullable', 'boolean'],
+            'editorState.saving' => ['nullable', 'boolean'],
+            'editorState.drawing' => ['nullable', 'boolean'],
+            'editorState.grid' => ['nullable', 'numeric', 'between:0,64'],
 
             'screen' => ['nullable', 'array'],
             'screen.width' => ['required_with:screen', 'integer', 'between:1,16384'],
