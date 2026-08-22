@@ -2,6 +2,7 @@ import LevelPanel from '@/components/editor/inspector/level-panel';
 import RoomPanel from '@/components/editor/inspector/room-panel';
 import RoomsPanel from '@/components/editor/inspector/rooms-panel';
 import ThingPanel from '@/components/editor/inspector/thing-panel';
+import type { StairPlan } from '@/lib/editor/stairs';
 import { wallFacts } from '@/lib/editor/walls';
 import type {
     LevelAssets,
@@ -27,6 +28,8 @@ type InspectorProps = {
     onChangeRoomWalls: (texture: string | null) => void;
     onDeleteRooms: () => void;
     onChangeEdge: (change: Partial<SectorPoint>) => void;
+    /** Replaces the picked room with a flight of steps. */
+    onCarveStairs: (plan: StairPlan) => void;
     onChangeThing: (change: Partial<LevelThing>) => void;
     onDeleteThing: () => void;
     onDeleteSector: () => void;
@@ -44,6 +47,7 @@ export default function Inspector({
     onChangeRoomWalls,
     onDeleteRooms,
     onChangeEdge,
+    onCarveStairs,
     onChangeThing,
     onDeleteThing,
     onDeleteSector,
@@ -116,6 +120,7 @@ export default function Inspector({
                     textures={assets.textures}
                     onChangeSector={onChangeSector}
                     onChangeEdge={onChangeEdge}
+                    onCarveStairs={onCarveStairs}
                     onDeleteSector={onDeleteSector}
                 />
             )}

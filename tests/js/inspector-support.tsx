@@ -147,6 +147,7 @@ export function showInspector({
         onChangeRoomWalls: vi.fn(),
         onDeleteRooms: vi.fn(),
         onChangeEdge: vi.fn(),
+        onCarveStairs: vi.fn(),
         onChangeThing: vi.fn(),
         onDeleteThing: vi.fn(),
         onDeleteSector: vi.fn(),

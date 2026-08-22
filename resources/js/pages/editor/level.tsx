@@ -31,6 +31,7 @@ import {
     windingOf,
 } from '@/lib/editor/map';
 import type { Point, Selection } from '@/lib/editor/map';
+import { carveStairs } from '@/lib/editor/stairs';
 import { DEFAULT_PLAYER_HEIGHT, HEIGHTS } from '@/lib/engine/sprite-actor';
 import { cn } from '@/lib/utils';
 import type { EditorPageProps, Level } from '@/types';
@@ -709,6 +710,26 @@ export default function LevelEditor({
                                         ),
                                     )
                                 }
+                                onCarveStairs={(plan) => {
+                                    if (selection === null) {
+                                        return;
+                                    }
+
+                                    // Its own kind of edit, so a flight is one
+                                    // press of undo rather than N. It replaces
+                                    // the room, so the selection has to let go
+                                    // — rooms are picked by index and the ones
+                                    // after this have all just moved.
+                                    commit('stairs', (current) =>
+                                        carveStairs(
+                                            current,
+                                            selection.sector,
+                                            plan,
+                                        ),
+                                    );
+                                    setSelection(null);
+                                    setRooms([]);
+                                }}
                                 onDeleteSector={() => {
                                     if (selection === null) {
                                         return;

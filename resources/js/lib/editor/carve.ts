@@ -53,7 +53,7 @@ const MIN_ROOM_WIDTH = 0.15;
 type Ring = [number, number][];
 
 /** A room's corners as the clipping library wants them, closed. */
-function toRing(points: Point[]): Ring {
+export function toRing(points: Point[]): Ring {
     const ring: Ring = points.map((point) => [point.x, point.z]);
     ring.push([points[0].x, points[0].z]);
 
@@ -61,7 +61,7 @@ function toRing(points: Point[]): Ring {
 }
 
 /** Back to corners: the closing point dropped, wound the way the engine reads. */
-function toPoints(ring: Ring): Point[] {
+export function toPoints(ring: Ring): Point[] {
     const points = ring
         .slice(0, -1)
         .map(([x, z]) => ({ x, z }))
@@ -170,7 +170,7 @@ function corners(source: Sector, from: Point, to: Point): Point[] {
 }
 
 /** A ring of bare corners dressed back up as a room's walls. */
-function dress(source: Sector, points: Point[]): SectorPoint[] {
+export function dress(source: Sector, points: Point[]): SectorPoint[] {
     return points.flatMap((point, index) => {
         const next = points[(index + 1) % points.length];
         const stretch = [point, ...corners(source, point, next), next];

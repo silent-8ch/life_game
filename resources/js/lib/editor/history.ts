@@ -43,6 +43,7 @@ export type EditKind =
     | 'revert'
     | 'spawn'
     | 'split'
+    | 'stairs'
     | 'thing';
 
 /** The kinds that arrive as a stream of small changes rather than in one go. */

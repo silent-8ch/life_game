@@ -5,7 +5,9 @@ import {
     Toggle,
 } from '@/components/editor/inspector/controls';
 import SlopePanel from '@/components/editor/inspector/slope-panel';
+import StairsPanel from '@/components/editor/inspector/stairs-panel';
 import TexturePicker from '@/components/editor/texture-picker';
+import type { StairPlan } from '@/lib/editor/stairs';
 import type { Sector, SectorPoint } from '@/types';
 
 /**
@@ -29,6 +31,7 @@ export default function RoomPanel({
     textures,
     onChangeSector,
     onChangeEdge,
+    onCarveStairs,
     onDeleteSector,
 }: {
     sector: Sector;
@@ -42,6 +45,7 @@ export default function RoomPanel({
     textures: string[];
     onChangeSector: (change: Partial<Sector>) => void;
     onChangeEdge: (change: Partial<SectorPoint>) => void;
+    onCarveStairs: (plan: StairPlan) => void;
     onDeleteSector: () => void;
 }) {
     return (
@@ -106,6 +110,8 @@ export default function RoomPanel({
                 </div>
 
                 <SlopePanel sector={sector} onChangeSector={onChangeSector} />
+
+                <StairsPanel sector={sector} onCarveStairs={onCarveStairs} />
 
                 <div className="flex gap-2">
                     <Toggle
