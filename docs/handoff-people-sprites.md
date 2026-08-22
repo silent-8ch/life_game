@@ -66,8 +66,36 @@ directions. A head at 45° is not a head at 0°.
 Per person: **15 bodies** (5 directions × 3 poses) and **25 heads** (5 directions × 5
 expressions). Across six people, **90 bodies and 150 heads**.
 
-**Generate the bodies first and stop.** They prove the join, the registration and the walk
-before 150 heads are spent on a pipeline nobody has watched move yet.
+## ⚠ Deliver ONE person's body set first, and stop
+
+**15 images, one person, nothing else.** Not one person's everything, not all six bodies — one
+body set. Paul checks the directions and the animation, accepts or rejects, and only then does
+the rest of the cast get generated.
+
+**Why the batch is one person and not six.** Every failure this has had so far was systematic:
+all frames identical, every fist oversized, every sheet drawn to its own order. A fault in the
+approach shows in the first fifteen images exactly as clearly as in ninety, and costs a
+fifteenth as much to find.
+
+**Deliver it through the sprite checker.** `public/sprite-check.html` shows all eight directions
+side by side and **plays the walk cycle in each**, including the three mirrored ones with the
+half-cycle offset applied — which is the only way to see whether turning reads correctly, since
+it cannot be judged from still images. **That page is where Paul accepts the sprites.**
+
+## Naming, because the checker and the manifest both depend on it
+
+Files go in **`public/sprites/people/`** — a new folder. The old `realistic` sheets were a
+different format and were reverted; nothing should land beside them.
+
+```
+{person}-{degrees}-{pose}.png      paul-000-stand.png
+                                   paul-045-stride-a.png
+                                   paul-090-stride-b.png
+{person}-head-{degrees}-{mood}.png paul-head-135-neutral.png
+```
+
+**Degrees zero-padded to three** so they sort. Directions drawn: `000 045 090 135 180`. Poses:
+`stand stride-a stride-b`. Moods: `neutral happy sad angry surprised`.
 
 ---
 
