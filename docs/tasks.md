@@ -1,7 +1,7 @@
 # Task board
 
 Two agents, **1** and **A**, each committing to their own branch (`agent1`, `agentA`) and
-merging to `main`. This file is the shared state: who owns what, what is in flight, what is
+merging to `main`. Agent 1 is session `life-game-22`; agent A is `life-game2-78`. This file is the shared state: who owns what, what is in flight, what is
 done, and what is broken.
 
 Last audited against the repo at `cf87e8a`, when both branches were level with `main` and the
@@ -56,7 +56,7 @@ Keep the branch column honest — it is how work in flight gets found.
 
 | ID | Task | Status | Depends on | Notes |
 | --- | --- | --- | --- | --- |
-| A-01 | Split `build-level.ts` | todo | — | **Land this first; everything rebases onto it.** 1242 lines doing flats, walls, step walls, mirrors, portal panes, sky lids, colliders and thing boxes. Split along those seams. Pure refactor — no behaviour change, existing tests must pass untouched. |
+| A-01 | Split `build-level.ts` | **landed** | — | `0f2cb7c` (merge of `33b4b51`). 1242 → 88 lines plus `lib/engine/build/`. Both agents built this independently; see **ISSUE-13**. |
 | A-02 | Extract `prepareReflections` | todo | A-01 | Move it out of `level-viewport.tsx` into `lib/engine/reflections.ts` so the Node harness can load it, then pin release-before-render ordering, the `onto`-room filter, sky hidden at the deepest pass, and `show(0)` before the player's `hug()`. Closes **ISSUE-9**. Plan: `plan-test-coverage.md` task 2. |
 | A-03 | Prop rendering — engine | todo | A-01, 1-03 | Render modes `box`/`billboard`/`cross`, fitted UVs, cutout with `alphaTest`, prop texture loader path, frame animation, alt-state by flag. **Billboards must face whichever camera is drawing** — same trap as the sky dome. Plan: `plan-prop-rendering.md`. |
 | A-04 | Slopes — engine | todo | A-01, 1-05 | `floorAt`/`ceilingAt` in `sectors.ts`; `buildFlat` per-vertex displacement; `buildWall` trapezoids with per-end heights; shared-edge step walls; trapezoid portal panes. Plan: `plan-slopes-and-stats.md` part 1. |
@@ -87,6 +87,8 @@ Audited from the commit history, not self-reported:
 | Debug wall naming | `5653864` | |
 | Anisotropic filtering | `263d12f` | |
 | Hand art, walk and run | `dd39848`, `c670dd7` | 12 of 36 cards; normalised and passing the gate |
+| A-01 split `build-level.ts` | `0f2cb7c` | 1242 → 88 lines + `lib/engine/build/`. Byte-identical scene output verified by diffing whole built scenes, not just by tests. Added `LevelTopologyTest.php`. |
+| Linters ignore `.claude/**` | `3cecabc` | Unblocked `ci:check` for both agents |
 
 `plan-test-coverage.md` task 1 is therefore complete. Tasks 2, 3 and 4 remain as A-02, 1-01
 and 1-02.
@@ -110,8 +112,13 @@ and strike an entry rather than deleting it when it closes.
 | ISSUE-8 | **`LevelWriter` deletes and recreates everything on save**, so ids churn and nothing can hold a durable reference to a wall or a room. Not urgent — but anything that wants to reference an edge by id hits this first. | low | 1 | open |
 | ISSUE-9 | **`prepareReflections` cannot be tested** — unexported inside a `.tsx` the Node harness cannot load. The least-tested, most load-bearing code in the project. | medium | A | open → A-02 |
 | ISSUE-10 | **No swept collision test.** Collision relies on `RUN_SPEED * MAX_FRAME_SECONDS < 2 * PLAYER_RADIUS` and nothing enforces it, so a future speed tweak silently lets the player walk through walls. | medium | 1 | open → 1-02 |
-| ISSUE-11 | **Three files over 1100 lines** — `build-level.ts` 1242, `level-viewport.tsx` 1221, `inspector.tsx` 1156. All three are the contention points between the two agents. | medium | A / 1 | open → A-01 |
+| ISSUE-11 | **Files over 1100 lines.** `build-level.ts` is off this list — 88 lines after A-01. Still standing: `level-viewport.tsx` (1221) and `inspector.tsx` (1156), both still contention points. | medium | A / 1 | partly closed |
 | ISSUE-12 | **Nothing tests what renders.** Every engine test asserts on structure; the portal, mirror and sky-lid rules describe failures whose only symptom is on screen. Those stay eye-verified. | low | — | accepted |
+| ISSUE-13 | **A-01 was built twice.** Agent A landed `33b4b51` (merged `0f2cb7c`, into `lib/engine/build/`); agent 1 had already built `968ab93` on `agent1-split-build-level` (into flat `build-*.ts`). Both verified byte-identical scene output. **Ruling: main keeps A's. Agent 1 drops `968ab93`** — not on quality, purely because main has moved and re-landing a competing refactor of the same 1242 lines is a merge nobody should attempt. Root cause: the board was written after work had already started. | high | 1 | **resolved — agent 1 to drop** |
+| ISSUE-14 | **Linters walked the agent worktrees.** `.claude/` holds ~1 GB of whole project copies; git skips it via the global ignore file, which eslint and prettier do not read. `ci:check` returned 591,586 errors, blocking both agents. Fixed on main in `3cecabc`. Agent 1 had the same fix unpushed as `349a3e1` — drop it. | high | — | **closed** `3cecabc` |
+| ISSUE-15 | **`.ai/rules/engine.md` is stale after the split.** The note about `drawnByRoom` needing to be declared above `buildWall`/`buildFlat` describes a temporal-dead-zone trap that no longer exists — it is a scene field now, created before any builder runs. Two other notes point at `build-level.ts` for `carriedOn` (now `build/topology.ts`) and `buildWall` (now `build/walls.ts`); both still true, just relocated. **Agent A is authorised to edit `engine.md` for this** — it knows exactly what moved. | low | A | open |
+| ISSUE-16 | **Cross-lane work on `agent1-footsteps` (`69389d9`).** Adds `lib/engine/audio.ts` and hooks `level-viewport.tsx`, both agent A's paths, and edited `.ai/rules/engine.md` without notice. **Ruling: split it** — agent 1 keeps the data model, payload, validation and inspector half; agent A takes the engine module and the viewport hook. Neither half lands alone. | medium | 1 / A | open |
+| ISSUE-17 | **Unmerged work sitting on agent 1's local branches.** `agent1-undo-redo` (`4ba8756`, `lib/editor/history.ts`, bounded draft history + ⌘Z, 5 tests) is done and unpushed. Nothing on `origin/agent1` is ahead of main, so none of agent 1's four branches exist remotely. Push or lose them. | medium | 1 | open |
 
 ---
 
