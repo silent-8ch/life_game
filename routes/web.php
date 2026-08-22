@@ -4,6 +4,7 @@ use App\Http\Controllers\DebugSnapshotController;
 use App\Http\Controllers\GameController;
 use App\Http\Controllers\InteractionController;
 use App\Http\Controllers\LevelEditorController;
+use App\Http\Controllers\LevelPickerController;
 use App\Http\Controllers\LevelWallController;
 use App\Http\Controllers\SaveController;
 use App\Http\Controllers\SupportTicketController;
@@ -13,6 +14,7 @@ Route::get('/', [GameController::class, 'index'])->name('games.index');
 
 // The map editor sits behind the same login as the admin panel it is reached from.
 Route::middleware('auth')->group(function () {
+    Route::get('levels', [LevelPickerController::class, 'index'])->name('levels.index');
     Route::get('editor/{level}', [LevelEditorController::class, 'edit'])->name('levels.editor');
     // A ticket's pictures are bytes somebody posted without signing in, so they
     // are never served from public/. The panel's own login is the gate.

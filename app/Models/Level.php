@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Database\Factories\LevelFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -55,6 +57,7 @@ use Illuminate\Support\Carbon;
     'wall_color',
     'floor_color',
     'accent_color',
+    'owner_id',
 ])]
 class Level extends Model
 {
@@ -74,6 +77,33 @@ class Level extends Model
             'sky_variant' => 'integer',
             'backdrop_layers' => 'array',
         ];
+    }
+
+    /**
+     * Who drew it, or null if it predates anybody having an account.
+     *
+     * @return BelongsTo<User, $this>
+     */
+    public function owner(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'owner_id');
+    }
+
+    /**
+     * Levels a person may edit: their own, and every orphan.
+     *
+     * An orphan is unclaimed rather than protected — the levels that existed
+     * before accounts did belong to nobody, and locking them would strand the
+     * work rather than look after it.
+     *
+     * @param  Builder<Level>  $query
+     */
+    #[Scope]
+    protected function editableBy(Builder $query, User $user): void
+    {
+        $query->where(function (Builder $inner) use ($user): void {
+            $inner->where('owner_id', $user->id)->orWhereNull('owner_id');
+        });
     }
 
     /**

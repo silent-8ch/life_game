@@ -23,6 +23,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $this->call([
+            PlayersSeeder::class,
             TheStudySeeder::class,
             LifeSeeder::class,
             TheHouseSeeder::class,
