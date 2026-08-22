@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import * as THREE from 'three';
 import { store } from '@/actions/App/Http/Controllers/DebugSnapshotController';
 import { createActors } from '@/lib/engine/actors';
+import type { PropSet } from '@/lib/engine/build/things';
 import { buildLevel } from '@/lib/engine/build-level';
 import { MAX_FRAME_SECONDS, REACH } from '@/lib/engine/constants';
 import { createHands } from '@/lib/engine/hands';
@@ -43,10 +44,26 @@ import { createTextureLibrary } from '@/lib/engine/textures';
 import { wantsTouchControls } from '@/lib/engine/touch';
 import { createView } from '@/lib/engine/view';
 import { cn } from '@/lib/utils';
-import type { Level, LevelThing } from '@/types';
+import type { Flags, Level, LevelThing } from '@/types';
 
 type LevelViewportProps = {
     level: Level;
+    /**
+     * Which flags the saved game has set, by name.
+     *
+     * Only flags that have been set are here at all, so `name in flags` is the
+     * honest test — a flag set to an empty string and a flag never set are
+     * different states and would otherwise read alike.
+     *
+     * They arrive again after every interaction while the level object stays
+     * the one the browser already had, which is the whole point of the closure
+     * the payload puts it behind. So this is watched for a change rather than
+     * read once at build.
+     *
+     * Optional because the map editor's preview has no saved game behind it and
+     * no flags to speak of, rather than because a game might not send them.
+     */
+    flags?: Flags;
     /** Whatever the crosshair is resting on, or null. */
     onFocus: (thing: LevelThing | null) => void;
     onExamine: (thing: LevelThing) => void;
@@ -82,6 +99,7 @@ const SCAN_FRAMES = 30;
 
 export default function LevelViewport({
     level,
+    flags = {},
     onFocus,
     onExamine,
     onLockChange,
@@ -111,6 +129,27 @@ export default function LevelViewport({
         lines: string[];
         status: string;
     } | null>(null);
+
+    /**
+     * The props, once the level is built, and the flags they are showing.
+     *
+     * Flags arrive again after every interaction while the level object stays
+     * the one the browser already had — that closure exists so a partial reload
+     * never rebuilds the geometry. So a flipped switch reaches the renderer by
+     * being handed to it, not by anything being made again.
+     */
+    const propSet = useRef<PropSet | null>(null);
+    const flagsSet = useRef<ReadonlySet<string>>(new Set(Object.keys(flags)));
+
+    useEffect(() => {
+        // Only flags that have been set are in the payload at all, so presence
+        // is the whole test: a flag set to an empty string and one never set
+        // are different states and would otherwise read alike.
+        const set = new Set(Object.keys(flags));
+
+        flagsSet.current = set;
+        propSet.current?.setFlags(set);
+    }, [flags]);
 
     // Held in a ref so that re-rendering the frame never restarts the level.
     const callbacks = useRef({ onFocus, onExamine, onLockChange, onMessage });
@@ -170,6 +209,10 @@ export default function LevelViewport({
 
         const textures = createTextureLibrary();
         const built = buildLevel(level, textures);
+
+        // Whatever the save already says, before the first frame is drawn.
+        built.props.setFlags(flagsSet.current);
+        propSet.current = built.props;
         scene.add(built.group);
 
         const legend = probe === null ? [] : paintWalls(built.group);
@@ -205,6 +248,7 @@ export default function LevelViewport({
             built.portals,
             playerSprite,
             actors,
+            built.props,
             camera,
             sky,
         );
@@ -301,6 +345,14 @@ export default function LevelViewport({
                     ? 0
                     : floorAt(standingIn, player.x, player.z);
 
+            // People wander towards a spot picked with Math.random(), so a scan
+            // that let them walk would read back a different picture every run
+            // — a column or two of somebody's shoulder, which is exactly the
+            // size of difference the scan exists to catch. They stand where
+            // they were authored instead, and everything else runs as usual on
+            // its fixed timestep.
+            const moving = scanning ? 0 : seconds;
+
             hands.update(seconds, player.walked, push.running);
 
             playerSprite.place(
@@ -310,15 +362,17 @@ export default function LevelViewport({
                 player.yaw,
                 player.walked,
             );
-            actors.update(seconds, built.colliders);
+            actors.update(moving, built.colliders);
             actors.faceViewer(player.x, player.z, player.yaw);
+            built.props.update(seconds);
+            built.props.faceViewer(player.x, player.z);
 
             aimCamera(camera, player);
 
             sky?.follow(player.x, player.eye, player.z);
 
             textures.tick(seconds);
-            magic?.update(seconds);
+            magic?.update(moving);
         };
 
         /** One frame: move everything on, draw every pane, then draw the view. */
@@ -362,8 +416,15 @@ export default function LevelViewport({
          * The frame left on screen at the end is the frame that was read, so a
          * screenshot and the JSON are the same picture.
          */
-        const scan = (): void => {
+        const scan = async (): Promise<void> => {
             resize();
+
+            // Before anything is drawn, not after: a frame read back with half
+            // its textures still in flight is a different frame from the same
+            // spot a second later, and which one you get is decided by the disk
+            // cache. That makes a diff of two captures worth nothing, and it
+            // fails intermittently, which is worse than failing.
+            await textures.settled();
 
             for (let drawn = 0; drawn < SCAN_FRAMES; drawn++) {
                 drawFrame(SCAN_STEP_SECONDS);
@@ -540,7 +601,7 @@ export default function LevelViewport({
         // A scan is a measurement, not a game: it draws its own frames, reads
         // them back and stops. Nothing else runs.
         if (scanning) {
-            scan();
+            void scan();
         } else {
             frame = requestAnimationFrame(tick);
         }
@@ -548,6 +609,7 @@ export default function LevelViewport({
         return () => {
             cancelAnimationFrame(frame);
             observer.disconnect();
+            propSet.current = null;
             input.dispose();
             actors.dispose();
             playerSprite.dispose();

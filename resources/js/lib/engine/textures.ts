@@ -8,6 +8,7 @@ import { TEXTURE_METRES } from '@/lib/engine/constants';
  */
 
 const TEXTURE_PATH = '/sprites/textures';
+const PROP_PATH = '/sprites/props';
 
 /** Frames across the water strip. */
 const WATER_FRAMES = 4;
@@ -16,6 +17,15 @@ const WATER_FRAME_SECONDS = 0.18;
 export type TextureLibrary = {
     /** A tiling surface texture, or null when the surface has none. */
     surface: (name: string | null) => THREE.Texture | null;
+    /**
+     * One prop's picture, clamped and cut out rather than tiled.
+     *
+     * A frame number turns the name into `{name}-{frame}.png`, which is how an
+     * animated prop is stored: a file per frame rather than cells on a sheet,
+     * the same decision as the hand poses and for the same reason — another
+     * frame is another file and nothing depends on the order they were cut in.
+     */
+    prop: (name: string | null, frame?: number) => THREE.Texture | null;
     /** The animated water sheet, already framed. */
     water: () => THREE.Texture;
     /**
@@ -29,6 +39,15 @@ export type TextureLibrary = {
     useRenderer: (renderer: THREE.WebGLRenderer) => void;
     /** Advance anything that animates. */
     tick: (seconds: number) => void;
+    /**
+     * Settles once every picture asked for so far has arrived or failed.
+     *
+     * For the frame scan, which draws its frames the instant the level is built
+     * and would otherwise read back a room with half its textures still in
+     * flight — a different picture from the same spot a second later, decided
+     * by the disk cache rather than by the code.
+     */
+    settled: () => Promise<void>;
     dispose: () => void;
 };
 
@@ -63,6 +82,37 @@ function retro(texture: THREE.Texture, anisotropy: number): THREE.Texture {
 }
 
 export function createTextureLibrary(): TextureLibrary {
+    // How many pictures are still on their way, and who is waiting for the last
+    // of them. Counted here rather than read off three's loading manager, whose
+    // tallies are not part of its published shape.
+    let outstanding = 0;
+    let waiting: (() => void)[] = [];
+
+    const arrived = (): void => {
+        outstanding = Math.max(0, outstanding - 1);
+
+        if (outstanding > 0) {
+            return;
+        }
+
+        const settling = waiting;
+
+        waiting = [];
+
+        for (const wake of settling) {
+            wake();
+        }
+    };
+
+    /** Wraps a load so the count is kept whether it arrives or fails. */
+    const counted = (
+        load: (done: () => void) => THREE.Texture,
+    ): THREE.Texture => {
+        outstanding++;
+
+        return load(arrived);
+    };
+
     // Settled once the renderer exists and can be asked what it manages, which
     // is after the level is built. Anything loaded before then is brought up to
     // it at that point.
@@ -86,9 +136,16 @@ export function createTextureLibrary(): TextureLibrary {
             return existing;
         }
 
-        const texture = retro(
-            loader.load(`${TEXTURE_PATH}/${name}.png`),
-            anisotropy,
+        const texture = counted((done) =>
+            retro(
+                loader.load(
+                    `${TEXTURE_PATH}/${name}.png`,
+                    done,
+                    undefined,
+                    done,
+                ),
+                anisotropy,
+            ),
         );
         loaded.set(name, texture);
 
@@ -97,9 +154,16 @@ export function createTextureLibrary(): TextureLibrary {
 
     const water = (): THREE.Texture => {
         if (waterTexture === null) {
-            waterTexture = retro(
-                loader.load('/sprites/bg/water-surface.png'),
-                anisotropy,
+            waterTexture = counted((done) =>
+                retro(
+                    loader.load(
+                        '/sprites/bg/water-surface.png',
+                        done,
+                        undefined,
+                        done,
+                    ),
+                    anisotropy,
+                ),
             );
             waterTexture.wrapS = THREE.ClampToEdgeWrapping;
             waterTexture.wrapT = THREE.ClampToEdgeWrapping;
@@ -109,8 +173,33 @@ export function createTextureLibrary(): TextureLibrary {
         return waterTexture;
     };
 
+    const prop = (
+        name: string | null,
+        frame?: number,
+    ): THREE.Texture | null => {
+        if (name === null) {
+            return null;
+        }
+
+        const file = frame === undefined ? name : `${name}-${frame}`;
+        const key = `prop:${file}`;
+        const existing = loaded.get(key);
+
+        if (existing !== undefined) {
+            return existing;
+        }
+
+        const texture = counted((done) =>
+            propTexture(loader, file, anisotropy, done),
+        );
+        loaded.set(key, texture);
+
+        return texture;
+    };
+
     return {
         surface,
+        prop,
         water,
 
         useRenderer: (renderer) => {
@@ -140,6 +229,17 @@ export function createTextureLibrary(): TextureLibrary {
                 waterTexture.offset.x = waterFrame / WATER_FRAMES;
             }
         },
+
+        settled: () =>
+            new Promise<void>((wake) => {
+                if (outstanding === 0) {
+                    wake();
+
+                    return;
+                }
+
+                waiting.push(wake);
+            }),
 
         dispose: () => {
             for (const texture of loaded.values()) {
@@ -224,4 +324,36 @@ export function tileWallUvs(
     }
 
     uv.needsUpdate = true;
+}
+
+/**
+ * A prop's picture: one object, one image, alpha and all.
+ *
+ * Kept apart from the surface textures on purpose. A surface texture is opaque,
+ * square and tiles seamlessly; a prop carries a silhouette, has a real aspect
+ * ratio and never repeats. Wrapping is clamped for exactly that reason — a
+ * repeating prop shows a one-pixel band of its opposite edge along every
+ * silhouette, which reads as a coloured fringe round the leaves.
+ */
+export function propTexture(
+    loader: THREE.TextureLoader,
+    name: string,
+    anisotropy: number,
+    done?: () => void,
+): THREE.Texture {
+    const texture = loader.load(
+        `${PROP_PATH}/${name}.png`,
+        done,
+        undefined,
+        done,
+    );
+
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.magFilter = THREE.NearestFilter;
+    texture.minFilter = THREE.LinearMipmapLinearFilter;
+    texture.wrapS = THREE.ClampToEdgeWrapping;
+    texture.wrapT = THREE.ClampToEdgeWrapping;
+    texture.anisotropy = anisotropy;
+
+    return texture;
 }

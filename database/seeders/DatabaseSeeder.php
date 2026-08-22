@@ -27,6 +27,7 @@ class DatabaseSeeder extends Seeder
             LifeSeeder::class,
             TheHouseSeeder::class,
             PortalDemoSeeder::class,
+            LevelEightSeeder::class,
         ]);
     }
 }
