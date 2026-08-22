@@ -1,0 +1,233 @@
+{
+    "level": {
+        "slug": "william-level",
+        "name": "William Level",
+        "description": "A level waiting to be drawn.",
+        "spawnX": -2.5,
+        "spawnZ": -1,
+        "spawnAngle": 0,
+        "ceilingHeight": 3,
+        "sky": "sky-sunset",
+        "skyVariant": 3,
+        "backdrop": "mountains",
+        "backdropLayers": [
+            3
+        ],
+        "wallColor": "#7fe0c9",
+        "floorColor": "#2f6f5e",
+        "accentColor": "#fbbf24",
+        "playerSprite": "william"
+    },
+    "sectors": [
+        {
+            "slug": "room",
+            "name": "Room",
+            "floorHeight": 0,
+            "ceilingHeight": 3,
+            "floor": "blue-rug",
+            "ceiling": "cream-plaster-wall",
+            "walls": "blue-rug",
+            "sky": 1,
+            "water": 0,
+            "sortOrder": 0,
+            "edges": [
+                {
+                    "x": -5,
+                    "z": -26,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": -2,
+                    "z": -28.5,
+                    "wallTexture": null,
+                    "blocks": 1,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": 22.5,
+                    "z": -29.5,
+                    "wallTexture": null,
+                    "blocks": 1,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": 37,
+                    "z": 14,
+                    "wallTexture": null,
+                    "blocks": 1,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": -29.5,
+                    "z": 33.5,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": -16,
+                    "z": -19.5,
+                    "wallTexture": null,
+                    "blocks": 1,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                }
+            ]
+        },
+        {
+            "slug": "room-2",
+            "name": "Room 2",
+            "floorHeight": 0,
+            "ceilingHeight": 13,
+            "floor": "deep-water",
+            "ceiling": "metal-roof",
+            "walls": "river-water",
+            "sky": 1,
+            "water": 1,
+            "sortOrder": 1,
+            "edges": [
+                {
+                    "x": -29.5,
+                    "z": 33.5,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": -113.5,
+                    "z": 0,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": -52,
+                    "z": -36.5,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": -16,
+                    "z": -19.5,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                }
+            ]
+        }
+    ],
+    "things": [
+        {
+            "slug": "wade",
+            "name": "Wade",
+            "description": "Wade is wandering about.",
+            "kind": "actor",
+            "x": -1.5,
+            "z": -1.5,
+            "elevation": 0,
+            "width": 0.9,
+            "depth": 0.9,
+            "height": 1.8,
+            "angle": 0,
+            "isSolid": 0,
+            "sprite": "wade",
+            "behaviour": "wander",
+            "speed": 1.1,
+            "texture": null
+        },
+        {
+            "slug": "krystal",
+            "name": "Krystal",
+            "description": "Krystal is wandering about.",
+            "kind": "actor",
+            "x": 2.5,
+            "z": -2,
+            "elevation": 0,
+            "width": 0.9,
+            "depth": 0.9,
+            "height": 1.7,
+            "angle": 0,
+            "isSolid": 0,
+            "sprite": "krystal",
+            "behaviour": "wander",
+            "speed": 1.1,
+            "texture": null
+        },
+        {
+            "slug": "luna",
+            "name": "Luna",
+            "description": "Luna is wandering about.",
+            "kind": "actor",
+            "x": 1.7633557568774,
+            "z": -2.4270509831248,
+            "elevation": 0,
+            "width": 0.9,
+            "depth": 0.9,
+            "height": 1.66,
+            "angle": 0,
+            "isSolid": 0,
+            "sprite": "luna",
+            "behaviour": "wander",
+            "speed": 1.1,
+            "texture": null
+        },
+        {
+            "slug": "luke",
+            "name": "Luke",
+            "description": "Luke is wandering about.",
+            "kind": "actor",
+            "x": -1.7633557568774,
+            "z": -2.4270509831248,
+            "elevation": 0,
+            "width": 0.9,
+            "depth": 0.9,
+            "height": 1.62,
+            "angle": 0,
+            "isSolid": 0,
+            "sprite": "luke",
+            "behaviour": "wander",
+            "speed": 1.1,
+            "texture": null
+        },
+        {
+            "slug": "william",
+            "name": "William",
+            "description": "William is wandering about.",
+            "kind": "actor",
+            "x": -3,
+            "z": -0.5,
+            "elevation": 0,
+            "width": 0.9,
+            "depth": 0.9,
+            "height": 1.55,
+            "angle": 0,
+            "isSolid": 0,
+            "sprite": "william",
+            "behaviour": "wander",
+            "speed": 1.1,
+            "texture": null
+        }
+    ]
+}
