@@ -169,6 +169,70 @@ it('lets a room see through an open doorway but not through a wall', function ()
         ->and($walled['west'])->toBe(['west']);
 });
 
+it('sees all the way down a run of open doorways, not one along it', function (): void {
+    // Four rooms in a line, every boundary open. Standing in the first, the
+    // fourth is in plain sight down the whole run.
+    $rooms = <<<'JS'
+    [
+        room('a', [corner(0, 0), corner(10, 0), corner(10, 10), corner(0, 10)]),
+        room('b', [corner(10, 0), corner(20, 0), corner(20, 10), corner(10, 10)]),
+        room('c', [corner(20, 0), corner(30, 0), corner(30, 10), corner(20, 10)]),
+        room('d', [corner(30, 0), corner(40, 0), corner(40, 10), corner(30, 10)]),
+    ]
+    JS;
+
+    $answer = levelTopology($rooms, <<<'JS'
+        process.stdout.write(JSON.stringify({
+            a: topology.seenFrom('a').sort(),
+            d: topology.seenFrom('d').sort(),
+        }));
+        JS);
+
+    // This used to stop at one doorway, and Paul found it from both ends on the
+    // demo: the mirror at least a room away cant see through the portal behind
+    // me, and the portal can not see whats in the mirror. His nearest mirror was
+    // two doorways beyond the portal's far room, so neither set reached the
+    // other and both reflections sat frozen. One gate, two symptoms.
+    //
+    // A count of doorways was never what being able to see something is. Rooms
+    // at the ends of a straight run are in plain sight of each other however
+    // many openings lie between; rooms sharing one doorway round a corner are
+    // not in sight at all. Wrong in both directions, and the frustum test is
+    // what has always been doing the real work.
+    expect($answer['a'])->toBe(['a', 'b', 'c', 'd'])
+        ->and($answer['d'])->toBe(['a', 'b', 'c', 'd']);
+});
+
+it('stops at a wall however far the run goes on behind it', function (): void {
+    // The same four, with the middle boundary shut from one side. Reachability
+    // is still a filter and this is what it filters: two halves that cannot see
+    // each other at all, however long each half is.
+    $answer = levelTopology(
+        <<<'JS'
+        [
+            room('a', [corner(0, 0), corner(10, 0), corner(10, 10), corner(0, 10)]),
+            room('b', [
+                corner(10, 0),
+                corner(20, 0, { blocks: true }),
+                corner(20, 10),
+                corner(10, 10),
+            ]),
+            room('c', [corner(20, 0), corner(30, 0), corner(30, 10), corner(20, 10)]),
+            room('d', [corner(30, 0), corner(40, 0), corner(40, 10), corner(30, 10)]),
+        ]
+        JS,
+        <<<'JS'
+        process.stdout.write(JSON.stringify({
+            a: topology.seenFrom('a').sort(),
+            d: topology.seenFrom('d').sort(),
+        }));
+        JS
+    );
+
+    expect($answer['a'])->toBe(['a', 'b'])
+        ->and($answer['d'])->toBe(['c', 'd']);
+});
+
 it('counts a portal link by its walls, not by its faces', function (): void {
     $answer = levelTopology(
         <<<'JS'

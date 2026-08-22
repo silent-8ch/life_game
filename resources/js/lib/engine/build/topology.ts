@@ -31,10 +31,35 @@ export type Topology = {
         back: (edge: Edge) => boolean;
     };
     /**
-     * For a room, itself and whatever can be seen from it through an open
-     * doorway. Anything standing in one of those can turn up in a view of that
-     * room, and has to be drawn for it — a mirror through a doorway that never
-     * gets redrawn shows a reflection that never moves.
+     * For a room, itself and every room an open doorway eventually leads to.
+     * Anything standing in one of those can turn up in a view of that room, and
+     * has to be drawn for it — a mirror through a doorway that never gets
+     * redrawn shows a reflection that never moves.
+     *
+     * ## Why this is reachability and not a count of doorways
+     *
+     * It used to be **one hop**: a room and the rooms immediately open to it.
+     * That is not what being able to see something is. Two rooms at the ends of
+     * a straight corridor are in plain sight of each other however many
+     * doorways lie between them, and two rooms sharing a doorway round a corner
+     * are not in sight of each other at all. A hop count is wrong in both
+     * directions and its only virtue was keeping the work down.
+     *
+     * Paul, from the demo, twice and from both ends: *the mirror at least a
+     * room away cant see through the portal behind me*, and *the portal can not
+     * see whats in the mirror*. Measured by the session watching him, the
+     * nearest mirror to that portal's far room is **two** doorways out. So the
+     * portal's set did not reach the mirror and the mirror's set did not reach
+     * back — one gate, both symptoms, and *sits frozen* is this file's own name
+     * for it.
+     *
+     * Keeping the work down is now left to the two things that are actually
+     * about work: the frustum test in `reflections.ts`, which is what visibility
+     * really is, and `PORTAL_RENDER_BUDGET`, which is what a budget really is.
+     * This stays as a filter rather than being deleted because reachability
+     * still excludes something real — a room in a different connected piece of
+     * the plan, or one that can only be got to through a portal, is genuinely
+     * not on the other side of this opening.
      */
     seenFrom: (slug: string) => string[];
     /**
@@ -81,17 +106,22 @@ function readCarriedOn(level: Level): Topology['carriedOn'] {
     };
 }
 
-/** Each room, plus whatever an open doorway lets it see. */
+/** Each room, plus everywhere an open doorway eventually leads. */
 function readRoomsSeenFrom(level: Level): Map<string, string[]> {
-    const roomsSeenFrom = new Map<string, string[]>();
+    /** Which rooms each room shares an open boundary with. */
+    const openTo = new Map<string, Set<string>>();
 
     for (const sector of level.sectors) {
-        roomsSeenFrom.set(sector.slug, [sector.slug]);
+        openTo.set(sector.slug, new Set<string>());
     }
 
     for (const edge of edgesOf(level.sectors)) {
         const { sector, beyond } = edge;
 
+        // Solid from either side is solid, the same reading the wall builder
+        // and the nav graph both make. A portal mouth is `beyond === null` and
+        // so is not a way through here — a portal pane already carries the room
+        // on its far side as its own starting point.
         if (
             beyond === null ||
             edge.from.blocks ||
@@ -100,16 +130,30 @@ function readRoomsSeenFrom(level: Level): Map<string, string[]> {
             continue;
         }
 
-        for (const [from, to] of [
-            [sector.slug, beyond.slug],
-            [beyond.slug, sector.slug],
-        ]) {
-            const seen = roomsSeenFrom.get(from);
+        openTo.get(sector.slug)?.add(beyond.slug);
+        openTo.get(beyond.slug)?.add(sector.slug);
+    }
 
-            if (seen !== undefined && !seen.includes(to)) {
-                seen.push(to);
+    const roomsSeenFrom = new Map<string, string[]>();
+
+    // One flood per room rather than one flood per connected piece shared out
+    // among its rooms. The answer is the same either way — reachability is
+    // symmetric — and the levels this runs on have tens of rooms, once, at
+    // build. Worth revisiting on a level with thousands.
+    for (const sector of level.sectors) {
+        const seen = new Set<string>([sector.slug]);
+        const queue = [sector.slug];
+
+        while (queue.length > 0) {
+            for (const next of openTo.get(queue.shift() as string) ?? []) {
+                if (!seen.has(next)) {
+                    seen.add(next);
+                    queue.push(next);
+                }
             }
         }
+
+        roomsSeenFrom.set(sector.slug, [...seen]);
     }
 
     return roomsSeenFrom;
