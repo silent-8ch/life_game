@@ -6,15 +6,10 @@ import { createActors } from '@/lib/engine/actors';
 import { buildLevel } from '@/lib/engine/build-level';
 import { moveWithCollisions } from '@/lib/engine/collision';
 import {
-    BACKGROUND_COLOR,
     EYE_HEIGHT,
-    FAR_PLANE,
-    FIELD_OF_VIEW,
     MAX_FRAME_SECONDS,
     MAX_PITCH,
     MOUSE_SENSITIVITY,
-    NEAR_PLANE,
-    PIXEL_SCALE,
     PLAYER_RADIUS,
     REACH,
     RUN_SPEED,
@@ -40,7 +35,7 @@ import {
     scanRowsOf,
     wantsScan,
 } from '@/lib/engine/scan';
-import { boundsOf, sectorAt } from '@/lib/engine/sectors';
+import { sectorAt } from '@/lib/engine/sectors';
 import { createSky } from '@/lib/engine/sky';
 import { describeSpot, readingOf } from '@/lib/engine/snapshot';
 import { createMagic } from '@/lib/engine/spells';
@@ -51,6 +46,7 @@ import {
 } from '@/lib/engine/sprite-actor';
 import { createTextureLibrary } from '@/lib/engine/textures';
 import { createTouchControls, wantsTouchControls } from '@/lib/engine/touch';
+import { createView } from '@/lib/engine/view';
 import { cn } from '@/lib/utils';
 import type { Level, LevelThing } from '@/types';
 
@@ -73,9 +69,6 @@ type LevelViewportProps = {
 
 /** The one of them who can do magic. */
 const WIZARD = 'william';
-
-const FOG_NEAR = 8;
-const FOG_FAR = 60;
 
 const FORWARD_KEYS = ['KeyW', 'ArrowUp'];
 const BACKWARD_KEYS = ['KeyS', 'ArrowDown'];
@@ -174,14 +167,16 @@ export default function LevelViewport({
                 ? createProbeBackdrop()
                 : null;
 
-        const scene = new THREE.Scene();
-
-        if (probe === null) {
-            scene.background = new THREE.Color(BACKGROUND_COLOR);
-            scene.fog = new THREE.Fog(BACKGROUND_COLOR, FOG_NEAR, FOG_FAR);
-        } else {
-            scene.background = probe.texture;
-        }
+        // The scene, the camera and the renderer, and how far this level has to
+        // be seen across. All of it follows from the level and from whether
+        // this is a debug run.
+        const {
+            scene,
+            camera,
+            renderer,
+            resize,
+            dispose: disposeView,
+        } = createView(level, container, probe);
 
         const textures = createTextureLibrary();
         const built = buildLevel(level, textures);
@@ -245,41 +240,6 @@ export default function LevelViewport({
             };
         }
 
-        // How far the camera has to be able to see. FAR_PLANE is what an
-        // ordinary level needs, and it is kept as tight as that on purpose:
-        // walls sit a centimetre apart where they are inset, and the further
-        // the far plane goes the less depth there is to tell them apart with.
-        //
-        // But somebody who makes a person a hundred metres tall would rather
-        // see all of them than keep the precision, and the far plane is what
-        // was cutting the top off. So it opens up exactly as far as the level
-        // asks and no further.
-        const reach = (() => {
-            const bounds = boundsOf(level.sectors);
-            const across = Math.hypot(
-                bounds.maxX - bounds.minX,
-                bounds.maxZ - bounds.minZ,
-            );
-            const tallest = level.things.reduce(
-                (most, thing) => Math.max(most, thing.height),
-                0,
-            );
-            const highest = level.sectors.reduce(
-                (most, sector) => Math.max(most, sector.ceilingHeight),
-                0,
-            );
-
-            return Math.max(FAR_PLANE, across + tallest * 1.2 + highest + 10);
-        })();
-
-        const camera = new THREE.PerspectiveCamera(
-            FIELD_OF_VIEW,
-            1,
-            NEAR_PLANE,
-            reach,
-        );
-        camera.rotation.order = 'YXZ';
-
         const sky =
             level.sky === null || probe !== null ? null : createSky(level.sky);
 
@@ -314,31 +274,6 @@ export default function LevelViewport({
         const thingsBySlug = new Map(
             level.things.map((thing) => [thing.slug, thing]),
         );
-
-        // Smoothing happens inside the small buffer, before it is blown up.
-        // The picture stays as coarse as it was — the edges within it just stop
-        // climbing in steps. Turning it off is a matter of PIXEL_SCALE, which
-        // is what decides how coarse the picture is in the first place.
-        const renderer = new THREE.WebGLRenderer({
-            // Antialiasing blends a one-pixel sliver into its neighbours, and a
-            // blended colour matches nothing in the legend. Debug wants the
-            // hard edges, and the buffer kept so a frame can be read back.
-            antialias: probe === null,
-            preserveDrawingBuffer: probe !== null,
-            // Depth kept as a logarithm rather than spread evenly. The far
-            // plane opens up as far as a level asks — somebody a thousand
-            // metres tall wants a thousand metres of it — and spread evenly
-            // there is not enough left over to tell two walls a centimetre
-            // apart from each other. It costs the early depth test, which is
-            // a fair price for walls that do not shimmer.
-            logarithmicDepthBuffer: true,
-        });
-        renderer.setPixelRatio(1 / PIXEL_SCALE);
-        renderer.domElement.style.width = '100%';
-        renderer.domElement.style.height = '100%';
-        renderer.domElement.style.imageRendering = 'pixelated';
-        renderer.domElement.style.display = 'block';
-        container.appendChild(renderer.domElement);
 
         // Now that there is a renderer to ask, turn on anisotropic filtering.
         textures.useRenderer(renderer);
@@ -407,18 +342,6 @@ export default function LevelViewport({
 
         const isLocked = (): boolean =>
             touch ? started : document.pointerLockElement === container;
-
-        const resize = (): void => {
-            const { clientWidth, clientHeight } = container;
-
-            if (clientWidth === 0 || clientHeight === 0) {
-                return;
-            }
-
-            renderer.setSize(clientWidth, clientHeight, false);
-            camera.aspect = clientWidth / clientHeight;
-            camera.updateProjectionMatrix();
-        };
 
         const setFocus = (slug: string | null): void => {
             if (slug === focusedSlug) {
@@ -1042,7 +965,7 @@ export default function LevelViewport({
             hands.dispose();
             built.dispose();
             textures.dispose();
-            renderer.dispose();
+            disposeView();
             renderer.domElement.remove();
         };
         // touch is settled once, when the component first mounts, so listing it
