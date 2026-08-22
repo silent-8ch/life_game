@@ -364,12 +364,50 @@ export default function MapView({
                     context.save();
                     context.translate(x, y);
                     context.rotate((held.angle * Math.PI) / 180);
-                    context.strokeRect(
-                        (-held.width / 2) * at.scale,
-                        (-held.depth / 2) * at.scale,
-                        held.width * at.scale,
-                        held.depth * at.scale,
-                    );
+
+                    // How it is drawn, legible in plan without picking it up.
+                    // A cross shows the planes it actually stands, at their
+                    // real angles, so a row of them reads at a glance; a
+                    // billboard shows a ring, because it has no angle of its
+                    // own and turning it does nothing.
+                    if (held.render === 'cross') {
+                        const reach =
+                            (Math.max(held.width, held.depth) / 2) * at.scale;
+                        const planes = held.planeCount === 3 ? 3 : 2;
+
+                        for (let plane = 0; plane < planes; plane++) {
+                            const turn = (Math.PI * plane) / planes;
+
+                            context.beginPath();
+                            context.moveTo(
+                                Math.cos(turn) * -reach,
+                                Math.sin(turn) * -reach,
+                            );
+                            context.lineTo(
+                                Math.cos(turn) * reach,
+                                Math.sin(turn) * reach,
+                            );
+                            context.stroke();
+                        }
+                    } else if (held.render === 'billboard') {
+                        context.beginPath();
+                        context.arc(
+                            0,
+                            0,
+                            (Math.max(held.width, held.depth) / 2) * at.scale,
+                            0,
+                            Math.PI * 2,
+                        );
+                        context.stroke();
+                    } else {
+                        context.strokeRect(
+                            (-held.width / 2) * at.scale,
+                            (-held.depth / 2) * at.scale,
+                            held.width * at.scale,
+                            held.depth * at.scale,
+                        );
+                    }
+
                     context.restore();
                 }
 

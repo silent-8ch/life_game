@@ -11,6 +11,14 @@ type TexturePickerProps = {
     value: string | null;
     textures: string[];
     onChange: (texture: string | null) => void;
+    /**
+     * Which folder under `public/sprites` the thumbnails come from.
+     *
+     * Props live apart from the tiling textures — they carry alpha, have real
+     * aspect ratios and never repeat — so the same picker serves both lists by
+     * being told where to look.
+     */
+    folder?: string;
 };
 
 export default function TexturePicker({
@@ -18,6 +26,7 @@ export default function TexturePicker({
     value,
     textures,
     onChange,
+    folder = 'textures',
 }: TexturePickerProps) {
     const [open, setOpen] = useState(false);
     const [search, setSearch] = useState('');
@@ -43,7 +52,7 @@ export default function TexturePicker({
                     </span>
                 ) : (
                     <img
-                        src={`/sprites/textures/${value}.png`}
+                        src={`/sprites/${folder}/${value}.png`}
                         alt=""
                         className="h-8 w-8 shrink-0 rounded object-cover"
                     />
@@ -96,7 +105,7 @@ export default function TexturePicker({
                                 )}
                             >
                                 <img
-                                    src={`/sprites/textures/${texture}.png`}
+                                    src={`/sprites/${folder}/${texture}.png`}
                                     alt={texture}
                                     className="h-full w-full object-cover"
                                 />
