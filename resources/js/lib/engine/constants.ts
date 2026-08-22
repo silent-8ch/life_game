@@ -62,6 +62,27 @@ export const WADE_DEPTH = 0.35;
 /** How fast the eye catches up with a change of floor height. */
 export const STEP_SMOOTHING = 12;
 
+/**
+ * How fast a fall gains speed, in metres per second per second.
+ *
+ * Earth's, because the game is a house. Most shooters run two or three times
+ * this so a jump feels crisp, and that choice belongs to the task that adds a
+ * jump — until then there is nothing to tune against, and a made-up number
+ * would be a decision made while building something else.
+ */
+export const GRAVITY = 9.81;
+
+/**
+ * The fastest a fall gets, in metres per second.
+ *
+ * Roughly what a person reaches falling belly-down through air. Nothing in any
+ * level is tall enough to approach it; it is here so that a bug which lets
+ * somebody fall out of the world does so at a speed the arithmetic below still
+ * holds for, rather than accelerating without limit until a single frame's step
+ * overflows into something that stops behaving like a number.
+ */
+export const TERMINAL_FALL = 55;
+
 /** Radius of the sky drum. Far enough to read as distance, near enough to draw. */
 export const SKY_RADIUS = 90;
 

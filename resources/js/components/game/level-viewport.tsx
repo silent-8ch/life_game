@@ -11,6 +11,7 @@ import type { HeldItem } from '@/lib/engine/hands';
 import { createInput } from '@/lib/engine/input';
 import {
     aimCamera,
+    fallPlayer,
     settleEye,
     spawnPlayer,
     turnPlayer,
@@ -339,12 +340,8 @@ export default function LevelViewport({
                 lid.mesh.visible = lid.room === standingIn?.slug;
             }
 
+            fallPlayer(player, standingIn, seconds);
             settleEye(player, standingIn, seconds);
-
-            const floor =
-                standingIn === null
-                    ? 0
-                    : floorAt(standingIn, player.x, player.z);
 
             // People wander towards a spot picked with Math.random(), so a scan
             // that let them walk would read back a different picture every run
@@ -367,9 +364,14 @@ export default function LevelViewport({
                 focusedSlug !== null,
             );
 
+            // The body stands where the feet are rather than on the floor
+            // underneath them, which are the same thing until somebody is in
+            // the air and then are not. A mirror is the only place both are on
+            // screen at once, and it is exactly where a body left standing on
+            // the floor while the camera falls past it would show.
             playerSprite.place(
                 player.x,
-                floor,
+                player.y,
                 player.z,
                 player.yaw,
                 player.walked,
