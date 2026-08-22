@@ -23,13 +23,12 @@ import { createPortals } from '@/lib/engine/portals';
 import {
     createProbeBackdrop,
     paintWalls,
-    scanRow,
     spotFromSearch,
     wantsProbeBackdrop,
 } from '@/lib/engine/probe-backdrop';
 import { prepareReflections } from '@/lib/engine/reflections';
 import {
-    afterAFreshFrame,
+    armConsoleScan,
     publishScan,
     readNow,
     scanRowsOf,
@@ -37,7 +36,7 @@ import {
 } from '@/lib/engine/scan';
 import { sectorAt } from '@/lib/engine/sectors';
 import { createSky } from '@/lib/engine/sky';
-import { describeSpot, readingOf } from '@/lib/engine/snapshot';
+import { describeSpot, postSnapshot, readingOf } from '@/lib/engine/snapshot';
 import { createMagic } from '@/lib/engine/spells';
 import {
     createSpriteActor,
@@ -185,59 +184,7 @@ export default function LevelViewport({
         const legend = probe === null ? [] : paintWalls(built.group);
 
         if (probe !== null) {
-            // The legend goes to the console rather than on screen: it is one
-            // line per wall in the level, which is far too much to read over
-            // the view, and it only has to be looked up once a sliver has been
-            // caught in a picture.
-            console.log(
-                `[debug] ${legend.length} walls painted. Read a colour off the picture, round each channel to the nearest of 0/51/102/153/204/255, and look it up here.`,
-            );
-            console.table(
-                legend.map((wall) => ({
-                    css: wall.css,
-                    room: wall.sector,
-                    beyond: wall.beyond,
-                    corner: wall.index,
-                    from: `${wall.from.x},${wall.from.z}`,
-                    to: `${wall.to.x},${wall.to.z}`,
-                })),
-            );
-
-            // Hung on the window on purpose. Reading a row back names every
-            // surface across the view and the columns each one holds, which
-            // settles an argument about a two-pixel sliver that no amount of
-            // squinting at a screenshot will.
-            (
-                window as unknown as {
-                    scanRow?: (row?: number) => unknown;
-                }
-            ).scanRow = async (row?: number) => {
-                // The drawing buffer is only guaranteed to hold this frame's
-                // picture immediately after it was drawn. Read it at any other
-                // moment and it can come back as whatever was last composited,
-                // which reads as one flat colour across the whole row and looks
-                // exactly like a wall filling the view. Wait for a fresh frame.
-                // Raced against a timer, because the level stops drawing while
-                // it is paused and waiting on a frame that will never come
-                // would hang whoever asked rather than telling them.
-                await afterAFreshFrame();
-
-                return scanRow(
-                    renderer.domElement,
-                    legend,
-                    row ?? Math.floor(renderer.domElement.height / 2),
-                )
-                    .filter((run) => run.to - run.from > 1)
-                    .map((run) => ({
-                        columns: `${run.from}-${run.to}`,
-                        width: run.to - run.from,
-                        css: run.css,
-                        wall:
-                            run.wall === null
-                                ? 'unpainted (floor, ceiling, sprite or pane)'
-                                : `${run.wall.sector} #${run.wall.index} -> ${run.wall.beyond ?? 'outside'} (${run.wall.from.x},${run.wall.from.z})-(${run.wall.to.x},${run.wall.to.z})`,
-                    }));
-            };
+            armConsoleScan(renderer.domElement, legend);
         }
 
         const sky =
@@ -601,48 +548,18 @@ export default function LevelViewport({
                 );
             };
 
-            // Laravel wants the forgery token, and this page carries none in
-            // its markup — only the cookie it sets on every response. Read it
-            // back out and hand it over the way Laravel expects.
-            const guard = document.cookie
-                .split('; ')
-                .find((crumb) => crumb.startsWith('XSRF-TOKEN='));
+            void postSnapshot(spot, store().url).then((what) => {
+                if ('failed' in what) {
+                    failed(what.failed);
 
-            void fetch(store().url, {
-                method: 'POST',
-                credentials: 'same-origin',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Accept: 'application/json',
-                    ...(guard === undefined
-                        ? {}
-                        : {
-                              'X-XSRF-TOKEN': decodeURIComponent(
-                                  guard.slice('XSRF-TOKEN='.length),
-                              ),
-                          }),
-                },
-                body: JSON.stringify(spot),
-            })
-                .then(async (answer) => {
-                    if (!answer.ok) {
-                        failed(`the server said ${answer.status}`);
+                    return;
+                }
 
-                        return;
-                    }
-
-                    const said: unknown = await answer.json().catch(() => null);
-                    const name =
-                        said !== null &&
-                        typeof said === 'object' &&
-                        'saved' in said
-                            ? String((said as { saved: unknown }).saved)
-                            : 'a snapshot';
-
-                    show(`Saved as ${name}`);
-                    callbacks.current.onMessage?.(`Snapshot saved as ${name}.`);
-                })
-                .catch(() => failed('the server did not answer'));
+                show(`Saved as ${what.saved}`);
+                callbacks.current.onMessage?.(
+                    `Snapshot saved as ${what.saved}.`,
+                );
+            });
         };
 
         const examine = (): void => {
