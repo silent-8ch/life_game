@@ -1,4 +1,6 @@
-import { nearestLevel, scanRow } from '@/lib/engine/probe-backdrop';
+import type * as THREE from 'three';
+import type { PortalSurface } from '@/lib/engine/portal-surface';
+import { isBackdrop, nearestLevel, scanRow } from '@/lib/engine/probe-backdrop';
 import type { ScanRun, WallPaint } from '@/lib/engine/probe-backdrop';
 
 /**
@@ -66,6 +68,12 @@ export type ScanReading = {
 
 export type ScanCapture = {
     level: string;
+    /**
+     * What each portal pane is holding, when asked for. Not the same picture as
+     * the frame: a hugged pane covers the screen with the far camera's whole
+     * frustum, so the canvas cannot answer what the pane itself contains.
+     */
+    panes?: { home: string; onto: string[]; reading: ScanReading | null }[];
     /** Where the camera stood, exactly as `?at=` was given it. */
     spot: string;
     width: number;
@@ -222,6 +230,97 @@ export function armConsoleScan(
                               : `${run.wall.sector} #${run.wall.index} -> ${run.wall.beyond ?? 'outside'} (${run.wall.from.x},${run.wall.from.z})-(${run.wall.to.x},${run.wall.to.z})`,
                 }));
         };
+}
+
+/**
+ * Reads a row of what a pane is actually holding, rather than of what reached
+ * the screen.
+ *
+ * These are not the same picture and the difference is the whole reason this
+ * exists. A pane within `PANE_CLEARANCE` of the eye is squared up and blown up
+ * to cover the view, so the canvas shows the far camera's entire frustum rather
+ * than the mouth's silhouette — read the canvas and you learn what the player
+ * sees, which at that range is not what the portal holds.
+ *
+ * Decoded against the same legend, so a run names the wall it is, or the
+ * backdrop, in a pane's own texture.
+ */
+/**
+ * A render target's pixel, brought into the space the legend is written in.
+ *
+ * The canvas is read back already encoded for display; a render target is not,
+ * so the same colour comes out of the two with different bytes. Read one as if
+ * it were the other and every colour lands on the wrong legend entry — the
+ * backdrop check decoded as `room-2` and `room-3` before this, which is the
+ * fabrication bug over again in the instrument built to investigate it.
+ */
+function encoded(channel: number): number {
+    const value = channel / 255;
+    const shown =
+        value <= 0.0031308
+            ? value * 12.92
+            : 1.055 * Math.pow(value, 1 / 2.4) - 0.055;
+
+    return Math.round(shown * 255);
+}
+
+export function readPane(
+    renderer: THREE.WebGLRenderer,
+    pane: PortalSurface,
+    legend: WallPaint[],
+    depth = 0,
+    at = 0.5,
+): ScanReading | null {
+    const target = pane.peek(depth);
+
+    if (target === null) {
+        return null;
+    }
+
+    const row = Math.floor(target.height * at);
+    const pixels = new Uint8Array(target.width * 4);
+
+    renderer.readRenderTargetPixels(target, 0, row, target.width, 1, pixels);
+
+    const byColour = new Map<string, WallPaint>();
+
+    for (const wall of legend) {
+        byColour.set(wall.colour.join(','), wall);
+    }
+
+    const runs: ScanRun[] = [];
+
+    for (let column = 0; column < target.width; column++) {
+        const key = [
+            nearestLevel(encoded(pixels[column * 4])),
+            nearestLevel(encoded(pixels[column * 4 + 1])),
+            nearestLevel(encoded(pixels[column * 4 + 2])),
+        ].join(',');
+
+        const last = runs[runs.length - 1];
+
+        if (last !== undefined && last.css === key) {
+            last.to = column + 1;
+
+            continue;
+        }
+
+        runs.push({
+            from: column,
+            to: column + 1,
+            css: key,
+            wall: byColour.get(key) ?? null,
+            ...(isBackdrop(key) ? { backdrop: true } : {}),
+        });
+    }
+
+    return {
+        row,
+        at: Number(at.toFixed(3)),
+        runs: runs
+            .filter((run) => run.to - run.from >= NARROWEST)
+            .map(describe),
+    };
 }
 
 /**

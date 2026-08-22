@@ -254,6 +254,18 @@ export type PortalSurface = {
         z: number;
         yaw: number;
     };
+    /**
+     * The picture this pane is holding at a depth, or null if nothing has ever
+     * been drawn into it.
+     *
+     * For debugging only, and it exists because there was no way to see it. A
+     * hugged pane is blown up to cover the whole screen, so what reaches the
+     * canvas is the far camera's entire frustum rather than the mouth's
+     * silhouette — which means reading the canvas cannot tell you what the pane
+     * itself holds. Two sessions spent an evening arguing about the contents of
+     * a buffer neither could look at.
+     */
+    peek: (depth: number) => THREE.WebGLRenderTarget | null;
     dispose: () => void;
 };
 
@@ -633,6 +645,12 @@ export function createPortalSurface(
             mesh.quaternion.copy(camera.quaternion);
             mesh.scale.set((tall * camera.aspect) / size.x, tall / size.y, 1);
             mesh.updateMatrixWorld(true);
+        },
+
+        peek: (depth) => {
+            const at = indexOf(depth);
+
+            return drawn[at] ? targets[at] : null;
         },
 
         show: (depth, shrink = 1) => {
