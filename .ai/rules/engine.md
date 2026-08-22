@@ -241,3 +241,6 @@ All six `-edge-open` and `-edge` cards were regenerated independently as LEFT ha
 
 ## Open edge hands use the right-side orientation
 The regenerated `-edge-open` cards look correct only when their unmirrored drawing is assigned to the right side (`DRAWN.walk = 1`) for all six people. Their edge-on fists remain assigned left (`DRAWN.run = -1`). This visual engine mapping takes precedence over the handedness wording used during generation.
+
+## Open edge orientation is per person
+For regenerated `-edge-open` cards, the unmirrored side is Paul/Wade/Luke = left (`walk: -1`) and Krystal/Luna/William = right (`walk: 1`). All regenerated edge fists currently use left (`run: -1`). These values were checked in-game; do not infer them from prompt handedness.

@@ -62,7 +62,7 @@ const RAISE_RATE = 7;
  *
  * There is an entry per pose because each card's visible orientation must match
  * the side that receives its unmirrored drawing. The regenerated open edge
- * cards belong on the right; the fists and back poses keep their own mapping.
+ * cards differ by person; the fists and back poses keep their own mapping.
  *
  * Read off the artwork by measuring which side carries the finger outlines; the
  * thumb is the other one. An edge-on hand hides most of its thumb, so treat
@@ -91,11 +91,11 @@ const RAISE_RATE = 7;
  * These twelve were settled by looking at the cards.
  */
 const DRAWN: Record<string, Record<Pose, 1 | -1>> = {
-    paul: { walk: 1, run: -1, reach: -1, grip: 1 },
+    paul: { walk: -1, run: -1, reach: -1, grip: 1 },
     krystal: { walk: 1, run: -1, reach: -1, grip: 1 },
     luna: { walk: 1, run: -1, reach: -1, grip: 1 },
-    wade: { walk: 1, run: -1, reach: -1, grip: 1 },
-    luke: { walk: 1, run: -1, reach: -1, grip: 1 },
+    wade: { walk: -1, run: -1, reach: -1, grip: 1 },
+    luke: { walk: -1, run: -1, reach: -1, grip: 1 },
     william: { walk: 1, run: -1, reach: -1, grip: 1 },
 };
 
