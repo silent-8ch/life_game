@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import InteractionPanel from '@/components/editor/interaction-panel';
 import TexturePicker from '@/components/editor/texture-picker';
-import { wallFacts } from '@/lib/editor/walls';
+import { wallFacts, wallLabels } from '@/lib/editor/walls';
 import { cn } from '@/lib/utils';
 import type {
     LevelAssets,
@@ -362,6 +362,96 @@ function DrawingPanel({
     );
 }
 
+/**
+ * A floor or ceiling that is not level.
+ *
+ * A slope is a rise per metre measured into the room from a chosen wall, so
+ * both halves are needed to mean anything: picking Flat clears the rise as
+ * well, since a rise hinged on nothing is a number that does nothing.
+ *
+ * The heights above read differently once this is set — a room's floor height
+ * becomes its height *along the hinge wall*, not everywhere — so the panel says
+ * so rather than leaving it to be worked out from the geometry.
+ */
+function SlopePanel({
+    sector,
+    onChangeSector,
+}: {
+    sector: Sector;
+    onChangeSector: (change: Partial<Sector>) => void;
+}) {
+    const walls = wallLabels(sector);
+
+    const surface = (
+        name: string,
+        slope: number,
+        hinge: number | null,
+        set: (slope: number, hinge: number | null) => void,
+    ) => (
+        <div className="grid grid-cols-2 gap-2">
+            <Field label={`${name} hinged on`}>
+                <select
+                    value={hinge ?? ''}
+                    onChange={(event) =>
+                        event.target.value === ''
+                            ? set(0, null)
+                            : set(slope, Number(event.target.value))
+                    }
+                    className={inputClass}
+                >
+                    <option value="">Flat</option>
+                    {walls.map((label, index) => (
+                        <option key={label} value={index}>
+                            {label}
+                        </option>
+                    ))}
+                </select>
+            </Field>
+            <Field label="Rise per metre">
+                <NumberInput
+                    step="0.05"
+                    min={-8}
+                    max={8}
+                    value={slope}
+                    onChange={(next) => set(next, hinge)}
+                />
+            </Field>
+        </div>
+    );
+
+    return (
+        <div className="flex flex-col gap-2 border-t border-slate-800 pt-3">
+            <span className="text-[11px] tracking-wider text-slate-400 uppercase">
+                Slopes
+            </span>
+
+            {surface(
+                'Floor',
+                sector.floorSlope,
+                sector.floorSlopeEdge,
+                (floorSlope, floorSlopeEdge) =>
+                    onChangeSector({ floorSlope, floorSlopeEdge }),
+            )}
+
+            {surface(
+                'Ceiling',
+                sector.ceilingSlope,
+                sector.ceilingSlopeEdge,
+                (ceilingSlope, ceilingSlopeEdge) =>
+                    onChangeSector({ ceilingSlope, ceilingSlopeEdge }),
+            )}
+
+            {(sector.floorSlope !== 0 || sector.ceilingSlope !== 0) && (
+                <p className="text-[11px] text-slate-500">
+                    Floor and ceiling above are the heights along the hinge
+                    wall. Hinge two rooms on the wall they share, at the same
+                    height, and they meet flush.
+                </p>
+            )}
+        </div>
+    );
+}
+
 export default function Inspector({
     level,
     assets,
@@ -418,6 +508,8 @@ export default function Inspector({
         const ceiling = shared((sector) => sector.ceilingHeight);
         const sky = shared((sector) => sector.isSky);
         const water = shared((sector) => sector.isWater);
+        const floorRise = shared((sector) => sector.floorSlope);
+        const ceilingRise = shared((sector) => sector.ceilingSlope);
 
         return (
             <div className="flex h-full flex-col gap-5 overflow-y-auto p-4">
@@ -448,6 +540,42 @@ export default function Inspector({
                                 mixed={ceiling === undefined}
                                 onChange={(next) =>
                                     onChangeRooms({ ceilingHeight: next })
+                                }
+                            />
+                        </Field>
+                    </div>
+
+                    {/*
+                        Rise only, with no hinge picker. A hinge is an index
+                        into one room's own walls, and the same number means a
+                        different wall in each of them — so offering it across a
+                        mixed selection would set several rooms sloping in
+                        directions nobody chose. The rise is safe because it is
+                        the same quantity everywhere, and it only does anything
+                        to rooms that already have a hinge.
+                    */}
+                    <div className="grid grid-cols-2 gap-2">
+                        <Field label="Floor rise">
+                            <NumberInput
+                                step="0.05"
+                                min={-8}
+                                max={8}
+                                value={floorRise ?? 0}
+                                mixed={floorRise === undefined}
+                                onChange={(next) =>
+                                    onChangeRooms({ floorSlope: next })
+                                }
+                            />
+                        </Field>
+                        <Field label="Ceiling rise">
+                            <NumberInput
+                                step="0.05"
+                                min={-8}
+                                max={8}
+                                value={ceilingRise ?? 0}
+                                mixed={ceilingRise === undefined}
+                                onChange={(next) =>
+                                    onChangeRooms({ ceilingSlope: next })
                                 }
                             />
                         </Field>
@@ -1084,6 +1212,11 @@ export default function Inspector({
                                 />
                             </Field>
                         </div>
+
+                        <SlopePanel
+                            sector={sector}
+                            onChangeSector={onChangeSector}
+                        />
 
                         <div className="flex gap-2">
                             <Toggle

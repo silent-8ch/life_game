@@ -23,7 +23,7 @@ use Symfony\Component\Process\Process;
 function wallAnswer(string $body): array
 {
     $script = <<<JS
-        const { wallFacts } = await import('@/lib/editor/walls.ts');
+        const { wallFacts, wallLabels } = await import('@/lib/editor/walls.ts');
 
         const corner = (x, z, extra = {}) => ({
             x, z, wallTexture: null, blocks: false,
@@ -228,4 +228,50 @@ it('answers rather than throws when the selection points at nothing', function (
         ->and($answer['goneRoom']['portalEnds'])->toEqual(0)
         ->and($answer['goneWall']['portalEnds'])->toEqual(0)
         ->and($answer['goneWall']['openDoorway'])->toBeFalse();
+});
+
+it('names each wall by the side of the room it is on', function (): void {
+    // "Wall 3" tells nobody anything, and picking the wall a floor hinges on is
+    // the whole of authoring a slope. North is -z, the way the camera looks at
+    // a yaw of zero.
+    $answer = wallAnswer(<<<'JS'
+        // south runs (0,0) (8,0) (8,4) (0,4) — anticlockwise in x/z.
+        const anticlockwise = wallLabels(level.sectors[0]);
+
+        // The same square wound the other way. The walls are in a different
+        // order but each is still on the same side of the room, which is what
+        // a label has to survive.
+        const flipped = {
+            ...level.sectors[0],
+            points: [...level.sectors[0].points].reverse(),
+        };
+
+        process.stdout.write(JSON.stringify({
+            anticlockwise,
+            clockwise: wallLabels(flipped),
+        }));
+        JS);
+
+    // The room spans z 0..4, so its wall at z = 0 is on the *north* side of it
+    // — north being -z. Worth spelling out, because the fixture is called
+    // "south" for where it sits relative to the other room, and reading that
+    // across to the wall names is the obvious mistake. This assertion had it
+    // backwards on the first pass.
+    expect($answer['anticlockwise'])->toBe([
+        '1 — north', '2 — east', '3 — south', '4 — west',
+    ]);
+
+    // Wound the other way the walls come in a different order, but every one of
+    // the four compass points is still named exactly once. Reading the winding
+    // wrong would give all four the opposite name and still look tidy.
+    expect($answer['clockwise'])->toHaveCount(4);
+
+    $sides = array_map(
+        fn (string $label): string => explode(' — ', $label)[1],
+        $answer['clockwise']
+    );
+
+    sort($sides);
+
+    expect($sides)->toBe(['east', 'north', 'south', 'west']);
 });

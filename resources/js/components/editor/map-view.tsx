@@ -15,6 +15,7 @@ import {
     toScreen,
     toWorld,
     twinEdge,
+    windingOf,
 } from '@/lib/editor/map';
 import type { Point, Selection, View } from '@/lib/editor/map';
 import { boundsOf } from '@/lib/engine/sectors';
@@ -336,6 +337,60 @@ export default function MapView({
                     labelX,
                     labelY + 13,
                 );
+
+                // An arrow on the hinge wall, pointing uphill. Without it a
+                // slope is invisible in plan — the heights shown above are the
+                // heights along the hinge and nowhere else, so two rooms
+                // reading "0.0 → 3.0" can be quite different rooms.
+                if (sector.floorSlope !== 0 && sector.floorSlopeEdge !== null) {
+                    const points = sector.points;
+                    const hinge = points[sector.floorSlopeEdge];
+                    const next =
+                        points[(sector.floorSlopeEdge + 1) % points.length];
+
+                    if (hinge !== undefined && next !== undefined) {
+                        const spanX = next.x - hinge.x;
+                        const spanZ = next.z - hinge.z;
+                        const length = Math.hypot(spanX, spanZ) || 1;
+
+                        // Into the room, and reversed when the floor falls
+                        // away, so the arrow always points up the slope.
+                        const turn = windingOf(points) > 0 ? 1 : -1;
+                        const rising = sector.floorSlope > 0 ? 1 : -1;
+                        const intoX = (-spanZ / length) * turn * rising;
+                        const intoZ = (spanX / length) * turn * rising;
+
+                        const [tailX, tailY] = toScreen(
+                            at,
+                            (hinge.x + next.x) / 2,
+                            (hinge.z + next.z) / 2,
+                        );
+                        const reach = Math.min(28, at.scale * 0.8);
+                        const headX = tailX + intoX * reach;
+                        const headY = tailY + intoZ * reach;
+
+                        context.strokeStyle = COLORS.label;
+                        context.lineWidth = 1;
+                        context.beginPath();
+                        context.moveTo(tailX, tailY);
+                        context.lineTo(headX, headY);
+                        context.stroke();
+
+                        const wing = 4;
+                        context.beginPath();
+                        context.moveTo(headX, headY);
+                        context.lineTo(
+                            headX - intoX * wing + intoZ * wing,
+                            headY - intoZ * wing - intoX * wing,
+                        );
+                        context.moveTo(headX, headY);
+                        context.lineTo(
+                            headX - intoX * wing - intoZ * wing,
+                            headY - intoZ * wing + intoX * wing,
+                        );
+                        context.stroke();
+                    }
+                }
             });
 
             // Things, so there is something to place rooms around.

@@ -94,3 +94,52 @@ export function wallFacts(level: Level, selection: Selection): WallFacts {
 
     return { twin, across, partner, portalEnds, openDoorway };
 }
+
+/**
+ * A short name for each of a room's walls, for picking one out of a list.
+ *
+ * "Wall 3" tells nobody anything, and a slope is authored by choosing the wall
+ * a floor is hinged on — so the list has to say which wall is which without
+ * making the author count corners round the plan. The compass point is worked
+ * out from the wall's outward normal, which is the side of the room it is on.
+ *
+ * North is -z, the way the camera looks at a yaw of zero.
+ */
+export function wallLabels(sector: Sector): string[] {
+    const points = sector.points;
+    const count = points.length;
+
+    // Which way round the corners run, so "into the room" means into the room.
+    let twiceArea = 0;
+
+    for (let index = 0; index < count; index++) {
+        const point = points[index];
+        const next = points[(index + 1) % count];
+
+        twiceArea += point.x * next.z - next.x * point.z;
+    }
+
+    const turn = twiceArea > 0 ? 1 : -1;
+
+    return points.map((point, index) => {
+        const next = points[(index + 1) % count];
+        const spanX = next.x - point.x;
+        const spanZ = next.z - point.z;
+        const length = Math.hypot(spanX, spanZ) || 1;
+
+        // Outward: the inward normal turned around.
+        const outX = -((-spanZ / length) * turn);
+        const outZ = -((spanX / length) * turn);
+
+        const compass =
+            Math.abs(outZ) > Math.abs(outX)
+                ? outZ < 0
+                    ? 'north'
+                    : 'south'
+                : outX > 0
+                  ? 'east'
+                  : 'west';
+
+        return `${index + 1} — ${compass}`;
+    });
+}
