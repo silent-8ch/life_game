@@ -117,8 +117,65 @@ const FRAGMENT_SHADER = `
     }
 `;
 
-/** Pulls the tilted near plane a hair off the mouth, against seams at the edge. */
+/**
+ * Pulls the tilted near plane a hair off the mouth, against seams at the edge.
+ *
+ * It is not free, and what it costs is the **far** plane. Lengyel's
+ * substitution replaces the third row of the projection outright, so the far
+ * plane afterwards is `row4 - row3` and lands at
+ *
+ *     d / (d / far + bias * (1 - d / far) / 2)
+ *
+ * where `d` is how far the camera stands off the plane it is clipped against.
+ * With `d` small that is `2d / bias`, and it does not depend on `far` at all —
+ * so a level asking for a hundred metres of view gets **sixteen and a half**
+ * when the camera is five centimetres off a mouth, and everything past that
+ * distance is clipped away and shows the background instead.
+ *
+ * That is what Paul saw as *it looks black where it should be a wall*: the
+ * chamber's far wall, twenty-six metres from the pane's camera, at the end of a
+ * sightline through the portal demo's long hall. Standing in that corridor and
+ * looking at the same doorway directly draws it correctly, which is what said
+ * the fault was in the pane's camera rather than in the room.
+ *
+ * So the bias is now the largest one that leaves the far plane where the level
+ * asked for it, and only shrinks below this where it has to — see `biasFor`.
+ */
 const CLIP_BIAS = 0.005;
+
+/**
+ * How much of the level's asked-for view distance the tilt is allowed to cost.
+ *
+ * It has to cost something. Rearranged for the bias, the identity above says
+ * the far plane sits at `far` only when the bias is exactly zero — any nudge at
+ * all pulls it in, and a bias of zero is what the nudge exists to avoid. So
+ * this is the trade written down rather than discovered: keep nine tenths of
+ * the view distance, and spend the tenth on the seam.
+ */
+const FAR_KEPT = 0.9;
+
+/**
+ * The largest bias that still leaves the far plane at `FAR_KEPT` of `far`.
+ *
+ * Solving the identity in `CLIP_BIAS` for a target of `k * far` gives
+ *
+ *     bias = 2 * (1 - k) * off / (k * (far - off))
+ *
+ * which past about a quarter of a metre, at a hundred metres of view, exceeds
+ * `CLIP_BIAS` and changes nothing. Closer in it tightens — which is exactly
+ * where the far plane was being hauled in, and exactly where a seam has the
+ * least room to show anyway.
+ *
+ * Giving up seam margin to keep the far plane is the right way round: a seam is
+ * a line a pixel wide at the rim of an opening, and the alternative is a room
+ * at the end of a sightline not being drawn at all.
+ */
+export function biasFor(off: number, far: number): number {
+    return Math.min(
+        CLIP_BIAS,
+        (2 * (1 - FAR_KEPT) * off) / (FAR_KEPT * Math.max(far - off, off)),
+    );
+}
 
 /**
  * How close the camera may come to the plane it is clipped against before the
@@ -132,14 +189,16 @@ const CLIP_BIAS = 0.005;
  * again by five.
  *
  * It was 0.002, which is smaller than the band that fails, so the band failed.
- * The number is now `NEAR_PLANE`, and it is a derivation rather than a
- * measurement, which is why it is trustworthy in a way the old one was not.
- * The tilt exists to cut away whatever stands between the pane's camera and the
- * mouth — and all of that lies within `d` of the camera, where `d` is the
- * distance being tested. Once `d` is inside the near plane, the ordinary near
- * plane has already clipped every bit of it and the tilt has nothing left to
- * do. So this is not "close enough to get away with": it is the exact distance
- * below which the tilt is redundant.
+ * The number is now `NEAR_PLANE`, on the reasoning that whatever the tilt is
+ * there to cut lies within `d` of the mouth's plane, so once `d` is inside the
+ * near plane the ordinary near plane has already taken most of it.
+ *
+ * **Most, not all** — and the first version of this comment claimed all, which
+ * was wrong. The near plane clips by depth along the view, and the `d` measured
+ * here is a perpendicular distance to a plane: a wall twenty metres off to one
+ * side can be three centimetres in front of the mouth and nowhere near the near
+ * plane. So this is a measured threshold with a reason behind it rather than a
+ * derivation, and it should be read as the first and not the second.
  *
  * What the tilt used to be relied on for at that range, `behind` now does
  * outright by taking the room out of the pass. That is why this can be raised
@@ -184,6 +243,7 @@ export function tiltNearPlaneOnto(
     worldPlane: THREE.Plane,
     cameraWorldInverse: THREE.Matrix4,
     scratch: { plane: THREE.Plane; clip: THREE.Vector4; corner: THREE.Vector4 },
+    bias: number = CLIP_BIAS,
 ): void {
     const { plane, clip, corner } = scratch;
 
@@ -201,7 +261,7 @@ export function tiltNearPlaneOnto(
 
     projection.elements[2] = clip.x;
     projection.elements[6] = clip.y;
-    projection.elements[10] = clip.z + 1 - CLIP_BIAS;
+    projection.elements[10] = clip.z + 1 - bias;
     projection.elements[14] = clip.w;
 }
 
@@ -610,15 +670,15 @@ export function createPortalSurface(
                 options.exitPoint,
             );
 
-            if (
-                Math.abs(exitPlane.distanceToPoint(beyond.position)) >
-                CLIP_MINIMUM
-            ) {
+            const off = Math.abs(exitPlane.distanceToPoint(beyond.position));
+
+            if (off > CLIP_MINIMUM) {
                 tiltNearPlaneOnto(
                     beyond.projectionMatrix,
                     exitPlane,
                     beyond.matrixWorldInverse,
                     scratch,
+                    biasFor(off, camera.far),
                 );
             }
 
