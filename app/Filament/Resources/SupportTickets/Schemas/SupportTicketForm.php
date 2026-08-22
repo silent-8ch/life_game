@@ -37,7 +37,7 @@ class SupportTicketForm
                 ->description('Paste the address into the game to stand there yourself.')
                 ->schema([
                     TextEntry::make('level_slug')->label('Level'),
-                    TextEntry::make('standing_in')
+                    TextEntry::make('standing_in_slug')
                         ->label('Room')
                         ->placeholder('outside every room'),
                     TextEntry::make('at')

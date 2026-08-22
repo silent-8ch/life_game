@@ -27,10 +27,12 @@ use Illuminate\Support\Carbon;
  * @property float|null $at_eye
  * @property float|null $at_yaw
  * @property float|null $at_pitch
- * @property string|null $standing_in
+ * @property string|null $standing_in_slug
+ * @property array<string, mixed>|null $standing_in
  * @property string|null $looking_at
  * @property string|null $holding
  * @property bool $is_running
+ * @property array<string, mixed>|null $editor_state
  * @property array<string, mixed>|null $screen
  * @property array<int, mixed>|null $nearby
  * @property array<int, mixed>|null $legend
@@ -55,10 +57,12 @@ use Illuminate\Support\Carbon;
     'at_eye',
     'at_yaw',
     'at_pitch',
+    'standing_in_slug',
     'standing_in',
     'looking_at',
     'holding',
     'is_running',
+    'editor_state',
     'screen',
     'nearby',
     'legend',
@@ -79,6 +83,8 @@ class SupportTicket extends Model
             'at_yaw' => 'float',
             'at_pitch' => 'float',
             'is_running' => 'boolean',
+            'standing_in' => 'array',
+            'editor_state' => 'array',
             'screen' => 'array',
             'nearby' => 'array',
             'legend' => 'array',

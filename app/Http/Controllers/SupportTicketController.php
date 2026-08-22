@@ -50,10 +50,15 @@ class SupportTicketController extends Controller
                 'at_eye' => $request->input('at.eye'),
                 'at_yaw' => $request->input('at.yaw'),
                 'at_pitch' => $request->input('at.pitch'),
+                // The whole room, and its slug beside it. The slug is what the
+                // admin table filters and sorts by; the object is what makes
+                // the ticket diagnostic rather than merely located.
+                'standing_in_slug' => $request->input('standingIn.slug'),
                 'standing_in' => $request->input('standingIn'),
                 'looking_at' => $request->input('lookingAt'),
                 'holding' => $request->input('holding'),
                 'is_running' => $request->boolean('running'),
+                'editor_state' => $request->input('editorState'),
                 'screen' => $request->input('screen'),
                 'nearby' => $request->input('nearby'),
                 // Kept with the pictures rather than beside them. Without it
