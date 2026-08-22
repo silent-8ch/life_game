@@ -62,6 +62,7 @@ class UpdateLevelMapRequest extends FormRequest
             'sectors.*.floorTexture' => ['nullable', 'string', $textures],
             'sectors.*.ceilingTexture' => ['nullable', 'string', $textures],
             'sectors.*.wallTexture' => ['nullable', 'string', $textures],
+            'sectors.*.ambience' => ['nullable', 'string', Rule::in($assets->ambiences())],
             'sectors.*.isSky' => ['required', 'boolean'],
             'sectors.*.isWater' => ['required', 'boolean'],
             'sectors.*.points' => ['required', 'array', 'min:3', 'max:64'],

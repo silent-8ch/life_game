@@ -23,6 +23,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $floor_texture
  * @property string|null $ceiling_texture
  * @property string|null $wall_texture
+ * @property string|null $ambience
  * @property bool $is_sky
  * @property bool $is_water
  * @property int $sort_order
@@ -40,6 +41,7 @@ use Illuminate\Support\Carbon;
     'floor_texture',
     'ceiling_texture',
     'wall_texture',
+    'ambience',
     'is_sky',
     'is_water',
     'sort_order',

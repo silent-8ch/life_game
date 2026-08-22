@@ -38,7 +38,7 @@ it('sends every sector as a polygon the browser can build', function (): void {
                 ->hasAll([
                     'slug', 'name', 'floorHeight', 'ceilingHeight',
                     'floorTexture', 'ceilingTexture', 'wallTexture',
-                    'isSky', 'isWater', 'points',
+                    'ambience', 'isSky', 'isWater', 'points',
                 ])
                 ->has('points.0', fn (AssertableInertia $point) => $point
                     ->hasAll([

@@ -56,6 +56,8 @@ class LevelAssets
 
     private const BACKDROP_PATH = 'sprites/bg';
 
+    private const AMBIENCE_PATH = 'audio/ambience';
+
     /**
      * Tiling surface textures, by name.
      *
@@ -64,6 +66,21 @@ class LevelAssets
     public function textures(): array
     {
         return $this->pngNamesIn(self::TEXTURE_PATH);
+    }
+
+    /**
+     * Looping room tones, by name. A room names one to be heard in it, or names
+     * nothing and is silent.
+     *
+     * Found the same way the textures are — drop a file in the folder and it
+     * turns up in the editor — but they are mp3 rather than png, which is the
+     * one format every browser this runs in plays without argument.
+     *
+     * @return list<string>
+     */
+    public function ambiences(): array
+    {
+        return $this->namesIn(self::AMBIENCE_PATH, 'mp3');
     }
 
     /**
@@ -155,6 +172,14 @@ class LevelAssets
      */
     private function pngNamesIn(string $path): array
     {
+        return $this->namesIn($path, 'png');
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function namesIn(string $path, string $extension): array
+    {
         $directory = public_path($path);
 
         if (! File::isDirectory($directory)) {
@@ -162,7 +187,7 @@ class LevelAssets
         }
 
         $names = collect(File::files($directory))
-            ->filter(fn ($file): bool => $file->getExtension() === 'png')
+            ->filter(fn ($file): bool => $file->getExtension() === $extension)
             ->map(fn ($file): string => $file->getFilenameWithoutExtension())
             ->values()
             ->all();

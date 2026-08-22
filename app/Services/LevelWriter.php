@@ -54,6 +54,7 @@ class LevelWriter
                     'floor_texture' => $drawn['floorTexture'] ?? null,
                     'ceiling_texture' => $drawn['ceilingTexture'] ?? null,
                     'wall_texture' => $drawn['wallTexture'] ?? null,
+                    'ambience' => $drawn['ambience'] ?? null,
                     'is_sky' => $drawn['isSky'],
                     'is_water' => $drawn['isWater'],
                     'sort_order' => $order,

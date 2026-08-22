@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { store } from '@/actions/App/Http/Controllers/DebugSnapshotController';
 import { createActors } from '@/lib/engine/actors';
 import type { Actors } from '@/lib/engine/actors';
+import { createAudio } from '@/lib/engine/audio';
 import { buildLevel } from '@/lib/engine/build-level';
 import { moveWithCollisions } from '@/lib/engine/collision';
 import {
@@ -565,6 +566,11 @@ export default function LevelViewport({
         // scene for them: a child of something outside it is never drawn.
         const hands = createHands(level.playerSprite);
 
+        // Footsteps and the room's own loop. Silent until the player has
+        // interacted with the page — no browser will play anything before that
+        // — and silent for good if the files are not there.
+        const audio = createAudio();
+
         camera.add(hands.object);
         scene.add(camera);
 
@@ -762,6 +768,15 @@ export default function LevelViewport({
 
             hands.update(seconds, walked, running);
 
+            // The same tally of metres the hands swing on, so a step is heard
+            // exactly when a step is drawn.
+            audio.update(
+                seconds,
+                walked,
+                standingIn?.floorTexture ?? null,
+                standingIn?.ambience ?? null,
+            );
+
             playerSprite.place(player.x, floor, player.z, player.yaw, walked);
             actors.update(seconds, built.colliders);
             actors.faceViewer(player.x, player.z, player.yaw);
@@ -945,6 +960,17 @@ export default function LevelViewport({
                 .catch(() => failed('the server did not answer'));
         };
 
+        /**
+         * Sound off, or back on. There is no settings screen to put this in and
+         * one key is a smaller thing to invent than one; N because M is already
+         * the mark a wizard leaves. The choice is remembered between visits.
+         */
+        const muteSound = (): void => {
+            const off = audio.toggleMute();
+
+            callbacks.current.onMessage?.(off ? 'Sound off.' : 'Sound on.');
+        };
+
         const examine = (): void => {
             const thing =
                 focusedSlug === null
@@ -992,6 +1018,10 @@ export default function LevelViewport({
             if (event.code === 'KeyF' && !event.repeat) {
                 takeSnapshot();
             }
+
+            if (event.code === 'KeyN' && !event.repeat) {
+                muteSound();
+            }
         };
 
         const handleKeyUp = (event: KeyboardEvent): void => {
@@ -1030,6 +1060,14 @@ export default function LevelViewport({
                 }
             }
 
+            // Nothing may be heard before the player has interacted with the
+            // page, and the lock is that interaction.
+            if (locked) {
+                audio.start();
+            } else {
+                audio.stop();
+            }
+
             callbacks.current.onLockChange(locked);
         };
 
@@ -1048,6 +1086,7 @@ export default function LevelViewport({
         const stop = (): void => {
             started = false;
             controls.show(false);
+            audio.stop();
             setPlaying(false);
             pressed.clear();
             callbacks.current.onLockChange(false);
@@ -1067,6 +1106,7 @@ export default function LevelViewport({
                 // ask for either. The frame fills the screen itself instead.
                 started = true;
                 controls.show(true);
+                audio.start();
                 setPlaying(true);
                 callbacks.current.onLockChange(true);
             } else {
@@ -1130,6 +1170,11 @@ export default function LevelViewport({
                     title: 'Save a snapshot of this spot',
                     press: takeSnapshot,
                 },
+                {
+                    label: 'Mute',
+                    title: 'Turn the sound off, or back on',
+                    press: muteSound,
+                },
                 { label: 'Stop', title: 'Stop playing', press: stop },
             ],
         });
@@ -1177,6 +1222,7 @@ export default function LevelViewport({
             probe?.dispose();
             magic?.dispose();
             hands.dispose();
+            audio.dispose();
             built.dispose();
             textures.dispose();
             renderer.dispose();

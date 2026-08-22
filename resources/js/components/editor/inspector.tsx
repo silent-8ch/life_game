@@ -135,6 +135,61 @@ function NumberInput({
     );
 }
 
+/**
+ * The loop a room plays under everything else: rain in the yard, a hum indoors.
+ *
+ * A list of names rather than thumbnails, since there is nothing to look at.
+ * Whatever is stored is offered even when it is not in the folder, so a room
+ * does not quietly lose its sound because somebody moved the file.
+ */
+function AmbiencePicker({
+    label,
+    value,
+    ambiences,
+    onChange,
+}: {
+    label: string;
+    value: string | null;
+    ambiences: string[];
+    onChange: (ambience: string | null) => void;
+}) {
+    const offered =
+        value !== null && !ambiences.includes(value)
+            ? [value, ...ambiences]
+            : ambiences;
+
+    return (
+        <div>
+            <Field label={label}>
+                <select
+                    value={value ?? ''}
+                    onChange={(event) =>
+                        onChange(
+                            event.target.value === ''
+                                ? null
+                                : event.target.value,
+                        )
+                    }
+                    className={inputClass}
+                >
+                    <option value="">Silent</option>
+                    {offered.map((name) => (
+                        <option key={name} value={name}>
+                            {name.replaceAll('-', ' ')}
+                        </option>
+                    ))}
+                </select>
+            </Field>
+
+            {offered.length === 0 && (
+                <p className="mt-1 text-xs text-slate-500">
+                    Nothing in public/audio/ambience yet.
+                </p>
+            )}
+        </div>
+    );
+}
+
 function Toggle({
     label,
     checked,
@@ -408,6 +463,13 @@ export default function Inspector({
                         onChange={(wallTexture) =>
                             onChangeRooms({ wallTexture })
                         }
+                    />
+
+                    <AmbiencePicker
+                        label="Ambience"
+                        value={shared((sector) => sector.ambience) ?? null}
+                        ambiences={assets.ambiences}
+                        onChange={(ambience) => onChangeRooms({ ambience })}
                     />
                 </section>
 
@@ -1017,6 +1079,15 @@ export default function Inspector({
                             textures={assets.textures}
                             onChange={(wallTexture) =>
                                 onChangeSector({ wallTexture })
+                            }
+                        />
+
+                        <AmbiencePicker
+                            label="Ambience"
+                            value={sector.ambience}
+                            ambiences={assets.ambiences}
+                            onChange={(ambience) =>
+                                onChangeSector({ ambience })
                             }
                         />
                     </section>

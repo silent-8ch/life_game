@@ -547,6 +547,7 @@ export function newSector(level: Level, points: Point[]): Sector {
         floorTexture: null,
         ceilingTexture: null,
         wallTexture: null,
+        ambience: null,
         isSky: false,
         isWater: false,
         points: points.map((point) => ({

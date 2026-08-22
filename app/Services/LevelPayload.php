@@ -59,6 +59,7 @@ class LevelPayload
                 'floorTexture' => $sector->floor_texture,
                 'ceilingTexture' => $sector->ceiling_texture,
                 'wallTexture' => $sector->wall_texture,
+                'ambience' => $sector->ambience,
                 'isSky' => $sector->is_sky,
                 'isWater' => $sector->is_water,
                 'points' => $sector->edges->map(fn (LevelSectorEdge $edge): array => [

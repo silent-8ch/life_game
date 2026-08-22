@@ -32,6 +32,7 @@ class LevelEditorController extends Controller
             ],
             'assets' => [
                 'textures' => $assets->textures(),
+                'ambiences' => $assets->ambiences(),
                 'skies' => $assets->skies(),
                 'backdrops' => $assets->backdrops(),
                 'sprites' => $assets->household(),

@@ -134,6 +134,11 @@ export type Sector = {
     floorTexture: string | null;
     ceilingTexture: string | null;
     wallTexture: string | null;
+    /**
+     * The looping room tone heard while standing in it, by name, or null for a
+     * room that makes no sound of its own.
+     */
+    ambience: string | null;
     /** Open to the sky: no ceiling is drawn and the backdrop shows through. */
     isSky: boolean;
     /** The floor runs the water animation and the player wades in it. */
@@ -236,6 +241,8 @@ export type ExplorePageProps = {
 /** What the map editor has to build levels out of. */
 export type LevelAssets = {
     textures: string[];
+    /** Looping room tones, by name, from public/audio/ambience. */
+    ambiences: string[];
     skies: string[];
     /** Backdrop themes, and the numbered layers each one has. */
     backdrops: Record<string, number[]>;
