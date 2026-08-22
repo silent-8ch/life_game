@@ -1,10 +1,23 @@
 # Task board
 
-**PAUL IS THE RELEASE MANAGER. NOBODY ELSE MERGES, AND NOBODY ELSE COMMITS.** Agents have lost
-git privileges. **No worktrees and no branches — edit the real files in the checkout**, leave
-them modified, run the gate, **stop**, and say what changed and whether it passed. He adds and
-commits, then restarts you. **Stopping is part of finishing.** Both code agents are stopped now
-and only he can restart them.
+**WHO MAY COMMIT WHAT.** This has moved three times today; the current arrangement is:
+
+| Session | May commit |
+| --- | --- |
+| **`scanner`** | **its own work, on its own — commits and pushes, no waiting.** Paul restored this. |
+| **`organizer`** | `docs/**.md` and nothing else, ever. No code, no config, no seeders, no tests. |
+| **`production`** | nothing. Reports findings; a fix it takes goes to whoever can land it. |
+| **Paul** | everything, and he is still the release manager. |
+
+**Still true for everyone: no worktrees, no branches, one checkout per session.** Run
+`composer ci:check` before committing and say the result plainly, **including when it failed** —
+a red tree is now a red `main` rather than a red branch.
+
+**Why this moved.** The no-commit rule was written to stop work existing in exactly one place,
+which had happened three times. It worked, and it introduced a different failure: finished,
+green work queued behind one person. Seventeen files sat done in `scanner`'s tree while `main`
+moved under them. **The lesson is not that either rule was wrong** — it is that a bottleneck
+moves, it does not vanish, and it is worth naming where it has moved to.
 
 **⚠ THIS BOARD WENT STALE WHILE IT WAS UNCOMMITTED, AND THE RULE ABOVE IS WHY.** Everything
 below was written into a file only planning can see. Between writing it and reading it back,
