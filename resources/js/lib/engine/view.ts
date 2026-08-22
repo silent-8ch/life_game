@@ -4,7 +4,6 @@ import {
     FAR_PLANE,
     FIELD_OF_VIEW,
     NEAR_PLANE,
-    PIXEL_SCALE,
 } from '@/lib/engine/constants';
 import type { ProbeBackdrop } from '@/lib/engine/probe-backdrop';
 import { boundsOf } from '@/lib/engine/sectors';
@@ -87,10 +86,16 @@ export function createView(
 
     camera.rotation.order = 'YXZ';
 
-    // Smoothing happens inside the small buffer, before it is blown up. The
-    // picture stays as coarse as it was — the edges within it just stop
-    // climbing in steps. Turning it off is a matter of PIXEL_SCALE, which is
-    // what decides how coarse the picture is in the first place.
+    // The game draws at the size it is shown at.
+    //
+    // It used to render into a buffer a third of the canvas across and blow it
+    // up, which is nine times fewer pixels and a deliberate look — but the look
+    // was set when the textures were about 128 texels to the metre against
+    // roughly 117 screen pixels to the metre, near enough one to one. It is not
+    // a style so much as a match that no longer holds, and it throws away
+    // exactly the high-frequency detail the lighting work is about to add:
+    // lightmaps are indifferent to screen resolution, but a normal map's relief
+    // is per-pixel and a third-resolution buffer discards it.
     const renderer = new THREE.WebGLRenderer({
         // Antialiasing blends a one-pixel sliver into its neighbours, and a
         // blended colour matches nothing in the legend. Debug wants the hard
@@ -106,10 +111,8 @@ export function createView(
         logarithmicDepthBuffer: true,
     });
 
-    renderer.setPixelRatio(1 / PIXEL_SCALE);
     renderer.domElement.style.width = '100%';
     renderer.domElement.style.height = '100%';
-    renderer.domElement.style.imageRendering = 'pixelated';
     renderer.domElement.style.display = 'block';
     container.appendChild(renderer.domElement);
 

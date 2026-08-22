@@ -44,9 +44,6 @@ export const FAR_PLANE = 100;
 /** How far away you can still look at something, in metres. */
 export const REACH = 2.4;
 
-/** The render buffer is this many times smaller than the canvas, then upscaled. */
-export const PIXEL_SCALE = 3;
-
 /** Spacing of the lines drawn across untextured walls and floors, in metres. */
 export const GRID_SPACING = 1;
 

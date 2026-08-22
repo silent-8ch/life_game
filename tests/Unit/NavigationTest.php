@@ -118,12 +118,17 @@ it('finds the way from one room to the next', function (): void {
         }));
         JS);
 
-    // One doorway, and the waypoint is the middle of the opening — which is the
-    // whole point. Walking at the far room's centre from the west room goes
-    // through a wall; walking at the middle of the gap goes through the gap.
+    // One doorway, and the waypoint is a stride past the opening on the east
+    // side of it — which is the whole point. Walking at the far room's centre
+    // from the west room goes through a wall; walking at the gap goes at the
+    // gap; walking at the far side of the gap goes through it and out.
+    //
+    // 5.6 rather than 4.4 is the assertion that earns its keep. Both are a
+    // stride from the middle of the opening, and only one of them is in the
+    // room being entered.
     expect($answer['steps'])->toBe(1)
         ->and($answer['through'][0]['to'])->toBe('east')
-        ->and($answer['through'][0]['at'])->toEqual([5, 2.5])
+        ->and($answer['through'][0]['at'])->toEqual([5.6, 2.5])
         ->and($answer['reachable'])->toBe(['east', 'west']);
 });
 

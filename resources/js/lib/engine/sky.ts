@@ -74,8 +74,9 @@ export function createSky(sky: Sky): SkyDome {
     // Smoothed, unlike everything else. The sprites and the wall textures are
     // drawn to be blocky and want their texels left alone; the sky is a
     // photograph of the sky, and stepping it into squares only makes it look
-    // like a mistake. What blockiness is left comes from PIXEL_SCALE, which is
-    // the whole picture and not this.
+    // like a mistake. Nothing else in the picture is stepped now either — the
+    // renderer draws at the size it is shown at — so this is no longer the odd
+    // one out that it was.
     gradient.magFilter = THREE.LinearFilter;
     gradient.minFilter = THREE.LinearMipmapLinearFilter;
     gradient.generateMipmaps = true;
