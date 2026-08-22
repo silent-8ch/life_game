@@ -1,8 +1,7 @@
 import * as THREE from 'three';
 import { SKY_CEILING_ORDER } from '@/lib/engine/build/constants';
 import type { BuildContext } from '@/lib/engine/build/context';
-import { gridGeometry, shapeOf } from '@/lib/engine/build/geometry';
-import { GRID_SPACING } from '@/lib/engine/constants';
+import { shapeOf } from '@/lib/engine/build/geometry';
 import { boundsOf, ceilingAt, floorAt } from '@/lib/engine/sectors';
 import { tileFlatUvs } from '@/lib/engine/textures';
 import type { Sector } from '@/types';
@@ -157,43 +156,29 @@ export function buildFlat(
     holder.position.y = height;
     holder.rotation.x = -Math.PI / 2;
 
-    if (material === null) {
-        const bounds = boundsOf([sector]);
-        const mesh = new THREE.Mesh(
-            geometry,
-            materials.backing(materials.floorColor),
-        );
-        const grid = materials.track(
-            gridGeometry(
-                bounds.maxX - bounds.minX,
-                bounds.maxZ - bounds.minZ,
-                GRID_SPACING,
-            ),
-        );
-        const lineMesh = new THREE.LineSegments(
-            grid,
-            materials.lines(materials.floorColor),
-        );
+    // A surface nobody gave a texture is plain, not drawn in wireframe.
+    //
+    // It used to get a grid: a line every metre in the level's floor colour,
+    // which is `#2f6f5e` on every level here. On a level where half the rooms
+    // were never finished that reads as a green grid laid over the game, and it
+    // was reported as a rendering fault by somebody playing rather than as an
+    // unfinished level by somebody building.
+    //
+    // Only the lines go. The dark backing stays, because it is not decoration:
+    // it is opaque and it writes depth, which is the same reason an untextured
+    // *wall* still occludes. Drawing nothing at all was tried first and opens a
+    // hole — standing in room-8, whose floor is unset and which sits directly
+    // over room-2, looking down went from a wall to sixty pixels of backdrop.
+    // Level 8 has twenty-six such floors at ground level and eight more at four
+    // metres, so that is holes in a level people are playing, traded for a
+    // grid. An unfinished floor is a plain dark surface now.
+    const mesh = new THREE.Mesh(
+        geometry,
+        material ?? materials.backing(materials.floorColor),
+    );
 
-        const middle = {
-            x: (bounds.minX + bounds.maxX) / 2,
-            y: -(bounds.minZ + bounds.maxZ) / 2,
-        };
-
-        // The grid describes the surface, so it has to follow it. Built centred
-        // on its own origin and then moved, so where each line actually falls in
-        // the room is its own position plus that move.
-        tiltToSlope(grid, sector, surface, height, middle, 0.004);
-
-        lineMesh.position.set(middle.x, middle.y, 0.004);
-
-        holder.add(mesh, lineMesh);
-        scene.targets.push(mesh);
-    } else {
-        const mesh = new THREE.Mesh(geometry, material);
-        holder.add(mesh);
-        scene.targets.push(mesh);
-    }
+    holder.add(mesh);
+    scene.targets.push(mesh);
 
     // Tagged for the same reason walls are: an unpainted surface in a debug
     // picture can happen to land on a colour the legend already uses, and a
