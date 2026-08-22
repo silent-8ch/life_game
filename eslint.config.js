@@ -110,6 +110,10 @@ export default [
             'vendor',
             'node_modules',
             'public',
+            // Agent worktrees are whole checkouts of this repo living inside
+            // it. Without this, linting the project lints every one of them as
+            // well, node_modules and all.
+            '.claude/**',
             'bootstrap/ssr',
             'tailwind.config.js',
             'vite.config.ts',
