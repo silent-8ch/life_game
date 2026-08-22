@@ -20,6 +20,30 @@ const EPSILON = 1e-6;
 /** Rings smaller than this are slivers thrown up by the arithmetic. */
 const MIN_AREA = 1e-4;
 
+/**
+ * A room this small in area *and* this thin in every direction is a shard, not
+ * a room, and is dropped rather than kept and named.
+ *
+ * MIN_AREA above only catches floating-point dust — a square centimetre. What
+ * a carve actually leaves behind is bigger than that and entirely real: where a
+ * blade's edge lands a quarter of a metre from another room's wall, the gap
+ * between them survives as its own sector. One of those turned up as a 25 cm
+ * square with a fifteen-metre ceiling standing on the corner of a portal mouth,
+ * where it blocked a third of the view through the opening.
+ *
+ * Both tests have to fail together, because neither alone can tell a shard from
+ * a room somebody meant. Plenty of real rooms are long and thin — a landing two
+ * metres by half a metre is thinner than most of the shards — and plenty are
+ * small without being thin. Only the ones that are small in both senses are
+ * safe to throw away.
+ *
+ * The width is twice the area over the perimeter, which is about the width of
+ * the widest strip that fits inside the ring, and unlike a bounding box it does
+ * not change when the room is at an angle.
+ */
+const MIN_ROOM_AREA = 0.15;
+const MIN_ROOM_WIDTH = 0.15;
+
 type Ring = [number, number][];
 
 /** A room's corners as the clipping library wants them, closed. */
@@ -47,6 +71,32 @@ function areaOf(ring: Ring): number {
     return (
         Math.abs(windingOf(ring.slice(0, -1).map(([x, z]) => ({ x, z })))) / 2
     );
+}
+
+function perimeterOf(ring: Ring): number {
+    let total = 0;
+
+    for (let index = 0; index < ring.length - 1; index += 1) {
+        const [x, z] = ring[index];
+        const [nextX, nextZ] = ring[index + 1];
+
+        total += Math.hypot(nextX - x, nextZ - z);
+    }
+
+    return total;
+}
+
+/** Whether a ring is too small and too thin to be a room somebody wanted. */
+function isShard(ring: Ring): boolean {
+    const area = areaOf(ring);
+
+    if (area >= MIN_ROOM_AREA) {
+        return false;
+    }
+
+    const perimeter = perimeterOf(ring);
+
+    return perimeter > 0 && (2 * area) / perimeter < MIN_ROOM_WIDTH;
 }
 
 /** Whether a corner sits on a wall, ends included. */
@@ -163,7 +213,7 @@ function intoSlabs(polygon: Ring[]): Ring[] {
         for (const piece of clipping.intersection([polygon], [[band]])) {
             // A band is bounded by the heights the holes start and stop at, so
             // no hole can survive inside one; only the outer ring is taken.
-            if (areaOf(piece[0]) > MIN_AREA) {
+            if (areaOf(piece[0]) > MIN_AREA && !isShard(piece[0])) {
                 slabs.push(piece[0]);
             }
         }
@@ -181,7 +231,7 @@ function cut(sector: Sector, blade: Ring): Sector[] {
 
     const rings = remainder
         .flatMap((polygon) => intoSlabs(polygon))
-        .filter((ring) => areaOf(ring) > MIN_AREA);
+        .filter((ring) => areaOf(ring) > MIN_AREA && !isShard(ring));
 
     return rings.map((ring, index) => ({
         ...sector,

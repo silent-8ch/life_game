@@ -544,3 +544,43 @@ it('keeps a wall that survives a cut across a corner in the middle of it', funct
         ->and($answer['plaster']['wallTexture'])->toBe('plaster')
         ->and($answer['plaster']['blocks'])->toBeTrue();
 });
+
+it('throws away a shard a carve leaves behind', function (): void {
+    // A blade shaped to swallow the whole room bar a quarter-metre square in
+    // one corner. That square is a real result of the cut, six hundred times
+    // bigger than the arithmetic dust MIN_AREA catches, and it is not a room
+    // anybody wanted — this is the shape that turned up on the corner of a
+    // portal mouth with a fifteen-metre ceiling, blocking the view through it.
+    $answer = carvedLevel(
+        "[box('hall', 0, 0, 10, 10), room('blade', [corner(0.25, -1), corner(12, -1), corner(12, 12), corner(-1, 12), corner(-1, 0.25), corner(0.25, 0.25)])]",
+        <<<'JS'
+        const carved = carveRooms(level, 1);
+
+        process.stdout.write(JSON.stringify({
+            slugs: carved.sectors.map((s) => s.slug),
+        }));
+        JS
+    );
+
+    expect($answer['slugs'])->toBe(['blade']);
+});
+
+it('keeps a long thin room, which a width test alone would eat', function (): void {
+    // Two metres by half a metre: by the width measure this is thinner than
+    // most of the shards a carve throws up, and it is unmistakably a room —
+    // it is the shape of every landing in the house.
+    $answer = carvedLevel(
+        "[box('landing', 0, 0, 2, 0.5), box('blade', 6, 6, 8, 8)]",
+        <<<'JS'
+        const carved = carveRooms(level, 1);
+
+        process.stdout.write(JSON.stringify({
+            slugs: carved.sectors.map((s) => s.slug),
+            landing: areaOf(carved.sectors.find((s) => s.slug === 'landing')),
+        }));
+        JS
+    );
+
+    expect($answer['slugs'])->toContain('landing')
+        ->and($answer['landing'])->toEqual(1.0);
+});
