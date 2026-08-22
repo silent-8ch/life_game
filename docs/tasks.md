@@ -1,5 +1,9 @@
 # Task board
 
+**PLANNING DOES NOT ASSESS QUALITY.** Paul judges whether work is good; the board reports whether an agent has marked it done, and what it says it changed. No grading, no praise, no "trustworthy" or "well argued" — those are his calls and the board had been making them.
+
+**THE CURRENT LEVEL IS THE ONE THE PORTAL FIX WAS MADE IN.** Paul: it is his new current, and the old one is history. **Consequence worth checking before anyone spends time on it:** the `room-42` drag exists to make level 8 crossable, and if level 8 is now history that job may be moot.
+
 **WHO MAY COMMIT WHAT.** This has moved three times today; the current arrangement is:
 
 | Session | May commit |
