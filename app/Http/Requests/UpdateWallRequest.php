@@ -5,6 +5,7 @@ namespace App\Http\Requests;
 use App\Models\Level;
 use App\Services\LevelAssets;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -37,6 +38,24 @@ class UpdateWallRequest extends FormRequest
 
         return $level instanceof Level
             && Gate::allows('update', $level);
+    }
+
+    /**
+     * Preview editing answers in JSON, so the refusal does too.
+     *
+     * A bare 403 reaches the viewport as a failed fetch and shows the player
+     * nothing at all — they press the wall again and nothing happens twice.
+     */
+    protected function failedAuthorization(): never
+    {
+        $level = $this->route('level');
+        $owner = $level instanceof Level ? $level->owner?->name : null;
+
+        throw new HttpResponseException(response()->json([
+            'message' => $owner === null
+                ? 'That wall could not be changed.'
+                : "{$owner} drew this level, so only they can change it.",
+        ], 403));
     }
 
     /**

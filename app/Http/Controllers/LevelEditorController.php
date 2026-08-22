@@ -53,8 +53,6 @@ class LevelEditorController extends Controller
         Level $level,
         LevelWriter $writer,
     ): RedirectResponse {
-        Gate::authorize('update', $level);
-
         $writer->save($level, $request->validated());
 
         return back()->with('saved', true);

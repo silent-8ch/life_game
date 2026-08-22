@@ -7,7 +7,6 @@ use App\Models\Level;
 use App\Models\LevelSectorEdge;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Gate;
 
 /**
  * Changing one wall while standing in front of it.
@@ -29,8 +28,6 @@ class LevelWallController extends Controller
 {
     public function update(UpdateWallRequest $request, Level $level): JsonResponse
     {
-        Gate::authorize('update', $level);
-
         $sector = $level->sectors()
             ->where('slug', $request->string('sector'))
             ->first();

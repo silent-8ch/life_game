@@ -19,6 +19,7 @@ use App\Services\LevelAssets;
 use App\Services\PersonStats;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Validator;
 
 /**
@@ -33,6 +34,26 @@ class UpdateLevelMapRequest extends FormRequest
         $level = $this->route('level');
 
         return $this->user()?->can('update', $level) ?? false;
+    }
+
+    /**
+     * Say why, and do not take the page away.
+     *
+     * The default is a 403 page, which is the one answer you must not give
+     * somebody holding unsaved work — the editor would navigate and the draft
+     * would go with it. A validation failure keeps them where they are and
+     * arrives in the editor's `onError` with something to read.
+     */
+    protected function failedAuthorization(): never
+    {
+        /** @var Level $level */
+        $level = $this->route('level');
+
+        throw ValidationException::withMessages([
+            'save' => $level->owner === null
+                ? 'That did not save. Sign in and try again — your work is still on this page.'
+                : "{$level->owner->name} drew this level, so only they can save changes to it. Your work is still on this page.",
+        ]);
     }
 
     /**

@@ -13,6 +13,13 @@ use Database\Seeders\PlayersSeeder;
  * because unclaimed is not the same as protected.
  */
 beforeEach(function (): void {
+    // These render Inertia pages, which resolve their assets through the Vite
+    // manifest — and `public/build` is gitignored, so on a clean checkout there
+    // is no manifest to resolve against. Without this the test is green or red
+    // depending on whether anybody has run `npm run build` lately, which is a
+    // check nobody should believe. Nothing here is asserting about assets.
+    $this->withoutVite();
+
     $this->seed(PlayersSeeder::class);
     $this->paul = User::query()->where('email', 'paul@life.test')->sole();
     $this->wade = User::query()->where('email', 'wade@life.test')->sole();
@@ -95,4 +102,25 @@ it('marks another person\'s level as one you cannot edit', function (): void {
 
 it('wants somebody signed in before it shows a list at all', function (): void {
     $this->get(route('levels.index'))->assertRedirect();
+});
+
+it('says who owns a level rather than answering a save with a bare 403', function (): void {
+    $level = Level::factory()->create(['owner_id' => $this->wade->id]);
+
+    $this->actingAs($this->paul)
+        ->from(route('levels.editor', $level))
+        ->put(route('levels.editor.update', $level), [])
+        ->assertRedirect(route('levels.editor', $level))
+        ->assertSessionHasErrors('save');
+
+    expect(session('errors')->first('save'))->toContain('Wade');
+});
+
+it('tells the preview why a wall would not change', function (): void {
+    $level = Level::factory()->create(['owner_id' => $this->wade->id]);
+
+    $this->actingAs($this->paul)
+        ->patchJson(route('levels.wall.update', $level), [])
+        ->assertForbidden()
+        ->assertJsonPath('message', fn (string $m): bool => str_contains($m, 'Wade'));
 });

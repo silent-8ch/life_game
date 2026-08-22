@@ -73,6 +73,14 @@ export default function LevelEditor({
     const [sprite, setSprite] = useState<string>(assets.sprites[0] ?? '');
     const [drawing, setDrawing] = useState<Point[]>([]);
     const [saving, setSaving] = useState(false);
+
+    /**
+     * Why the last save did not go through, or null if it did.
+     *
+     * A save that fails silently is worse than one that fails loudly: the
+     * button goes back to "Save" and the work looks kept when it is not.
+     */
+    const [saveError, setSaveError] = useState<string | null>(null);
     const [preview, setPreview] = useState<Level>(level);
     const [history, setHistory] = useState<LevelHistory>(EMPTY_HISTORY);
 
@@ -332,7 +340,21 @@ export default function LevelEditor({
             {
                 preserveScroll: true,
                 preserveState: true,
-                onSuccess: () => setSaved(draft),
+                onSuccess: () => {
+                    setSaved(draft);
+                    setSaveError(null);
+                },
+                // Anything the server refused: the policy's reason, or the
+                // first validation complaint. Never nothing.
+                onError: (errors) => {
+                    const reasons = Object.values(errors).filter(Boolean);
+
+                    setSaveError(
+                        reasons.length > 0
+                            ? reasons.join(' ')
+                            : 'That did not save, and the server gave no reason. Copy anything you want to keep before leaving this page.',
+                    );
+                },
                 onFinish: () => setSaving(false),
             },
         );
@@ -393,6 +415,23 @@ export default function LevelEditor({
                         </button>
                     </div>
                 </header>
+
+                {saveError !== null && (
+                    <div
+                        role="alert"
+                        className="flex shrink-0 items-start justify-between gap-4 border-b border-red-500/40 bg-red-500/10 px-4 py-2 text-sm text-red-200"
+                    >
+                        <span>{saveError}</span>
+                        <button
+                            type="button"
+                            onClick={() => setSaveError(null)}
+                            className="shrink-0 text-red-200/60 transition hover:text-red-100"
+                            aria-label="Dismiss"
+                        >
+                            ×
+                        </button>
+                    </div>
+                )}
 
                 <div className="flex min-h-0 flex-1">
                     <div className="flex min-w-0 flex-1 flex-col">
