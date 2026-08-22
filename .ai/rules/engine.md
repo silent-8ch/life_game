@@ -83,14 +83,19 @@ The pane is also built `WALL_INSET * 2` narrower than the mouth, because the wal
 
 What is left is sub-pixel: where the pane's edge falls the wrong side of a pixel, the shader would read the sky the tilted near plane left outside the mouth, giving a bright hairline that flickers as the player walks. The vertex shader therefore pulls the read `EDGE_BIAS_TEXELS` in towards the middle of the pane, measured in texels of the target (via the `paneTexels` uniform) rather than as a fraction of the pane — a fraction of a distant pane is a fraction of a pixel and does nothing.
 
-## Mirror paired sprite directions in UVs
-Sprite atlases use five canonical views. Render 225°, 270°, and 315° by reusing the 135°, 90°, and 45° cells with a negative horizontal texture repeat; keep front and back unmirrored.
+## There is no one rule for which drawing faces which way — there is a table per person
+This replaces three sections that used to sit here, which between them gave two different mirroring rules and a third note superseding one of them. All three described a rule that does not exist — none matches the code, so an agent reading top to bottom got the wrong answer twice. What follows is read off `ORDERS` in `sprite-direction.ts`, which is the only source, and is pinned by `tests/Unit/SpriteDirectionTest.php`.
 
-## Mirror paired sprite directions in UVs
-Sprite atlases use five canonical views. The diagonal artwork's handedness is opposite the viewer-angle sign: render 45° and 135° mirrored, but 225° and 315° unmirrored. Render 270° by mirroring the 90° cardinal cell; keep front and back unmirrored.
+Each person has **eight** drawings, not five: four rows of a cardinal sheet and four of a diagonal one. `ORDERS` names, for 0° 45° 90° 135° 180° 225° 270° 315°, which sheet and row to show — `c2` is cardinal row 2, `d1` diagonal row 1, and a leading `~` means flipped left to right. The angle is where the **viewer** stands relative to the body, not the way the body is turned; the sprite sheets are named for the latter, which is the opposite.
 
-## Diagonal handedness correction
-This supersedes the earlier `Mirror paired sprite directions in UVs` note that said 225°/315° are mirrored. Correct mapping: 45°/135° mirrored; 225°/315° unmirrored; only the 270° cardinal side is mirrored.
+The sheets were drawn one at a time and were not drawn to one order. Paul's diagonals run backwards against Wade's; Krystal's cardinals run backwards against Paul's. Any rule of the form "mirror these three angles" is therefore wrong for somebody, which is what put the old sections here.
+
+**Mirroring is a last resort, not an economy, and it is per person.** Four of the six use none at all. A flipped person wears their watch on the wrong wrist and leads with the other foot, and where a flipped view meets an unflipped one of the same body the walk visibly changes step. It is used only where a sheet has no drawing for a direction, because two of its cells were drawn facing the same way and left another way round the body unpainted:
+
+- Wade and Luke: diagonal row 0 was drawn facing the same way as row 3, so neither sheet has a 45°. It is flipped from their 315°.
+- William: rows 0 and 1 repeat his 315° and 225°, so both views turned towards his right are flipped from the two turned to his left.
+
+Nobody's 270° is mirrored — it is a cardinal row like any other. A new person gets Paul's order until somebody checks their sheets with `public/sprite-directions.html`, and it will be wrong as often as it is right, so check rather than leave them on the fallback.
 
 ## Walking into a portal: the pane must survive the near plane
 Two things go wrong in the last few centimetres before a portal, and both look like the level has fallen away.
@@ -126,6 +131,15 @@ Targets are made on demand (`targetAt`), not up front: `PORTAL_BOUNCES` is 8, so
 Without one, a sky sector is a room with a hole in the roof: sight-lines run out over its walls into whatever else is on the plan. In a level using the Doom trick that is the floor above, sitting right next door in x/z — walk into the yard and you can see the bedrooms.
 
 Draw order matters and is why `SKY_CEILING_ORDER` is -0.5: the sky dome is at -1 and lays down no depth of its own (`depthWrite: false`), the lids go next, and the rooms are at 0. Put the lids after the rooms and the rooms are already painted before anything hides them.
+
+## A ceiling is turned over by reversing its winding, never by rotating it the other way
+A floor and a ceiling are the same polygon: `shapeOf` lays the sector out flat and `buildFlat` rotates it a quarter turn about x. Done for both, that leaves a ceiling's normal pointing **up**, exactly like a floor's — free while nothing is lit and every surface is `DoubleSide`, and fatal the moment anything is, because every ceiling in the level then lights as though it were the floor.
+
+**Do not fix it by rotating the other way.** Keeping the polygon where it is while turning its normal over is a reflection, not a rotation, and no rotation can do it: the shape is drawn in a local x/y plane and the quarter turn sends local y to world z, so at `rotation.x = -π/2` world z is `−y` and at `+π/2` it is `+y` — and since `shapeOf` writes each corner as `(x, −z)`, flipping that sign puts every corner at `+z`. The whole room is mirrored in z. The ceiling comes to sit over a floor plan that is not the one underneath it — which reads as rooms subtly not lining up, and nothing about the normal looks wrong while you hunt for it.
+
+`faceDownwards` in `build/flats.ts` reverses the winding of every triangle and recomputes the normals from that instead. The polygon does not move a millimetre, and the front of the face becomes the one underneath — which is what a ceiling drawn `FrontSide` will want when the lighting work arrives, since `DoubleSide` is what is hiding this today. The lid over a room open to the sky is turned as well: it paints nothing and cannot be lit, but a surface that reports which way it faces should not be the one that lies about it.
+
+Pinned by `tests/Unit/FlatNormalsTest.php`, which checks all four parts — floor up, ceiling down, the winding agreeing with the normal attribute, and the ceiling's corners still standing over the floor's.
 
 ## Walls are drawn longer than they are, to close the notch at a corner
 `buildWall` builds its quad `WALL_INSET * 2` longer than the wall's own length. Every wall is nudged `WALL_INSET` into its own room to stop coplanar faces fighting, and that nudge pulls the two walls at a corner apart from each other: they stop short and leave a notch of about a centimetre with nothing behind it. Stare into a corner and there is daylight in it. Overlapping them by what they were nudged closes it, and the overlap is buried inside the corner. Tile the UVs and the wireframe grid with the drawn length, not the real one, or the texture scale drifts.
@@ -191,7 +205,7 @@ The engine loads `{who}-edge-open.png` (walking) and `{who}-edge.png` (running/g
 
 The rule is thumbs inward. The art does not agree with itself: measured off the PNGs (the side carrying the finger outlines; the thumb is the other), Paul's and Wade's fists face the opposite way to their own open hands, and William's pair face the opposite way to everyone else's. Hence `DRAWN` is `Record<sprite, Record<pose, 1|-1>>` and `scale.x` is set every frame in `update()`, not once at build. Pinned by `tests/Unit/HandsTest.php`.
 
-Superseded and now unused: `{who}-hands-sheet.png`, `-open`, `-fist`, `-back`, `-views-sheet`. Same trap as `ORDERS` in sprite-direction.ts — never assume one orientation across the six sheets.
+`public/sprites/hands` holds exactly twelve files, `{who}-edge.png` and `{who}-edge-open.png` for the six of them, plus `overlays/`. Every other naming an earlier version of this note listed — `-hands-sheet`, `-open`, `-fist`, `-back`, `-views-sheet` — has been deleted from the repo. Same trap as `ORDERS` in sprite-direction.ts: never assume one orientation across the six sheets.
 
 ## A pane must hide the room behind its far mouth, not trust the clip plane
 The pane's camera stands in the room behind its far mouth, so that whole room is between the camera and the opening — the wall across the mouth, the walls meeting it at the corners, the floor, the ceiling. The tilted near plane (Lengyel) is supposed to cut all of it, but `CLIP_BIAS` leaves a couple of centimetres of slack at the plane, and every wall is drawn `WALL_INSET` past its own corners, so geometry touching the mouth leaks through — as the back of a wall filling the portal, or a sliver down the edge.
