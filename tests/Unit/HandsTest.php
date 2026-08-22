@@ -90,15 +90,15 @@ it('turns each drawing round for whichever side it was not made for', function (
         process.stdout.write(JSON.stringify({ turned }));
         JS);
 
-    // Every regenerated edge card is a left hand, so its unmirrored drawing
-    // belongs on the left side of the view in both poses.
+    // The regenerated open edge cards visually belong on the right side of the
+    // view. The edge-on fists belong on the left.
     expect($answer['turned'])->toBe([
-        'paul' => [-1, -1],
-        'krystal' => [-1, -1],
-        'luna' => [-1, -1],
-        'wade' => [-1, -1],
-        'luke' => [-1, -1],
-        'william' => [-1, -1],
+        'paul' => [1, -1],
+        'krystal' => [1, -1],
+        'luna' => [1, -1],
+        'wade' => [1, -1],
+        'luke' => [1, -1],
+        'william' => [1, -1],
     ]);
 });
 
@@ -175,11 +175,11 @@ it('leaves the hands edge on until the crosshair is on something', function (): 
         }));
         JS);
 
-    // Paul's walking and reaching cards are both left hands, so changing the
-    // pose does not require mirroring the card.
-    expect($answer['idle'])->toBe(-1)
+    // Paul's walking and reaching cards face opposite ways, and it returns to
+    // the walking orientation when the crosshair moves away.
+    expect($answer['idle'])->toBe(1)
         ->and($answer['reaching'])->toBe(-1)
-        ->and($answer['after'])->toBe(-1);
+        ->and($answer['after'])->toBe(1);
 });
 
 it('still works for a caller that says nothing about reaching', function (): void {
@@ -196,7 +196,7 @@ it('still works for a caller that says nothing about reaching', function (): voi
         process.stdout.write(JSON.stringify({ walk: right.scale.x }));
         JS);
 
-    expect($answer['walk'])->toBe(-1);
+    expect($answer['walk'])->toBe(1);
 });
 
 it('always ends up with a right hand on the right of the screen', function (): void {

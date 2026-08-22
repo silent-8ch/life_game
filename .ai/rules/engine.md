@@ -238,3 +238,6 @@ It shows worst through the portal: inside `CLIP_MINIMUM` of a mouth the tilted n
 
 ## Regenerated edge hands are consistently left-handed
 All six `-edge-open` and `-edge` cards were regenerated independently as LEFT hands from the fixed real character references. In `DRAWN`, both `walk` and `run` therefore map to `-1` for every person. The existing back/back-fist mapping remains independently measured.
+
+## Open edge hands use the right-side orientation
+The regenerated `-edge-open` cards look correct only when their unmirrored drawing is assigned to the right side (`DRAWN.walk = 1`) for all six people. Their edge-on fists remain assigned left (`DRAWN.run = -1`). This visual engine mapping takes precedence over the handedness wording used during generation.
