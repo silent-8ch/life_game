@@ -1,0 +1,290 @@
+<?php
+
+use Symfony\Component\Process\Process;
+
+/**
+ * One step of the player, and the order the three questions are asked in.
+ *
+ * Collide, cross a portal, refuse to leave the floor plan — and it has to be
+ * that order. A portal is asked about *before* the floor plan, because walking
+ * into one leaves the room by design: the step that crosses a mouth lands
+ * outside every sector until it is carried through to the far one, and a floor
+ * plan asked first refuses it as walking into nothing. Four rules in
+ * .ai/rules/engine.md describe this ordering and until now nothing pinned any
+ * of them, because it lived inside a .tsx the harness cannot load.
+ */
+
+/**
+ * @return array<string, mixed>
+ */
+function playerStep(string $body): array
+{
+    $script = <<<JS
+        const {
+            spawnPlayer,
+            turnPlayer,
+            walkPlayer,
+            settleEye,
+        } = await import('@/lib/engine/player.ts');
+        const { createPortals } = await import('@/lib/engine/portals.ts');
+        const { sectorAt } = await import('@/lib/engine/sectors.ts');
+
+        const corner = (x, z, extra = {}) => ({
+            x,
+            z,
+            blocks: false,
+            wallTexture: null,
+            isMirror: false,
+            isSky: false,
+            portalLink: null,
+            ...extra,
+        });
+
+        const room = (slug, points, extra = {}) => ({
+            slug,
+            name: slug,
+            floorHeight: 0,
+            ceilingHeight: 3,
+            floorTexture: null,
+            ceilingTexture: null,
+            wallTexture: null,
+            isSky: false,
+            isWater: false,
+            points,
+            ...extra,
+        });
+
+        const level = (sectors, spawn) => ({
+            slug: 'test',
+            name: 'test',
+            spawn,
+            sectors,
+            things: [],
+        });
+
+        /** A wall across the middle of a room, as a collider. */
+        const wall = (x1, z1, x2, z2) => ({
+            kind: 'segment',
+            x1,
+            z1,
+            x2,
+            z2,
+        });
+
+        const round = (value) => Number(value.toFixed(4));
+        const where = (player) => ({
+            x: round(player.x),
+            z: round(player.z),
+            yaw: round(player.yaw),
+            walked: round(player.walked),
+        });
+
+        {$body}
+        JS;
+
+    $process = new Process([
+        'node',
+        '--experimental-strip-types',
+        '--import',
+        './tests/js/typescript-imports.mjs',
+        '--input-type=module',
+        '--eval',
+        $script,
+    ], dirname(__DIR__, 2));
+
+    $process->mustRun();
+
+    return json_decode($process->getOutput(), true, flags: JSON_THROW_ON_ERROR);
+}
+
+it('negates the level spawn angle and takes a snapshot yaw as written', function (): void {
+    $answer = playerStep(<<<'JS'
+        const only = room('only', [
+            corner(0, 0), corner(10, 0), corner(10, 10), corner(0, 10),
+        ]);
+        const built = level([only], { x: 5, z: 5, angle: 90 });
+
+        const spawned = spawnPlayer(built, null);
+        const forced = spawnPlayer(built, { x: 2, z: 3, yaw: 90, pitch: 12 });
+
+        process.stdout.write(JSON.stringify({
+            spawnedYaw: round(spawned.yaw),
+            forcedYaw: round(forced.yaw),
+            forcedPitch: round(forced.pitch),
+            forcedAt: [forced.x, forced.z],
+        }));
+        JS);
+
+    // The level's angle runs the other way to the player's yaw. That is the
+    // whole reason `?at=` exists: feeding a snapshot's yaw in as a spawn angle
+    // aims the camera somewhere else entirely, and quietly — the view looks
+    // plausible, it is simply not the view that was reported.
+    expect($answer['spawnedYaw'])->toBe(-1.5708)
+        ->and($answer['forcedYaw'])->toBe(1.5708)
+        ->and($answer['forcedPitch'])->toBe(0.2094)
+        ->and($answer['forcedAt'])->toBe([2, 3]);
+});
+
+it('refuses a step that would leave the floor plan, and does not count it', function (): void {
+    $answer = playerStep(<<<'JS'
+        const only = room('only', [
+            corner(0, 0), corner(10, 0), corner(10, 10), corner(0, 10),
+        ]);
+        const built = level([only], { x: 5, z: 5, angle: 0 });
+        const world = { sectors: built.sectors, colliders: [], portals: [] };
+
+        // Facing due north with nothing in the way but the edge of the plan,
+        // walked at for long enough to be well outside it.
+        const player = spawnPlayer(built, { x: 5, z: 0.2, yaw: 0, pitch: 0 });
+
+        for (let step = 0; step < 20; step++) {
+            walkPlayer(player, { forward: 1, strafe: 0, running: true }, world, 0.05);
+        }
+
+        process.stdout.write(JSON.stringify({ at: where(player) }));
+        JS);
+
+    // Collision alone does not keep the player in: this room has no colliders
+    // at all. The floor plan is the backstop, and a step that lands off it is
+    // dropped whole — position and tally together.
+    expect($answer['at'])->toEqual(['x' => 5, 'z' => 0.2, 'yaw' => 0, 'walked' => 0]);
+});
+
+it('counts the distance asked for, not the distance covered', function (): void {
+    $answer = playerStep(<<<'JS'
+        const only = room('only', [
+            corner(0, 0), corner(10, 0), corner(10, 10), corner(0, 10),
+        ]);
+        const built = level([only], { x: 5, z: 5, angle: 0 });
+
+        // A wall right in front of them, inside the room.
+        const world = {
+            sectors: built.sectors,
+            colliders: [wall(0, 4, 10, 4)],
+            portals: [],
+        };
+
+        const player = spawnPlayer(built, { x: 5, z: 5, yaw: 0, pitch: 0 });
+
+        for (let step = 0; step < 20; step++) {
+            walkPlayer(player, { forward: 1, strafe: 0, running: false }, world, 0.05);
+        }
+
+        process.stdout.write(JSON.stringify({ at: where(player) }));
+        JS);
+
+    // Pushed into a wall for a second, they have gone nowhere much but the
+    // tally has run on — which is what swings the arms and picks the walk
+    // frame. Walking on the spot is meant to look like walking.
+    expect($answer['at']['z'])->toBeGreaterThan(4.3)
+        ->and($answer['at']['walked'])->toBeGreaterThan(2.0);
+});
+
+it('asks the portal before it asks the floor plan', function (): void {
+    $answer = playerStep(<<<'JS'
+        // Two rooms that do not touch, joined only by a portal. The step that
+        // crosses the mouth lands in the gap between them, where there is no
+        // sector at all.
+        const here = room('here', [
+            corner(0, 0), corner(4, 0), corner(4, 4, { portalLink: 'gap' }), corner(0, 4),
+        ]);
+        const there = room('there', [
+            corner(20, 0), corner(24, 0), corner(24, 4), corner(20, 4, { portalLink: 'gap' }),
+        ]);
+        const built = level([here, there], { x: 2, z: 2, angle: 0 });
+
+        const portals = createPortals(built.sectors);
+        const world = { sectors: built.sectors, colliders: [], portals };
+
+        // Standing just inside the mouth, walking into it.
+        const player = spawnPlayer(built, { x: 2, z: 3.8, yaw: 180, pitch: 0 });
+
+        const before = where(player);
+
+        for (let step = 0; step < 6; step++) {
+            walkPlayer(player, { forward: 1, strafe: 0, running: false }, world, 0.05);
+        }
+
+        process.stdout.write(JSON.stringify({
+            mouths: portals.length,
+            before,
+            after: where(player),
+            room: sectorAt(built.sectors, player.x, player.z)?.slug ?? null,
+        }));
+        JS);
+
+    // Carried bodily to the far mouth. Ask the floor plan first and this step
+    // is refused as walking into nothing, and the portal never fires at all —
+    // which is the bug the ordering exists to prevent.
+    expect($answer['mouths'])->toBe(2)
+        ->and($answer['room'])->toBe('there')
+        ->and($answer['after']['x'])->toBeGreaterThan(19.0);
+});
+
+it('brings the eye down into the water and back out of it', function (): void {
+    $answer = playerStep(<<<'JS'
+        const dry = room('dry', [
+            corner(0, 0), corner(10, 0), corner(10, 10), corner(0, 10),
+        ]);
+        const wet = room('wet', [
+            corner(0, 0), corner(10, 0), corner(10, 10), corner(0, 10),
+        ], { isWater: true });
+
+        const built = level([dry], { x: 5, z: 5, angle: 0 });
+        const player = spawnPlayer(built, null);
+
+        const dryEye = round(player.eye);
+
+        // Long enough to settle: the eye catches up rather than jumping.
+        for (let step = 0; step < 200; step++) {
+            settleEye(player, wet, 0.05);
+        }
+
+        const wetEye = round(player.eye);
+
+        for (let step = 0; step < 200; step++) {
+            settleEye(player, dry, 0.05);
+        }
+
+        process.stdout.write(JSON.stringify({
+            dryEye,
+            wetEye,
+            backOut: round(player.eye),
+        }));
+        JS);
+
+    // Down by WADE_DEPTH and back, without ever jumping there.
+    expect($answer['wetEye'])->toBeLessThan($answer['dryEye'])
+        ->and($answer['backOut'])->toBe($answer['dryEye']);
+});
+
+it('will not let the neck bend further than it bends', function (): void {
+    $answer = playerStep(<<<'JS'
+        const only = room('only', [
+            corner(0, 0), corner(10, 0), corner(10, 10), corner(0, 10),
+        ]);
+        const built = level([only], { x: 5, z: 5, angle: 0 });
+        const player = spawnPlayer(built, null);
+
+        for (let step = 0; step < 100; step++) {
+            turnPlayer(player, { yaw: 0.1, pitch: 0.5 });
+        }
+
+        const up = round(player.pitch);
+
+        for (let step = 0; step < 200; step++) {
+            turnPlayer(player, { yaw: 0, pitch: -0.5 });
+        }
+
+        process.stdout.write(JSON.stringify({
+            up,
+            down: round(player.pitch),
+            yaw: round(player.yaw),
+        }));
+        JS);
+
+    // Yaw runs on for ever; pitch stops where a neck does, both ways.
+    expect($answer['up'])->toBe(-$answer['down'])
+        ->and($answer['up'])->toBeLessThan(1.6)
+        ->and($answer['yaw'])->toEqual(10);
+});

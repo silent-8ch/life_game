@@ -4,27 +4,22 @@ import * as THREE from 'three';
 import { store } from '@/actions/App/Http/Controllers/DebugSnapshotController';
 import { createActors } from '@/lib/engine/actors';
 import { buildLevel } from '@/lib/engine/build-level';
-import { moveWithCollisions } from '@/lib/engine/collision';
 import {
-    BACKGROUND_COLOR,
-    EYE_HEIGHT,
-    FAR_PLANE,
-    FIELD_OF_VIEW,
     MAX_FRAME_SECONDS,
     MAX_PITCH,
     MOUSE_SENSITIVITY,
-    NEAR_PLANE,
-    PIXEL_SCALE,
-    PLAYER_RADIUS,
     REACH,
-    RUN_SPEED,
-    STEP_SMOOTHING,
-    WADE_DEPTH,
-    WALK_SPEED,
 } from '@/lib/engine/constants';
 import { createHands, HELD_ITEMS } from '@/lib/engine/hands';
 import type { HeldItem } from '@/lib/engine/hands';
-import { createPortals, crossPortal } from '@/lib/engine/portals';
+import {
+    aimCamera,
+    settleEye,
+    spawnPlayer,
+    turnPlayer,
+    walkPlayer,
+} from '@/lib/engine/player';
+import { createPortals } from '@/lib/engine/portals';
 import {
     createProbeBackdrop,
     paintWalls,
@@ -40,7 +35,7 @@ import {
     scanRowsOf,
     wantsScan,
 } from '@/lib/engine/scan';
-import { boundsOf, sectorAt } from '@/lib/engine/sectors';
+import { sectorAt } from '@/lib/engine/sectors';
 import { createSky } from '@/lib/engine/sky';
 import { describeSpot, readingOf } from '@/lib/engine/snapshot';
 import { createMagic } from '@/lib/engine/spells';
@@ -51,6 +46,7 @@ import {
 } from '@/lib/engine/sprite-actor';
 import { createTextureLibrary } from '@/lib/engine/textures';
 import { createTouchControls, wantsTouchControls } from '@/lib/engine/touch';
+import { createView } from '@/lib/engine/view';
 import { cn } from '@/lib/utils';
 import type { Level, LevelThing } from '@/types';
 
@@ -73,9 +69,6 @@ type LevelViewportProps = {
 
 /** The one of them who can do magic. */
 const WIZARD = 'william';
-
-const FOG_NEAR = 8;
-const FOG_FAR = 60;
 
 const FORWARD_KEYS = ['KeyW', 'ArrowUp'];
 const BACKWARD_KEYS = ['KeyS', 'ArrowDown'];
@@ -174,14 +167,16 @@ export default function LevelViewport({
                 ? createProbeBackdrop()
                 : null;
 
-        const scene = new THREE.Scene();
-
-        if (probe === null) {
-            scene.background = new THREE.Color(BACKGROUND_COLOR);
-            scene.fog = new THREE.Fog(BACKGROUND_COLOR, FOG_NEAR, FOG_FAR);
-        } else {
-            scene.background = probe.texture;
-        }
+        // The scene, the camera and the renderer, and how far this level has to
+        // be seen across. All of it follows from the level and from whether
+        // this is a debug run.
+        const {
+            scene,
+            camera,
+            renderer,
+            resize,
+            dispose: disposeView,
+        } = createView(level, container, probe);
 
         const textures = createTextureLibrary();
         const built = buildLevel(level, textures);
@@ -245,41 +240,6 @@ export default function LevelViewport({
             };
         }
 
-        // How far the camera has to be able to see. FAR_PLANE is what an
-        // ordinary level needs, and it is kept as tight as that on purpose:
-        // walls sit a centimetre apart where they are inset, and the further
-        // the far plane goes the less depth there is to tell them apart with.
-        //
-        // But somebody who makes a person a hundred metres tall would rather
-        // see all of them than keep the precision, and the far plane is what
-        // was cutting the top off. So it opens up exactly as far as the level
-        // asks and no further.
-        const reach = (() => {
-            const bounds = boundsOf(level.sectors);
-            const across = Math.hypot(
-                bounds.maxX - bounds.minX,
-                bounds.maxZ - bounds.minZ,
-            );
-            const tallest = level.things.reduce(
-                (most, thing) => Math.max(most, thing.height),
-                0,
-            );
-            const highest = level.sectors.reduce(
-                (most, sector) => Math.max(most, sector.ceilingHeight),
-                0,
-            );
-
-            return Math.max(FAR_PLANE, across + tallest * 1.2 + highest + 10);
-        })();
-
-        const camera = new THREE.PerspectiveCamera(
-            FIELD_OF_VIEW,
-            1,
-            NEAR_PLANE,
-            reach,
-        );
-        camera.rotation.order = 'YXZ';
-
         const sky =
             level.sky === null || probe !== null ? null : createSky(level.sky);
 
@@ -315,62 +275,17 @@ export default function LevelViewport({
             level.things.map((thing) => [thing.slug, thing]),
         );
 
-        // Smoothing happens inside the small buffer, before it is blown up.
-        // The picture stays as coarse as it was — the edges within it just stop
-        // climbing in steps. Turning it off is a matter of PIXEL_SCALE, which
-        // is what decides how coarse the picture is in the first place.
-        const renderer = new THREE.WebGLRenderer({
-            // Antialiasing blends a one-pixel sliver into its neighbours, and a
-            // blended colour matches nothing in the legend. Debug wants the
-            // hard edges, and the buffer kept so a frame can be read back.
-            antialias: probe === null,
-            preserveDrawingBuffer: probe !== null,
-            // Depth kept as a logarithm rather than spread evenly. The far
-            // plane opens up as far as a level asks — somebody a thousand
-            // metres tall wants a thousand metres of it — and spread evenly
-            // there is not enough left over to tell two walls a centimetre
-            // apart from each other. It costs the early depth test, which is
-            // a fair price for walls that do not shimmer.
-            logarithmicDepthBuffer: true,
-        });
-        renderer.setPixelRatio(1 / PIXEL_SCALE);
-        renderer.domElement.style.width = '100%';
-        renderer.domElement.style.height = '100%';
-        renderer.domElement.style.imageRendering = 'pixelated';
-        renderer.domElement.style.display = 'block';
-        container.appendChild(renderer.domElement);
-
         // Now that there is a renderer to ask, turn on anisotropic filtering.
         textures.useRenderer(renderer);
 
         // A spot named in the address wins over the level's own spawn, so a
         // reported snapshot can be stood on again exactly.
-        const forced = spotFromSearch(window.location.search);
-
-        const spawnSector = sectorAt(
-            level.sectors,
-            level.spawn.x,
-            level.spawn.z,
+        // A spot named in the address wins over the level's own spawn, so a
+        // reported snapshot can be stood on again exactly.
+        const player = spawnPlayer(
+            level,
+            spotFromSearch(window.location.search),
         );
-
-        const standingOn =
-            forced === null
-                ? spawnSector
-                : sectorAt(level.sectors, forced.x, forced.z);
-
-        const player = {
-            x: forced?.x ?? level.spawn.x,
-            z: forced?.z ?? level.spawn.z,
-            // The level's angle runs the other way to the player's yaw, which
-            // is exactly the trap `?at=` exists to avoid: a snapshot's yaw goes
-            // in as it was written.
-            yaw:
-                forced === null
-                    ? -THREE.MathUtils.degToRad(level.spawn.angle)
-                    : THREE.MathUtils.degToRad(forced.yaw),
-            pitch: forced === null ? 0 : THREE.MathUtils.degToRad(forced.pitch),
-            eye: (standingOn?.floorHeight ?? 0) + EYE_HEIGHT,
-        };
 
         // The player's own hands, hung off the camera. The camera goes into the
         // scene for them: a child of something outside it is never drawn.
@@ -394,7 +309,6 @@ export default function LevelViewport({
         const screenCenter = new THREE.Vector2(0, 0);
 
         let focusedSlug: string | null = null;
-        let walked = 0;
         let frame = 0;
         let lastTime = performance.now();
 
@@ -407,18 +321,6 @@ export default function LevelViewport({
 
         const isLocked = (): boolean =>
             touch ? started : document.pointerLockElement === container;
-
-        const resize = (): void => {
-            const { clientWidth, clientHeight } = container;
-
-            if (clientWidth === 0 || clientHeight === 0) {
-                return;
-            }
-
-            renderer.setSize(clientWidth, clientHeight, false);
-            camera.aspect = clientWidth / clientHeight;
-            camera.updateProjectionMatrix();
-        };
 
         const setFocus = (slug: string | null): void => {
             if (slug === focusedSlug) {
@@ -471,21 +373,12 @@ export default function LevelViewport({
                 : controls.walk();
             const turned = holding ? { yaw: 0, pitch: 0 } : controls.takeLook();
 
-            if (turned.yaw !== 0 || turned.pitch !== 0) {
-                player.yaw += turned.yaw;
-                player.pitch = THREE.MathUtils.clamp(
-                    player.pitch + turned.pitch,
-                    -MAX_PITCH,
-                    MAX_PITCH,
-                );
-            }
+            turnPlayer(player, turned);
 
             const running =
                 pressed.has('ShiftLeft') ||
                 pressed.has('ShiftRight') ||
                 controls.running();
-
-            const speed = running ? RUN_SPEED : WALK_SPEED;
 
             // A stick reads anywhere between nothing and all the way over; a key
             // is only ever one or the other. Whichever is pushed harder wins.
@@ -503,58 +396,12 @@ export default function LevelViewport({
                 pushed.strafe,
             );
 
-            if (forward !== 0 || strafe !== 0) {
-                const sin = Math.sin(player.yaw);
-                const cos = Math.cos(player.yaw);
-
-                let moveX = forward * -sin + strafe * cos;
-                let moveZ = forward * -cos + strafe * -sin;
-
-                // A stick half over is a walk half as fast. A key is all the
-                // way over or not at all, so this changes nothing for one.
-                const throttle = Math.min(1, Math.hypot(forward, strafe));
-
-                const length = Math.hypot(moveX, moveZ);
-                moveX = (moveX / length) * speed * throttle * seconds;
-                moveZ = (moveZ / length) * speed * throttle * seconds;
-
-                const moved = moveWithCollisions(
-                    player,
-                    moveX,
-                    moveZ,
-                    built.colliders,
-                    PLAYER_RADIUS,
-                );
-
-                // A portal is asked about before the floor plan is, because
-                // walking into one leaves the room by design: the step that
-                // crosses it lands outside every sector until it is carried
-                // through to the far mouth.
-                const through = crossPortal(
-                    portals,
-                    player.x,
-                    player.z,
-                    moved.x,
-                    moved.z,
-                    player.yaw,
-                );
-
-                const next =
-                    through !== null &&
-                    sectorAt(level.sectors, through.x, through.z) !== null
-                        ? through
-                        : moved;
-
-                if (sectorAt(level.sectors, next.x, next.z) !== null) {
-                    walked += Math.hypot(moveX, moveZ);
-                    player.x = next.x;
-                    player.z = next.z;
-
-                    if (next === through) {
-                        player.yaw = through.yaw;
-                    }
-                }
-            }
+            walkPlayer(
+                player,
+                { forward, strafe, running },
+                { sectors: level.sectors, colliders: built.colliders, portals },
+                seconds,
+            );
 
             const standingIn = sectorAt(level.sectors, player.x, player.z);
 
@@ -563,28 +410,23 @@ export default function LevelViewport({
                 lid.mesh.visible = lid.room === standingIn?.slug;
             }
 
+            settleEye(player, standingIn, seconds);
+
             const floor = standingIn?.floorHeight ?? 0;
-            const wading = standingIn?.isWater === true ? WADE_DEPTH : 0;
 
-            // The eye catches up with the floor rather than jumping to it.
-            player.eye +=
-                (floor + EYE_HEIGHT - wading - player.eye) *
-                Math.min(1, STEP_SMOOTHING * seconds);
+            hands.update(seconds, player.walked, running);
 
-            hands.update(seconds, walked, running);
-
-            playerSprite.place(player.x, floor, player.z, player.yaw, walked);
+            playerSprite.place(
+                player.x,
+                floor,
+                player.z,
+                player.yaw,
+                player.walked,
+            );
             actors.update(seconds, built.colliders);
             actors.faceViewer(player.x, player.z, player.yaw);
 
-            camera.position.set(player.x, player.eye, player.z);
-            camera.rotation.y = player.yaw;
-            camera.rotation.x = player.pitch;
-
-            // Mirrors and portals are drawn from cameras derived from this one,
-            // and they run before the main render — which is where three would
-            // otherwise get round to working its world matrix out.
-            camera.updateMatrixWorld(true);
+            aimCamera(camera, player);
 
             sky?.follow(player.x, player.eye, player.z);
 
@@ -700,7 +542,9 @@ export default function LevelViewport({
 
             player.x = home.x;
             player.z = home.z;
-            walked = 0;
+            // The tally the walk frame and the hands ride on. A recall is not a
+            // stride, so it does not count as one.
+            player.walked = 0;
 
             magic.burst({ x: home.x, y: home.y + 0.6, z: home.z });
         };
@@ -1042,7 +886,7 @@ export default function LevelViewport({
             hands.dispose();
             built.dispose();
             textures.dispose();
-            renderer.dispose();
+            disposeView();
             renderer.domElement.remove();
         };
         // touch is settled once, when the component first mounts, so listing it
