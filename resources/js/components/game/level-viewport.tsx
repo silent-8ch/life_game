@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import * as THREE from 'three';
 import { store } from '@/actions/App/Http/Controllers/DebugSnapshotController';
 import { createActors } from '@/lib/engine/actors';
+import type { PropSet } from '@/lib/engine/build/things';
 import { buildLevel } from '@/lib/engine/build-level';
 import { MAX_FRAME_SECONDS, REACH } from '@/lib/engine/constants';
 import { createHands } from '@/lib/engine/hands';
@@ -43,10 +44,26 @@ import { createTextureLibrary } from '@/lib/engine/textures';
 import { wantsTouchControls } from '@/lib/engine/touch';
 import { createView } from '@/lib/engine/view';
 import { cn } from '@/lib/utils';
-import type { Level, LevelThing } from '@/types';
+import type { Flags, Level, LevelThing } from '@/types';
 
 type LevelViewportProps = {
     level: Level;
+    /**
+     * Which flags the saved game has set, by name.
+     *
+     * Only flags that have been set are here at all, so `name in flags` is the
+     * honest test — a flag set to an empty string and a flag never set are
+     * different states and would otherwise read alike.
+     *
+     * They arrive again after every interaction while the level object stays
+     * the one the browser already had, which is the whole point of the closure
+     * the payload puts it behind. So this is watched for a change rather than
+     * read once at build.
+     *
+     * Optional because the map editor's preview has no saved game behind it and
+     * no flags to speak of, rather than because a game might not send them.
+     */
+    flags?: Flags;
     /** Whatever the crosshair is resting on, or null. */
     onFocus: (thing: LevelThing | null) => void;
     onExamine: (thing: LevelThing) => void;
@@ -82,6 +99,7 @@ const SCAN_FRAMES = 30;
 
 export default function LevelViewport({
     level,
+    flags = {},
     onFocus,
     onExamine,
     onLockChange,
@@ -111,6 +129,27 @@ export default function LevelViewport({
         lines: string[];
         status: string;
     } | null>(null);
+
+    /**
+     * The props, once the level is built, and the flags they are showing.
+     *
+     * Flags arrive again after every interaction while the level object stays
+     * the one the browser already had — that closure exists so a partial reload
+     * never rebuilds the geometry. So a flipped switch reaches the renderer by
+     * being handed to it, not by anything being made again.
+     */
+    const propSet = useRef<PropSet | null>(null);
+    const flagsSet = useRef<ReadonlySet<string>>(new Set(Object.keys(flags)));
+
+    useEffect(() => {
+        // Only flags that have been set are in the payload at all, so presence
+        // is the whole test: a flag set to an empty string and one never set
+        // are different states and would otherwise read alike.
+        const set = new Set(Object.keys(flags));
+
+        flagsSet.current = set;
+        propSet.current?.setFlags(set);
+    }, [flags]);
 
     // Held in a ref so that re-rendering the frame never restarts the level.
     const callbacks = useRef({ onFocus, onExamine, onLockChange, onMessage });
@@ -170,6 +209,10 @@ export default function LevelViewport({
 
         const textures = createTextureLibrary();
         const built = buildLevel(level, textures);
+
+        // Whatever the save already says, before the first frame is drawn.
+        built.props.setFlags(flagsSet.current);
+        propSet.current = built.props;
         scene.add(built.group);
 
         const legend = probe === null ? [] : paintWalls(built.group);
@@ -566,6 +609,7 @@ export default function LevelViewport({
         return () => {
             cancelAnimationFrame(frame);
             observer.disconnect();
+            propSet.current = null;
             input.dispose();
             actors.dispose();
             playerSprite.dispose();

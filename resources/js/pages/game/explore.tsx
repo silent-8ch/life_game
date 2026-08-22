@@ -11,6 +11,7 @@ import type { ExplorePageProps, LevelThing } from '@/types';
 export default function Explore({
     game,
     level,
+    flags,
     inventory,
     message,
 }: ExplorePageProps) {
@@ -113,6 +114,7 @@ export default function Explore({
 
                     <LevelViewport
                         level={level}
+                        flags={flags}
                         onFocus={setFocused}
                         onExamine={examine}
                         onLockChange={lockChanged}
