@@ -128,8 +128,7 @@ export function paintWalls(group: THREE.Object3D): WallPaint[] {
 
     group.traverse((object) => {
         const flat = object.userData.flat as
-            | { sector: string; height: number }
-            | undefined;
+            { sector: string; height: number } | undefined;
 
         // Floors and ceilings all go one reserved colour. They are never the
         // thing being hunted, and left in their own textures their pixels can
@@ -326,7 +325,10 @@ export function spotFromSearch(search: string): ForcedSpot | null {
 
     const numbers = asked.split(',').map((part) => Number(part.trim()));
 
-    if (numbers.length < 2 || numbers.some((value) => !Number.isFinite(value))) {
+    if (
+        numbers.length < 2 ||
+        numbers.some((value) => !Number.isFinite(value))
+    ) {
         return null;
     }
 

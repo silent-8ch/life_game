@@ -1,8 +1,5 @@
 import * as THREE from 'three';
-import {
-    PANE_TEXELS_ACROSS,
-    PANE_TEXELS_DOWN,
-} from '@/lib/engine/constants';
+import { PANE_TEXELS_ACROSS, PANE_TEXELS_DOWN } from '@/lib/engine/constants';
 
 /**
  * The pane that fills a portal mouth. It is drawn with the view from the far

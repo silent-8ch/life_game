@@ -86,7 +86,10 @@ export function createTextureLibrary(): TextureLibrary {
             return existing;
         }
 
-        const texture = retro(loader.load(`${TEXTURE_PATH}/${name}.png`), anisotropy);
+        const texture = retro(
+            loader.load(`${TEXTURE_PATH}/${name}.png`),
+            anisotropy,
+        );
         loaded.set(name, texture);
 
         return texture;

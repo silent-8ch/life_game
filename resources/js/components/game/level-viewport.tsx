@@ -333,7 +333,10 @@ export default function LevelViewport({
             return;
         }
 
-        const fade = window.setTimeout(() => setFlash(null), SNAPSHOT_SHOWN_FOR);
+        const fade = window.setTimeout(
+            () => setFlash(null),
+            SNAPSHOT_SHOWN_FOR,
+        );
 
         return () => window.clearTimeout(fade);
     }, [flash]);
@@ -554,8 +557,7 @@ export default function LevelViewport({
                 forced === null
                     ? -THREE.MathUtils.degToRad(level.spawn.angle)
                     : THREE.MathUtils.degToRad(forced.yaw),
-            pitch:
-                forced === null ? 0 : THREE.MathUtils.degToRad(forced.pitch),
+            pitch: forced === null ? 0 : THREE.MathUtils.degToRad(forced.pitch),
             eye: (standingOn?.floorHeight ?? 0) + EYE_HEIGHT,
         };
 
@@ -1203,7 +1205,7 @@ export default function LevelViewport({
             {flash !== null && (
                 <div
                     key={flash.id}
-                    className="pointer-events-none absolute top-3 left-3 z-50 max-w-[min(20rem,70vw)] animate-in rounded-md border border-white/15 bg-black/70 px-3 py-2 font-mono text-[11px] leading-tight text-white/85 shadow-lg backdrop-blur-sm fade-in"
+                    className="animate-in fade-in pointer-events-none absolute top-3 left-3 z-50 max-w-[min(20rem,70vw)] rounded-md border border-white/15 bg-black/70 px-3 py-2 font-mono text-[11px] leading-tight text-white/85 shadow-lg backdrop-blur-sm"
                 >
                     <div className="mb-1 font-sans text-[10px] font-semibold tracking-widest text-emerald-300 uppercase">
                         Snapshot
