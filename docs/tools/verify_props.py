@@ -41,7 +41,17 @@ FLOOR = 24            # alpha at or below this is nothing drawn at all
 SOLID = 247           # alpha at or above this is unambiguously kept
 
 HALO_FRACTION = 0.06  # part-transparent pixels, as a share of what is drawn
-CROSS_COVERAGE = 0.80 # a silhouette filling more of its frame than this is a board
+#: How solid a cross-plane silhouette is *within its own bounding box*. A board
+#: is nearly 1.0. Do NOT measure the bounding box against the canvas instead:
+#: the brief asks props to fill their frame with no margin and asks foliage to
+#: reach out in both directions, so a good plant's box covers nearly all of it.
+#: That is the measurement this gate got wrong first time, and it failed four
+#: correct plants for doing what they were told.
+CROSS_DENSITY = 0.85
+
+#: A board also has opaque corners. Foliage must have transparent ones — this is
+#: rule 2 of the brief's cross-plane section, stated directly rather than inferred.
+CROSS_CORNER_INK = 0.50
 CROSS_CENTRE = 0.04   # ink may sit this far off the axis, as a share of width
 
 ROW = re.compile(
@@ -113,11 +123,26 @@ def faults(path, spec):
                   if rows[y][x][3] >= SOLID]
     top, bottom = min(solid_rows), max(solid_rows)
 
-    coverage = ((right - left + 1) * (bottom - top + 1)) / (width * height)
-    if coverage > CROSS_COVERAGE:
+    box = (right - left + 1) * (bottom - top + 1)
+    density = len(columns) / box
+    if density > CROSS_DENSITY:
         found.append(
-            f'silhouette fills {coverage:.0%} of the frame '
-            f'(limit {CROSS_COVERAGE:.0%}) — it will read as two crossed boards'
+            f'silhouette is {density:.0%} solid inside its own outline '
+            f'(limit {CROSS_DENSITY:.0%}) — it will read as two crossed boards'
+        )
+
+    corner_w, corner_h = max(1, width // 10), max(1, height // 10)
+    inked = []
+    for corner_x, corner_y in ((0, 0), (width - corner_w, 0),
+                               (0, height - corner_h), (width - corner_w, height - corner_h)):
+        ink = sum(1 for y in range(corner_y, corner_y + corner_h)
+                  for x in range(corner_x, corner_x + corner_w)
+                  if rows[y][x][3] >= SOLID)
+        inked.append(ink / (corner_w * corner_h))
+    if all(share > CROSS_CORNER_INK for share in inked):
+        found.append(
+            'all four corners are painted — foliage needs transparent corners '
+            'or the two planes read as crossed boards'
         )
 
     middle = (left + right) / 2
@@ -158,7 +183,23 @@ def main(argv):
         for name in sorted(os.listdir(folder)):
             if not name.endswith('.png') or name in specs:
                 continue
-            stem = re.sub(r'-(\d+|[a-z]+)\.png$', '.png', name)
+            # An animated texture is authored as {name}-1.png ... {name}-N.png
+            # and its base name is never a file, so a numbered set is expected
+            # rather than stray. Report it once, as a set, saying what it is.
+            frame = re.match(r'^(.*)-(\d+)\.png$', name)
+            if frame:
+                if frame.group(2) == '1':
+                    siblings = sorted(
+                        f for f in os.listdir(folder)
+                        if re.match(rf'^{re.escape(frame.group(1))}-\d+\.png$', f)
+                    )
+                    print(
+                        f'NOTE {frame.group(1)}-1..{len(siblings)}.png — a {len(siblings)}-frame '
+                        f'animation set, not in the table. Author it as a thing with '
+                        f'texture "{frame.group(1)}" and animation_frames {len(siblings)}.'
+                    )
+                continue
+            stem = re.sub(r'-[a-z]+\.png$', '.png', name)
             if stem not in specs:
                 print(f'NOTE {name} is not in the brief\'s table')
 
