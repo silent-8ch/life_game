@@ -49,6 +49,27 @@ owner still gets told, and still owns the file afterwards; what they no longer d
 between a green branch and `main`. Hands sat unreviewed for two hours while Paul asked where
 they were; that is the cost this rule removes.
 
+**BOTH AGENTS ARE STOPPED** — Paul is reaching usage limits. Only he can restart either;
+planning cannot, and did not try. `main` is clean and green, nothing is half-landed.
+
+**⚠ ONE PIECE OF WORK EXISTS IN ONLY ONE PLACE AND IS NOT COMMITTED.** Agent A's pathfinding
+(A-18) is written, **local to that session's `agentA` working tree, unpushed, and its last
+gate run failed** — so it is unknown rather than good. If that session ends it is gone. **One
+`git commit` and `git push` from Paul, to a branch, would preserve it even unverified.** This
+is the same shape as `will-2` and the six lost levels: work living in exactly one place.
+
+**Its measurements are worth keeping even if the code is not.** Level 8 went from 42 rooms
+reached to **127** over two minutes of five people walking, stuck time unchanged at 2%. The
+house went 36 → 62 but **stuck time rose 11% → 15%**, unexplained — agent A's guess was
+furniture colliders near doorways, and they would not land it without explaining that. The
+graph hands the limits in rather than baking them, per ISSUE-45.
+
+**On A-21, from agent A before stopping:** the line to watch is `fitTo` in
+`portal-surface.ts`. The asked-for size is a **floor**, and it is currently never exceeded
+because the drawing buffer is a third of the canvas. Remove the pixel scale and
+`max(512, drawingBufferWidth)` starts returning the buffer width **on every pane, every depth,
+all at once**. `PANE_TEXELS_ACROSS`/`DOWN` is the knob.
+
 **AGENT 1 IS STOPPED.** Paul stopped that session — *"we are reaching limits."* Only he can
 restart it; a message from planning cannot. **Nothing waits on it**: working tree clean,
 nothing uncommitted, and `d794e33` — which agent 1 believed unmerged — **is on `main`**, merged
