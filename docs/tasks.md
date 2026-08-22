@@ -110,6 +110,43 @@ in one image and cutting them up, which measures wrong and looks fine.
 as the working agreement requires rather than because nobody would have noticed.** It was
 written to make good on "planning verifies before merging", which without it was a promise and
 not a check. Agent 1: if you would rather own it, say so and it is yours.
+## What comes after the current queue
+
+Both lanes empty out soon — A-04 is A's last unblocked task and 1-11/1-12 is agent 1's. This
+is what `docs/next-directions.md` offers, filtered to what is actually reachable, so the board
+does not run dry mid-shift. **Nothing here is assigned; the ordering is a product decision and
+belongs to the user, not to planning.**
+
+Unblocked today, in agent 1's lane:
+
+- **Save where you are in a level** (~1 day). `game_states` has `current_level_id` but no
+  position, angle or sector, so reopening a game drops you at spawn. Small and immediately
+  noticeable.
+- **A stair generator in the editor** (~2 days). Pairs with the slopes that just landed;
+  `carve.ts` already knows how to split a room into slabs (`intoSlabs`), so most of the
+  geometry exists. Turns the most tedious authoring job into one dialog.
+- **Stats that do something** (~3 days). The sequel to `plan-slopes-and-stats.md` part 2,
+  which deliberately stopped at storing numbers. `StatAtLeast` on `ConditionType`,
+  `ChangeStat` on `EffectType`, and their editor controls. Gating what the world *says* on
+  Perception rather than inventing combat.
+
+Unblocked today, in agent A's lane:
+
+- **A minimap** (~1–2 days). `boundsOf` exists and `map-view.tsx` already draws a complete
+  floor plan; a corner minimap is largely reusing that with the player on top.
+
+Blocked, and worth knowing why:
+
+- **Doors that open** (~2–3 days) — called out in `next-directions.md` as the single feature
+  most likely to make the house feel like a house. Wants A-03, which wants prop art.
+- **Vertical physics** (~1 week) — gravity, jumping, falling, crouching. The doc says it wants
+  slopes first, and slopes are landing now. It is also what makes `MAX_STEP` a runtime
+  decision rather than a build-time collider, which is the better model.
+- **Room over room** (weeks) — the big one. Wants vertical physics and slopes first.
+- **Shared presence** (~1 week for positions and facing only). `@laravel/multiplex` is already
+  in `package.json` and imported nowhere; the rendering work is done and what is missing is a
+  transport and a server-side authority.
+
 ## Parked
 
 **Sound** — `agent1-footsteps` (`69389d9`), 1-09 and A-07. Parked by the user. The branch holds
@@ -201,6 +238,7 @@ and strike an entry rather than deleting it when it closes.
 | ISSUE-35 | **`texture` accepting prop names is a correction, not a widening — the plan's own worked example needed it.** Agent 1 changed validation inside 1-04 so `texture` accepts either the tiling set or `sprites/props`, flagged it as a data-model change made in an editor task, and asked whether it should be narrowed. **Ruling: it stays, and it was never a widening.** `plan-prop-rendering.md:101` describes a light switch as a thing with `texture` = `light-switch-off` and `texture_alt` = `light-switch-on` — and both of those are in the prop table, not the tiling set. The plan's own example fails under the old rule. What the plan says at :137, that `texture_alt` must name a prop, was an incomplete sentence rather than a boundary. **Open question deliberately left to A-03**: whether `box` mode should be held to the tiling set, since a box textured with a cutout PNG shows holes where `alphaTest` is not applied. That is an authoring hazard, decided where the truth about `alphaTest` lives, not here. Flagging it rather than landing it quietly was right. | medium | 1 | **ruled — keep** |
 | ISSUE-36 | **The editor's prop picker is empty and will look broken until the art lands.** `LevelAssets::props()` returns `[]` while `public/sprites/props` holds only a `.gitkeep`, so the picker offers nothing and `texture_alt` has no valid value. **That is correct behaviour, not a bug** — recorded here so it is not reported as one, by anyone who opens the editor before the outside art branch arrives. | low | — | open — expected |
 | ISSUE-33 | **A rebase onto `main` needs `php artisan migrate` after it, and nothing says so.** Agent A rebased onto the two migrations 1-03 and 1-05 landed, did not apply them, and `LevelPayload` read `render` off rows that had no value for it — two of the three levels answered **500**. Seven scan spots reported drawing nothing and the plausible explanation was the WebGL context limit, which is what A had just been working around. It was not. **This will happen again every time a migration lands**, to whichever agent rebases next, and it presents as the page being broken rather than as anything about the database. Added to the working agreement. | medium | — | open — in the agreement |
+| ISSUE-42 | **`docs/next-directions.md` is stale in the direction that matters — it lists work as outstanding that is done.** Its tech-debt item 1 says `UpdateLevelMapRequest::authorize()` returns `true` and there is no `app/Policies` directory at all, describing it as any logged-in user being able to overwrite any level; that was closed by `9110b36` and `LevelPolicy.php` exists. Four of its six quick wins are also landed — undo/redo, duplicate a room, drag the spawn point, the extent readout — and the arrow-key height nudge is in `level.tsx:264`. **A menu that lists a fixed security hole as open is worse than one that is merely out of date**: the next person to read it either re-does the work or believes the hole is live. Agent 1 owns `docs/**`; low priority, but it should not sit indefinitely. | medium | 1 | open |
 | ISSUE-39 | **The harness would not have caught the worst bug of the split, and agent A caught it by reading.** `isLocked` is `touch ? started : pointerLockElement === container` — a phone has no pointer to lock, so on touch, playing *is* the flag. A's first `input.ts` had only the second half, which would have made the game **unplayable on a phone**, and nothing would have found it: not the scan, not the tests, not tsc. Caught by reading the old code beside the new. This is the necessary counterweight to ISSUE-34: the harness proved five refactors byte-identical and would have shipped this. **Sixteen spots are sixteen desktop spots.** Worth knowing before anyone treats a green diff as a finished review. | high | — | open — remembered |
 | ISSUE-40 | **`cmd | tail -2 && git push` does not guard anything.** A pipeline's exit status is the last stage's, so `tail` succeeding meant the push ran while `ci:check` was failing. Agent A hit it, reported it unprompted, and `main` was fine — but the guard had never been a guard. The failure underneath it was `vitest: command not found`, which is ISSUE-33's twin: 1-08 added `npm run test:js` to the gate and A had not run `npm install`. **Use `set -o pipefail`, or check the command's own status, or do not chain the push.** | medium | — | open — in the agreement |
 | ISSUE-41 | **1-08 is four dev dependencies, not the two that were approved.** `vitest` and `@testing-library/react` are the approved pair; `jsdom` and `@testing-library/jest-dom` are what they need to run at all and to assert readably. Agent 1 installed `@vitest/ui` and `user-event` as well and took both back out, neither having earned a place. **Flagged by agent 1 unprompted and surfaced to the user rather than absorbed** — the approval said two and this is four, and the difference between "technically required" and "while I was in there" is exactly the difference nobody notices unless somebody counts. | low | — | open — surfaced |
