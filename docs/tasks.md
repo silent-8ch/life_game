@@ -49,6 +49,24 @@ owner still gets told, and still owns the file afterwards; what they no longer d
 between a green branch and `main`. Hands sat unreviewed for two hours while Paul asked where
 they were; that is the cost this rule removes.
 
+**AGENT 1 IS STOPPED.** Paul stopped that session — *"we are reaching limits."* Only he can
+restart it; a message from planning cannot. **Nothing waits on it**: working tree clean,
+nothing uncommitted, and `d794e33` — which agent 1 believed unmerged — **is on `main`**, merged
+at `641b7fa`, `ui` kind included. Whoever picks this lane up starts from the queue below with
+nothing to recover.
+
+**Three things agent 1 asked not be lost, verified here:**
+1. **The `ui` shot kind is on `main` and Paul confirmed it stays.** If that work is ever
+   reworked, do not let the earlier *"map and section only"* account remove it — that was the
+   bad relay in ISSUE-103.
+2. **Five sectors in level 8 are genuine rooms nothing can walk to** — `room-46`, `room-47-2`,
+   `room-52`, `room-60`, `room-75`. Unresolved, untouched, and a different question from the
+   wall slivers. ISSUE-84.
+3. **Nobody has looked at the new hand poses on a screen.** The signs are pinned by tests and
+   measured off the artwork, but `reach` and `grip` have never been seen in motion — **and a
+   handedness error looks fine in an assertion.** The one thing on this board whose only
+   possible check is a person looking.
+
 **Paul's comments are priorities.** His words, and the standing rule from here: anything he says in
 passing goes to the **front** of the queue, not behind whatever is in flight. A-11 waits behind
 his door-pathfinding ask; 1-24/25/26 go ahead of the sky lids. The board orders by what he
