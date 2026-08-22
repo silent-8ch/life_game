@@ -504,6 +504,63 @@ it('records what was being edited when the report came from the editor', functio
         ->and($state['history'])->toBe(4);
 });
 
+it('takes what the game actually sends, stringified the way a form sends it', function (): void {
+    // The join, end to end. A ticket goes up as multipart because it carries
+    // pictures, and multipart has exactly one type: string. So every number
+    // arrives as "2.5" and every boolean as "0" — and rules written against
+    // real numbers and real booleans would reject the whole report at the
+    // worst possible moment, after somebody has stopped playing, typed out
+    // what was wrong and pressed send.
+    //
+    // The client's own tests can only prove it sends what I *think* the server
+    // wants. This proves the server takes it.
+    Storage::fake('local');
+
+    $this->post(route('games.tickets.store', $this->game), [
+        'source' => 'play',
+        'level' => 'tech-demo',
+        'note' => 'the floor has a hole in it',
+        'running' => '0',
+        'at' => [
+            'x' => '2.5', 'z' => '-4.25', 'eye' => '1.62',
+            'yaw' => '135', 'pitch' => '-8.5',
+        ],
+        'standingIn' => [
+            'slug' => 'hall',
+            'name' => 'Hall',
+            'floorHeight' => '0',
+            'ceilingHeight' => '3',
+            'isSky' => '0',
+            'isWater' => '0',
+            'wallTexture' => 'cream-plaster-wall',
+        ],
+        'lookingAt' => 'crate',
+        'screen' => [
+            'width' => '1512', 'height' => '893',
+            'pixelRatio' => '2', 'touch' => '0',
+        ],
+        'nearby' => [
+            ['distance' => '-0.04', 'rooms' => ['hall'], 'open' => '1'],
+        ],
+        'legend' => [
+            ['css' => 'rgb(255, 204, 102)', 'sector' => 'hall', 'index' => '3'],
+        ],
+        'shots' => [
+            'normal' => UploadedFile::fake()->image('normal.png', 440, 250),
+        ],
+    ], ['Accept' => 'application/json'])->assertCreated();
+
+    $ticket = SupportTicket::sole();
+
+    expect($ticket->note)->toBe('the floor has a hole in it')
+        ->and($ticket->at_yaw)->toEqual(135.0)
+        ->and($ticket->standing_in_slug)->toBe('hall')
+        ->and($ticket->standing_in['wallTexture'])->toBe('cream-plaster-wall')
+        // "0" has to land as false. The string "false" would have landed as
+        // true, which is the trap this spelling avoids.
+        ->and($ticket->is_running)->toBeFalse();
+});
+
 it('takes a picture of the interface, which is what a UI fault looks like', function (): void {
     // The editor button exists for UI issues, and `map` and `section` both
     // draw the *level*. Without a kind for the interface, a child reporting

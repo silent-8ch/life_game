@@ -30,6 +30,11 @@ export type InputActions = {
     recall: (() => void) | null;
     takeInHand: (item: HeldItem | null) => void;
     takeSnapshot: () => void;
+    /**
+     * "Something here is wrong." Lets go of the mouse on the way, because the
+     * next thing asked for is a sentence typed into a box.
+     */
+    reportFault: () => void;
     /** A click while already playing: casting, if the player can cast. */
     fire: () => void;
     /** A turn of the head, applied at once rather than at the next frame. */
@@ -123,6 +128,14 @@ export function createInput(
 
         if (event.code === 'KeyF' && !event.repeat) {
             actions.takeSnapshot();
+        }
+
+        // B for broken. R is the wizard's recall and F takes a snapshot; this
+        // needs a key of its own, though the button beside it is what people
+        // actually use — a key nobody is told about was tried here and pressed
+        // zero times in an hour.
+        if (event.code === 'KeyB' && !event.repeat) {
+            actions.reportFault();
         }
     };
 
@@ -272,11 +285,9 @@ export function createInput(
                 press: actions.takeSnapshot,
             },
             {
-                label: 'Jump',
-                title: 'Jump',
-                press: () => {
-                    jumpAsked = true;
-                },
+                label: 'Report',
+                title: 'Tell somebody something here is wrong',
+                press: actions.reportFault,
             },
             { label: 'Stop', title: 'Stop playing', press: stop },
         ],

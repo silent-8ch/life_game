@@ -2,6 +2,7 @@ import { Head, Link, router } from '@inertiajs/react';
 import { useCallback, useState } from 'react';
 import { index } from '@/actions/App/Http/Controllers/GameController';
 import { store } from '@/actions/App/Http/Controllers/InteractionController';
+import { store as reportFault } from '@/actions/App/Http/Controllers/SupportTicketController';
 import InventoryTray from '@/components/game/inventory-tray';
 import LevelViewport from '@/components/game/level-viewport';
 import VerbMenu from '@/components/game/verb-menu';
@@ -119,6 +120,7 @@ export default function Explore({
                         onExamine={examine}
                         onLockChange={lockChanged}
                         onMessage={setNote}
+                        reportTo={reportFault(game.slug).url}
                         paused={asking !== null}
                     >
                         {/* Over the touch controls, which are z-20. */}

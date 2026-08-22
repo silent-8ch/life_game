@@ -79,6 +79,7 @@ function gameInput(string $body): array
             recall: () => done.push('recall'),
             takeInHand: (item) => done.push(`hold:\${item ?? 'nothing'}`),
             takeSnapshot: () => done.push('snapshot'),
+            reportFault: () => done.push('report'),
             fire: () => done.push('fire'),
             look: (turned) => turns.push(turned),
             held: () => holding,
@@ -285,6 +286,7 @@ it('does the things a key does, once per press', function (): void {
         press('KeyM');
         press('KeyR');
         press('KeyF');
+        press('KeyB');
         press('Digit1');
         press('Digit0');
 
@@ -301,6 +303,7 @@ it('does the things a key does, once per press', function (): void {
         'mark',
         'recall',
         'snapshot',
+        'report',
         'hold:wand',
         'hold:nothing',
     ]);

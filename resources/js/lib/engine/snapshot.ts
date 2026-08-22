@@ -216,6 +216,31 @@ export function readingOf(snapshot: Snapshot): string[] {
 }
 
 /** What became of a snapshot that was sent somewhere. */
+/**
+ * The CSRF header this app's session cookie asks for, or nothing.
+ *
+ * Shared rather than written twice: a snapshot and a ticket both post to a
+ * session-guarded route, and two copies of a cookie-reading loop is two places
+ * for it to go quietly wrong when only one of them is under test.
+ *
+ * Absent rather than empty when there is no cookie, so a request from
+ * somewhere without a session goes unguarded rather than guarded with nothing
+ * — an empty token reads as a forged one rather than as no token.
+ */
+export function guardHeaders(): Record<string, string> {
+    const guard = document.cookie
+        .split('; ')
+        .find((crumb) => crumb.startsWith('XSRF-TOKEN='));
+
+    return guard === undefined
+        ? {}
+        : {
+              'X-XSRF-TOKEN': decodeURIComponent(
+                  guard.slice('XSRF-TOKEN='.length),
+              ),
+          };
+}
+
 export type SnapshotSaved = { saved: string } | { failed: string };
 
 /**
@@ -234,10 +259,6 @@ export async function postSnapshot(
     spot: Snapshot,
     url: string,
 ): Promise<SnapshotSaved> {
-    const guard = document.cookie
-        .split('; ')
-        .find((crumb) => crumb.startsWith('XSRF-TOKEN='));
-
     let answer: Response;
 
     try {
@@ -247,13 +268,7 @@ export async function postSnapshot(
             headers: {
                 'Content-Type': 'application/json',
                 Accept: 'application/json',
-                ...(guard === undefined
-                    ? {}
-                    : {
-                          'X-XSRF-TOKEN': decodeURIComponent(
-                              guard.slice('XSRF-TOKEN='.length),
-                          ),
-                      }),
+                ...guardHeaders(),
             },
             body: JSON.stringify(spot),
         });
