@@ -271,3 +271,56 @@ it('hugs from beside the opening as readily as from in front of it', function ()
     expect(collect($answer['angles'])->pluck('held')->unique()->values()->all())
         ->toBe([$answer['clearance']]);
 });
+
+it('has no band of angles where the pane behaves differently', function (): void {
+    $answer = hugAnswer(<<<'JS'
+        // Paul filed two snapshots 1.9 seconds apart: identical position,
+        // identical pitch, and 1530.00 against 1530.25 degrees of yaw. One
+        // frame fine, the next broken, "only different by a few pixels".
+        //
+        // 1530 mod 360 is exactly 90, and the mouth he was standing at runs
+        // along the x axis, so the broken frame was looking exactly parallel to
+        // its plane. That is where `look.dot(face)` is zero and where the sign
+        // of a floating-point nothing decided whether the pane was hauled
+        // across his whole screen — so a quarter of a degree was the difference
+        // between the two pictures. It is the sharpest statement of the fault
+        // anyone produced and it costs almost nothing to keep.
+        const across = [];
+
+        for (const yaw of [89.5, 89.75, 90, 90.25, 90.5]) {
+            stand(7.914, 4, yaw);
+
+            const rested = cornersOf(eastward).map(onScreen);
+
+            eastward.hug(camera, PANE_CLEARANCE);
+
+            across.push({
+                yaw,
+                off: Number(offThePlane(eastward).toFixed(4)),
+                held: JSON.stringify(cornersOf(eastward).map(onScreen))
+                    === JSON.stringify(rested),
+            });
+
+            eastward.release();
+        }
+
+        process.stdout.write(JSON.stringify({
+            across,
+            clearance: PANE_CLEARANCE,
+        }));
+        JS);
+
+    // Eight and a half centimetres off the plane, which is the distance Paul
+    // was at — inside PANE_CLEARANCE, so the pane moves, and well outside
+    // NEAR_PLANE, so the old code's *other* failure could not have been what he
+    // saw. What he saw was the pane squared up to his screen.
+    expect(collect($answer['across'])->pluck('off')->unique()->values()->all())
+        ->toBe([$answer['clearance']]);
+
+    // And every one of the five angles leaves the pane exactly where it looked
+    // before, which is the claim: there is no band. Not "the band is narrow" —
+    // a quarter of a degree was already narrow enough to be invisible and wide
+    // enough to ruin the picture.
+    expect(collect($answer['across'])->pluck('held')->all())
+        ->toBe([true, true, true, true, true]);
+});

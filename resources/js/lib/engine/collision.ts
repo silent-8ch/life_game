@@ -32,6 +32,20 @@ export type BoxCollider = {
     halfDepth: number;
     /** Yaw in radians. */
     angle: number;
+    /**
+     * Whether it is solid at the moment. Absent means solid — every collider
+     * built before doors existed says nothing and means yes.
+     *
+     * A flag on a collider that stays in the array, rather than a collider
+     * added to and taken out of it. The array is read every frame by the
+     * player's own step *and* handed to `actors.update`, so swapping it out
+     * from under either leaves the other holding the old one, and a stale
+     * reference to a list of walls is a bug that shows up as somebody walking
+     * through a door that is shut. A flag on a stable object cannot go stale.
+     */
+    enabled?: boolean;
+    /** The thing this belongs to, for whatever needs to find it again. */
+    slug?: string;
 };
 
 export type Collider = SegmentCollider | BoxCollider;
@@ -179,10 +193,18 @@ export function resolveCollisions(
         const before = resolved;
 
         for (const collider of colliders) {
-            resolved =
-                collider.kind === 'segment'
-                    ? pushOutOfSegment(resolved, collider, radius)
-                    : pushOutOfBox(resolved, collider, radius);
+            if (collider.kind === 'segment') {
+                resolved = pushOutOfSegment(resolved, collider, radius);
+
+                continue;
+            }
+
+            // An open door is not there. Written as "not false" rather than
+            // "is true" so that everything which has never heard of doors keeps
+            // stopping people.
+            if (collider.enabled !== false) {
+                resolved = pushOutOfBox(resolved, collider, radius);
+            }
         }
 
         if (resolved.x === before.x && resolved.z === before.z) {
