@@ -463,6 +463,16 @@ export function newPerson(
         stats: null,
         speed: 1.1,
         texture: null,
+        // A person is drawn from a sprite sheet, so none of the prop rendering
+        // applies to them. They still carry the defaults, because the save
+        // sends every field back and validation asks for them on every thing.
+        render: 'box',
+        planeCount: 2,
+        uvMode: 'tile',
+        textureAlt: null,
+        altFlag: null,
+        animationFrames: 1,
+        animationFps: 8,
         x: at.x,
         z: at.z,
         elevation: 0,
@@ -490,6 +500,16 @@ export function newProp(level: Level, at: Point): LevelThing {
         stats: null,
         speed: 0,
         texture: null,
+        // Boxed and tiling to start with, which is what every prop was before
+        // there was a choice — so adding the choice changes nothing already
+        // placed. `fit` is what the editor offers once a prop texture is on it.
+        render: 'box',
+        planeCount: 2,
+        uvMode: 'tile',
+        textureAlt: null,
+        altFlag: null,
+        animationFrames: 1,
+        animationFps: 8,
         x: at.x,
         z: at.z,
         elevation: 0,

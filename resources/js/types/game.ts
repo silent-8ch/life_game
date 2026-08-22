@@ -167,6 +167,26 @@ export type Stats = {
 };
 
 /** A box in the level, positioned by its centre on the floor plan. */
+/**
+ * How a thing is put on the screen.
+ *
+ * A box is right for furniture and wrong for anything with a silhouette: a pot
+ * plant drawn on the side of a cube reads as a cube with a picture of a plant
+ * on it. A billboard turns to face whoever is looking; a cross stands two or
+ * three quads in a star and stays put, so a row of plants does not swivel
+ * together as the player walks past.
+ */
+export type ThingRender = 'box' | 'billboard' | 'cross';
+
+/**
+ * Whether a thing's texture repeats or is stretched to fit.
+ *
+ * Tiling suits a surface that carries on past what you can see. Fitting suits a
+ * picture of a particular object — a door tiled at the wall scale shows the
+ * middle 45% of a door, which looks like bad art rather than bad UVs.
+ */
+export type ThingUvMode = 'tile' | 'fit';
+
 export type LevelThing = {
     slug: string;
     name: string;
@@ -189,6 +209,23 @@ export type LevelThing = {
     inheritedStats?: Stats;
     speed: number;
     texture: string | null;
+    /** How it is put on the screen. */
+    render: ThingRender;
+    /** Quads in the star, for a cross prop. 2 or 3; ignored otherwise. */
+    planeCount: number;
+    /** Whether the texture repeats at the wall scale or fits each face once. */
+    uvMode: ThingUvMode;
+    /**
+     * Drawn instead of `texture` while `altFlag` is set. Null unless `altFlag`
+     * is too — the pair is all or nothing, since either alone means nothing.
+     */
+    textureAlt: string | null;
+    /** The game flag that swaps in `textureAlt`. */
+    altFlag: string | null;
+    /** Frames across the texture strip. 1 is a still picture. */
+    animationFrames: number;
+    /** How fast those frames advance. */
+    animationFps: number;
     x: number;
     z: number;
     elevation: number;
@@ -236,6 +273,11 @@ export type ExplorePageProps = {
 /** What the map editor has to build levels out of. */
 export type LevelAssets = {
     textures: string[];
+    /**
+     * Cutout art for props, listed apart from the tiling textures because they
+     * are a different kind of picture and belong in a different picker.
+     */
+    props: string[];
     skies: string[];
     /** Backdrop themes, and the numbered layers each one has. */
     backdrops: Record<string, number[]>;

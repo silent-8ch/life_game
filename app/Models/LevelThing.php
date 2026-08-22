@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Enums\ThingKind;
+use App\Enums\ThingRender;
+use App\Enums\ThingUvMode;
 use App\Services\PersonStats;
 use Database\Factories\LevelThingFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -27,6 +29,13 @@ use Illuminate\Support\Carbon;
  * @property array<string, int>|null $stats
  * @property float $speed
  * @property string|null $texture
+ * @property ThingRender $render
+ * @property int $plane_count
+ * @property ThingUvMode $uv_mode
+ * @property string|null $texture_alt
+ * @property string|null $alt_flag
+ * @property int $animation_frames
+ * @property float $animation_fps
  * @property float $x
  * @property float $z
  * @property float $elevation
@@ -52,6 +61,13 @@ use Illuminate\Support\Carbon;
     'stats',
     'speed',
     'texture',
+    'render',
+    'plane_count',
+    'uv_mode',
+    'texture_alt',
+    'alt_flag',
+    'animation_frames',
+    'animation_fps',
     'x',
     'z',
     'elevation',
@@ -74,7 +90,12 @@ class LevelThing extends Model
     {
         return [
             'kind' => ThingKind::class,
+            'render' => ThingRender::class,
+            'uv_mode' => ThingUvMode::class,
             'stats' => 'array',
+            'plane_count' => 'integer',
+            'animation_frames' => 'integer',
+            'animation_fps' => 'float',
             'speed' => 'float',
             'x' => 'float',
             'z' => 'float',
