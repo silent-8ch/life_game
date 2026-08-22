@@ -74,11 +74,25 @@ through him.
 rule, replacing the branch-per-task arrangement entirely. An agent's output is **modified files
 sitting in the working directory** where he can see them, `git add` them and commit them.
 
-**One checkout per agent — they do not share a tree.** Paul's ruling, and it is what makes the
-above safe: without branches, two sessions in one directory overwrite each other with nothing
-to merge. He commits from two places rather than one; that is the price and it is the right
-one. **The lane table below still governs who owns which files** — it now prevents two agents
-*changing the same file in two trees*, which produces a conflict he has to resolve by hand.
+**There is no agent 1. Two workers, split by where the work comes from, not by which files it
+touches.** Paul's ruling, and it retires the whole lane apparatus below:
+
+| Session | Does | Work comes from |
+| --- | --- | --- |
+| **`scanner`** | **the features** — all of them, data, editor and engine alike | Paul's queue on this board |
+| **`production`** | keeps the demo healthy, **and sometimes fixes bugs off the snapshots** | what the playtesters file |
+
+**The path-ownership table further down is history.** It existed to keep two feature agents out
+of three enormous files; all three are split and there is only one feature agent. Read it for
+the reasoning, not for permission.
+
+**The collision risk is much smaller and not zero.** Two workers can still meet in one file —
+a bug fix and a feature landing in the same place. It is far less likely than two feature
+agents were, and split by *cause* rather than by path it is easier to see coming. The rule is
+just: **`production` says which files a fix touches before starting one.**
+
+**One checkout per session, no shared trees.** Without branches, two sessions in one directory
+overwrite each other with nothing to merge.
 
 **Planning commits its own markdown — `docs/**.md` — and nothing else, ever.** Paul's
 exception, granted after the last arrangement failed: the rule saying "do not commit" was
