@@ -6,8 +6,8 @@ merging to `main`. Agent 1 is session `life-game-22`; agent A is `life-game2-78`
 reaches both of you. This file is the shared state: who owns what, what is in flight, what is
 done, and what is broken.
 
-Last audited against the repo at `952576b`. `origin/agentA` is level with `main`;
-`origin/agent1` has no diff against it.
+Last audited against the repo at `ea5ad72`. `origin/agentA` is level with `main`. Agent 1's
+work is on `origin/agent1-constants-guard` (`21857e2`) and **not merged** — see 1-01/1-02.
 
 ---
 
@@ -34,10 +34,16 @@ the work left touches one of them.
 the renderer.** `resources/js/types/game.ts` is the handoff — once the new fields are on
 `main`, A can build against them.
 
-**Land order now.** A-01, A-02 and A-06 are in. Nothing is mutually blocking any more, so the
-two lanes run independently: 1 starts on `1-03`, because `A-03` cannot start until it lands
-and A is idle waiting for it; A takes `A-08`, which is unblocked and in a file it already has
-open.
+**Sound is parked — stop work on it.** The user's call, and it lands on both of you: 1-09 and
+A-07 are off the board, and nothing on `agent1-footsteps` (`69389d9`) gets rebased, split or
+merged. If you have started either half, stop where you are and leave it on the branch — it is
+parked, not abandoned, and the branch is the only copy. See the Parked section.
+
+**Land order now.** A-01, A-02, A-06 and A-08 are in — that is everything in A's lane that did
+not need agent 1 first. With sound parked, **A is idle and blocked on 1 until 1-03 or 1-05 lands** — A-10 is a one-line
+fix and A-09 is not assigned yet. That makes `1-03` the only thing on this board with somebody
+waiting behind it, so it is where 1 goes, and the types half wants landing on its own rather
+than held for the editor.
 
 **Status values:** `todo`, `wip`, `review`, `landed`, `blocked`.
 Keep the branch column honest — it is how work in flight gets found.
@@ -53,13 +59,12 @@ evidence the board records.
 
 | ID | Task | Status | Depends on | Notes |
 | --- | --- | --- | --- | --- |
-| 1-03 | Prop rendering — data model | **wip — start here** | — | **Unblocks A-03, and A is idle waiting on it.** Migration for `render`, `plane_count`, `uv_mode`, `texture_alt`, `alt_flag`, `animation_frames`, `animation_fps`. `LevelAssets::props()` scanning a new `public/sprites/props`. Payload, TS types, validation, writer, `newProp`. **Land the types half as soon as it is green rather than holding it for the editor** — 1-04 is a separate task on purpose. Plan: `plan-prop-rendering.md`. |
-| 1-09 | Footsteps — data half | todo | — | The half of `agent1-footsteps` that is yours under ISSUE-16: migration, `LevelSector`, `LevelAssets`, payload, request validation, writer, factory, `types/game.ts`, `inspector.tsx`, `SectorAmbienceTest.php`. Drop `lib/engine/audio.ts`, the `level-viewport.tsx` hook and the `.ai/rules/engine.md` edit from your branch — those are **A-07**. Yours lands first. Rebase before you touch it; the branch is eight commits behind. |
+| 1-01 | Constants drift guard | **done, not merged** | — | `21857e2` on `origin/agent1-constants-guard`, green, branched off `3523865`. **Rebase it onto `main` and merge it** — work that only exists on a branch is work nobody can build on, and this branch is the one thing standing between 1-01/1-02 and the landed table. Findings from it are ISSUE-21 and ISSUE-22. |
+| 1-02 | Collision tripwire | **done, not merged** | — | Same branch as 1-01. Closes ISSUE-10 once merged. The wedge test in `plan-test-coverage.md` does not work as that plan describes it — see ISSUE-22. |
+| 1-03 | Prop rendering — data model | **wip** | — | **Unblocks A-03, and A is idle waiting on it.** Migration for `render`, `plane_count`, `uv_mode`, `texture_alt`, `alt_flag`, `animation_frames`, `animation_fps`. `LevelAssets::props()` scanning a new `public/sprites/props`. Payload, TS types, validation, writer, `newProp`. **Land the types half as soon as it is green rather than holding it for the editor** — 1-04 is a separate task on purpose. Plan: `plan-prop-rendering.md`. |
 | 1-05 | Slopes — data model | todo | — | **Unblocks A-04.** Four columns on `level_sectors`, PHP `floorAt`/`ceilingAt` on `LevelSector`, validation sampling corners, and hinge survival through `splitEdge`/`weldCorners`/`carveRooms` in `lib/editor/`. Plan: `plan-slopes-and-stats.md` part 1. |
 | 1-04 | Prop rendering — editor | todo | 1-03 | Inspector controls conditional on mode; prop texture picker; map-view glyphs for cross and billboard props. |
 | 1-06 | Slopes — editor | todo | 1-05 | Inspector hinge picker and rise field; side view drawing the section slanted. |
-| 1-01 | Constants drift guard | todo | — | `tests/Unit/ConstantsMatchTest.php`. `tests/Pest.php:59-63` hardcodes `MAX_STEP`, `MIN_HEADROOM`, `CLEARANCE` copied from `constants.ts`, and `LevelAssets::HEIGHTS` is mirrored in `sprite-actor.ts`. Import both under the Node harness and assert they match **both ways**, so adding a seventh person fails loudly. Plan: `plan-test-coverage.md` task 3. |
-| 1-02 | Collision tripwire | todo | — | Assert `RUN_SPEED * MAX_FRAME_SECONDS < 2 * PLAYER_RADIUS` with a comment naming what breaks. Plus a circle-vs-12°-wedge test asserting the settled distance is at least `PLAYER_RADIUS`, pinning why `RESOLVE_PASSES` is 12 and not 3. Closes ISSUE-10. Plan: `plan-test-coverage.md` task 4. |
 | 1-08 | React component test runner | todo | — | **Decided: Vitest + Testing Library** (ISSUE-6). Adds two dev dependencies — that approval is on the record here, so take it rather than re-asking. Wire it into `composer ci:check` alongside `types:check`, and land one real test on `inspector.tsx` in the same branch so the harness is proven, not just installed. Say so here before you touch `package.json`. |
 | 1-07 | Normal-map generator | todo | — | Unblocked: **ISSUE-7 is decided — normal maps are committed to the repo**, not generated at build time. So `docs/tools/make_normals.py` is a one-shot authoring tool whose output is checked in, and it must never overwrite a hand-fixed map in place. Standalone otherwise. Plan: `plan-lighting.md`. |
 
@@ -67,13 +72,19 @@ evidence the board records.
 
 | ID | Task | Status | Depends on | Notes |
 | --- | --- | --- | --- | --- |
-| A-08 | Fix `.ai/rules/engine.md` | **wip — start here** | A-01 | ISSUE-15 is done in `39abe66`. Still open in the same file: **ISSUE-4**, the two sections both titled "Mirror paired sprite directions in UVs" giving different rules for 225°/315° with a third superseding one of them — resolve them into one section that states the rule once, and say so rather than guess if the code does not settle it. And **ISSUE-5**, the `-back` / `-views-sheet` paragraph, which describes deleted files as superseded art — delete it. Plus the new ceiling section, **authorised**: a ceiling is turned over by reversing its winding, not by rotating it, because keeping the polygon in place while flipping its normal is a reflection, and the reflection mirrors the room in z. Give that its full reasoning — the failure it prevents is a whole level mirrored. **A is authorised to edit `engine.md` for all of this**; it is normally 1's. |
-| A-07 | Footsteps — engine half | todo | 1-09 | The other half of ISSUE-16: `lib/engine/audio.ts` (492 lines), the `level-viewport.tsx` hook and `FootstepsTest.php`, taken off `agent1-footsteps` (`69389d9`). **Do not land it before 1-09** — it reads fields that do not exist on `main` yet. Reading the branch now to plan against it is fine. The `engine.md` edit on that branch is yours to redo on top of A-08. |
+| A-10 | Fold ISSUE-21 into engine.md | todo | — | One line, and it is wrong in the direction that matters: the wedge clearance figure is 0.28 m and the measurement is 0.154 m. Agent 1 has the true numbers pinned in `ConstantsMatchTest`. Cite the test rather than restating a figure that will drift again. |
 | A-03 | Prop rendering — engine | blocked | 1-03 | Render modes `box`/`billboard`/`cross`, fitted UVs, cutout with `alphaTest`, prop texture loader path, frame animation, alt-state by flag. **Billboards must face whichever camera is drawing** — same trap as the sky dome. Plan: `plan-prop-rendering.md`. |
 | A-04 | Slopes — engine | blocked | 1-05 | `floorAt`/`ceilingAt` in `sectors.ts`; `buildFlat` per-vertex displacement; `buildWall` trapezoids with per-end heights; shared-edge step walls; trapezoid portal panes. Plan: `plan-slopes-and-stats.md` part 1. |
+| A-09 | Split `level-viewport.tsx` | **scoped, awaiting go/no-go** | — | It splits, and more cleanly than `build-level.ts` did: 1017 lines of which **878 are one `useEffect`**. Seams, in A's cutting order 3 → 1 → 5 → 4 → 2, smallest risk first: `view.ts` (scene/camera/renderer/fog and `reach`, ~95); `player.ts` (spawn, movement, collision, portal crossing, camera placement and the `updateMatrixWorld` mirrors depend on, ~245 — the valuable one, and four engine rules describe its ordering with nothing pinning them); the `?debug` probe wiring (~85); `snapshot-post.ts` (~90, the only piece that touches the network); `input.ts` (~200, pure DOM, all noise no risk). ~200 lines left in the .tsx, which is what a component should be. **Obstacle:** everything closes over shared mutable state, same as `buildLevel` — one session object made up front is the answer — and `createTouchControls` is built after `step()` uses it while its callbacks call `stop()`/`takeInHand()` declared above. That knot gets broken deliberately. **Verification, and this is the condition:** A-01 was safe because the whole built scene could be diffed; this has no equivalent, and the suite touches none of it. `?at=` makes a spot reproducible, `?debug` paints every wall a legend colour, and `window.scanRow(row)` returns the runs of surfaces across a row of the real frame as JSON. A dozen fixed spots across the three levels, several rows each, before and after, diffed — built **before** any cut and run between each. |
 | A-05 | Hand poses — wiring | blocked | **ISSUE-1** | `POSES` gains `reach` and `grip`; `DRAWN` gains twelve handedness entries; `hands.update()` takes a focus argument fed from `lookedAtSlug()`. Cannot start until the art exists. Plan: `plan-hand-poses.md`. |
 
 ## Parked
+
+**Sound** — `agent1-footsteps` (`69389d9`), 1-09 and A-07. Parked by the user. The branch holds
+footstep and ambience work: a migration, `lib/engine/audio.ts` (492 lines), the viewport hook,
+inspector controls and two test files. Nothing on it lands. ISSUE-16, which split it across the
+two lanes, is parked with it and does not need settling while it stays there. **Do not delete
+the branch** — it is the only copy of the work.
 
 **Lighting** (`plan-lighting.md`, baked GI, 5–8 weeks) is not assigned. It touches everything
 A owns and should not start until A-03 and A-04 have landed. A-06 was the first step toward it
@@ -102,6 +113,7 @@ Audited from the commit history, not self-reported:
 | Editor undo/redo | `81924ee` (of `4ba8756`) | `lib/editor/history.ts`, 112 lines — bounded draft history and ⌘Z, 5 tests. Was the unpushed work in ISSUE-17. |
 | A-02 extract `prepareReflections` | `910c074` (of `310827e`) | `lib/engine/reflections.ts`, 208 lines. `level-viewport.tsx` 1221 → 1017. `ReflectionsTest.php` — 7 tests over stub panes, with the cameras and bounding spheres real because the frustum test is what decides recursion. Portal demo walked in a browser. Closes ISSUE-9. |
 | A-06 ceilings face down | `952576b` (of `39abe66`) | `faceDownwards` in `build/flats.ts` + `FlatNormalsTest.php`. **Not** a rotation: turning a ceiling over by rotating the other way about x is a reflection, and it mirrors the room in z. The triangles are wound the other way and the normals recomputed from the winding, so the polygon does not move. Sky lid turned too. A/B'd in the browser — pixel for pixel unchanged. Closes ISSUE-3. |
+| A-08 rules-file rot in engine.md | `ea5ad72` (of `8b88078`) | ISSUE-4 and ISSUE-5. The three mirroring sections did not merely contradict each other — **all three described a rule that does not exist**. Read off `ORDERS` in `sprite-direction.ts`: eight drawings per person not five, four of the six use no mirroring at all, nobody's 270° is mirrored, and the flips that exist are there because a sheet has no drawing for that angle. One section now, from the code, naming `SpriteDirectionTest.php`. Hand-art paragraph replaced with what is actually in `public/sprites/hands`. Ceiling rule from A-06 written out in full. Verified against the code, not taken on report. |
 | ISSUE-15 engine.md staleness | `952576b` (of `39abe66`) | `drawnByRoom` trap named as gone rather than deleted; `carriedOn` → `build/topology.ts`, `buildWall` → `build/walls.ts`, `deepen()` → `engine/reflections.ts`. `game.md`'s "prepareReflections cannot be tested" line fixed in the same commit. |
 
 `plan-test-coverage.md` tasks 1 and 2 are therefore complete. Tasks 3 and 4 remain as 1-01
@@ -119,8 +131,8 @@ and strike an entry rather than deleting it when it closes.
 | ISSUE-1 | **24 of 36 hand cards missing.** `back`, `back-fist`, `palm`, `palm-fist` for all six people. Two generation rounds have both regenerated `edge`/`edge-open`, which already existed, instead. Blocks A-05. | high | art | open |
 | ISSUE-2 | **Hand art is inconsistently scaled between poses.** Fists came back drawn 1.3×–2.5× larger than open hands, for every person. The normaliser corrects it but throws away drawn resolution. Spec updated in `handoff-hand-art.md`; needs the generator to comply. | medium | art | open |
 | ISSUE-3 | **Ceiling surface normals point up**, same as floors. Invisible while unlit and double-sided; every ceiling would light as a floor. | medium | A | **closed** `952576b` |
-| ISSUE-4 | **`.ai/rules/engine.md` contradicts itself.** Two sections both titled "Mirror paired sprite directions in UVs" give different rules for 225°/315°, and a third supersedes one of them. An agent reading top to bottom gets the wrong answer twice. | medium | A | open → A-08 |
-| ISSUE-5 | **`.ai/rules/engine.md` mis-describes the hand art.** It lists `-back` and `-views-sheet` as superseded when they were the newer art; all of those files have since been deleted, so the section is now stale in a second way. | low | A | open → A-08 |
+| ISSUE-4 | **`.ai/rules/engine.md` contradicts itself** on sprite mirroring — and all three versions were wrong, not just two of them. There is no one rule; there is a table per person. | medium | A | **closed** `ea5ad72` |
+| ISSUE-5 | **`.ai/rules/engine.md` mis-describes the hand art.** It lists `-back` and `-views-sheet` as superseded when they were the newer art; all of those files have since been deleted. | low | A | **closed** `ea5ad72` |
 | ISSUE-6 | **No React component test runner exists.** `inspector.tsx` (1156), `map-view.tsx` and `side-view.tsx` have no coverage and nothing to write it with. | medium | 1 | **decided — Vitest + Testing Library, → 1-08** |
 | ISSUE-7 | **Undecided: normal maps committed or generated at build time.** `public/sprites/textures` is already 17 MB and normal maps compress worse. | low | — | **decided — committed. No build step, and hand-fixes survive. 1-07 unblocked** |
 | ISSUE-8 | **`LevelWriter` deletes and recreates everything on save**, so ids churn and nothing can hold a durable reference to a wall or a room. Not urgent — but anything that wants to reference an edge by id hits this first. | low | 1 | open |
@@ -131,10 +143,14 @@ and strike an entry rather than deleting it when it closes.
 | ISSUE-13 | **A-01 was built twice.** Ruling was: main keeps A's `33b4b51`, agent 1 drops `968ab93`. Done — `origin/agent1` now has no diff against `main`. `origin/agent1-split-build-level` is the abandoned branch and should be deleted so nobody picks it up. | high | 1 | **resolved — delete the branch** |
 | ISSUE-14 | **Linters walked the agent worktrees.** `ci:check` returned 591,586 errors, blocking both agents. Fixed on main in `3cecabc`; agent 1's duplicate `349a3e1` is merged away harmlessly. | high | — | **closed** `3cecabc` |
 | ISSUE-15 | **`.ai/rules/engine.md` is stale after the split.** The `drawnByRoom` temporal-dead-zone note describes a trap that no longer exists; `carriedOn` and `buildWall` moved. | low | A | **closed** `952576b` |
-| ISSUE-16 | **Cross-lane work on `agent1-footsteps` (`69389d9`).** Adds `lib/engine/audio.ts` and hooks `level-viewport.tsx`, both agent A's paths, and edited `.ai/rules/engine.md` without notice. **Ruling: split it** — 1 keeps the data half, A takes the engine half. Now tracked as **1-09** and **A-07**; neither half lands alone, and 1-09 goes first. The branch is eight commits behind `main`. | medium | 1 / A | open → 1-09, A-07 |
+| ISSUE-16 | **Cross-lane work on `agent1-footsteps` (`69389d9`).** Adds `lib/engine/audio.ts` and hooks `level-viewport.tsx`, both agent A's paths. The ruling was to split it into 1-09 and A-07. | medium | 1 / A | **parked** — sound is off the board by the user's call. The split stands if it ever comes back; nothing to do meanwhile. Leave the branch alone. |
 | ISSUE-17 | **Unmerged work sitting on agent 1's local branches.** `agent1-undo-redo` has since landed as `81924ee`. What is left unmerged is `agent1-footsteps`, which is ISSUE-16, and `agent1-split-build-level`, which is ISSUE-13. | medium | 1 | **closed** |
-| ISSUE-18 | **Both agents were mid-flight when this board was rewritten**, the same mistake that caused ISSUE-13. If either of you is already inside a task this board now assigns differently, say so before rebasing — do not silently drop or duplicate what you have. | medium | — | open |
-| ISSUE-19 | **`level-viewport.tsx` is the last big contention file in A's lane** — 1017 lines, and both A-03 and A-07 grow it again. Splitting it before they land is cheaper than after, and A-01 is the recipe. A has been asked whether it has real seams; if it does not, this closes rather than becoming a carve for its own sake. | medium | A | open — scoping |
+| ISSUE-18 | **Both agents were mid-flight when this board was rewritten**, the same mistake that caused ISSUE-13. | medium | — | **closed** — both reported in. A had only A-08, landed. 1 had 1-01 and 1-02, done and pushed. Nothing was dropped or duplicated. |
+| ISSUE-19 | **`level-viewport.tsx` is the last big contention file in A's lane** — 1017 lines, and both A-03 and A-07 grow it again. Splitting it before they land is cheaper than after, and A-01 is the recipe. A has been asked whether it has real seams; if it does not, this closes rather than becoming a carve for its own sake. | medium | A | open — scoping, → A-09 |
+| ISSUE-21 | **`.ai/rules/engine.md` line 133 is false.** It says the solver settles the player no closer than 0.28 m to a wall even in a 12° wedge. Measured across a sweep by 1-02: worst case is **0.154 m** at 12°, and **0.011 m** at 3°. The 0.28 figure holds for whatever single case it was measured on, not in general. Agent 1 found it, left it alone because it is A's file, and pinned the true numbers in the test instead — which is the rule working as intended. **A folds it in.** | medium | A | open |
+| ISSUE-22 | **`plan-test-coverage.md` task 3 is wrong about `CLEARANCE`, and its task 4 test does not work as described.** `constants.ts` has no `CLEARANCE`: Pest's `CLEARANCE = 0.4` is a test-local judgement about how much room counts as clear, and the engine's is in `portals.ts` at `0.02`, meaning the nudge that lands a body inside the far room after a crossing. Same name, unrelated. Separately, the wedge test as the plan describes it **passes at `RESOLVE_PASSES = 3` and silently tests nothing** — a single shot at the point of a wedge is pushed back out and settles in one pass. It only bites when swept across partial moves that stop the player inside. Both found while doing 1-01/1-02 and worked around correctly; the plan file still says the wrong thing. | low | 1 | open |
+| ISSUE-23 | **Something ran `npm` inside the planning checkout** and rewrote `package-lock.json`'s `name` field from `life_game2` to the directory name. Reverted. Both agents now work in their own worktrees, which is the fix; noted so that a stray lockfile diff on `main` is recognised rather than committed. | low | — | closed |
+| ISSUE-20 | **A new person silently inherits Paul's sprite order.** `UNCHECKED = ORDERS.paul` in `sprite-direction.ts` is the fallback for anyone not listed, and the six sheets were each drawn to their own order — Paul's diagonals run backwards against Wade's, Krystal's cardinals against Paul's. So the fallback is wrong about as often as it is right, and wrong looks like a person facing the wrong way in two of eight directions rather than like a crash. Surfaced by A-08. Not urgent while the cast is six; the trap is that adding the seventh is the moment nobody is thinking about it. Check new sheets with `public/sprite-directions.html`. | low | A | open |
 
 ---
 
