@@ -25,6 +25,7 @@ function playerStep(string $body): array
             turnPlayer,
             walkPlayer,
             fallPlayer,
+            jumpPlayer,
             settleEye,
         } = await import('@/lib/engine/player.ts');
         const { createPortals } = await import('@/lib/engine/portals.ts');
@@ -521,4 +522,166 @@ it('lets the eye lag a step and never lag a fall', function (): void {
         ->and($answer['afterOneStepFrame'])->toBeLessThan(0.5)
         ->and($answer['frames'])->toBeGreaterThan(20)
         ->and($answer['worstGap'])->toEqual(0);
+});
+
+it('jumps high enough to land on the ledge that was the point of it', function (): void {
+    $answer = playerStep(<<<'JS'
+        const { GRAVITY, JUMP_SPEED, MAX_FRAME_SECONDS } = await import(
+            '@/lib/engine/constants.ts'
+        );
+
+        const hall = room('hall', [
+            corner(0, 0), corner(10, 0), corner(10, 10), corner(0, 10),
+        ], { ceilingHeight: 20 });
+
+        const built = level([hall], { x: 5, z: 5, angle: 0 });
+        const player = spawnPlayer(built, null);
+
+        jumpPlayer(player);
+
+        // A second jump, in the air, on the frame after the first. It has to be
+        // refused, or holding the key climbs.
+        jumpPlayer(player);
+
+        const speedAfterTwo = round(player.fall);
+
+        let apex = player.y;
+        let frames = 0;
+
+        while (!player.footing && frames < 400) {
+            fallPlayer(player, hall, MAX_FRAME_SECONDS);
+            apex = Math.max(apex, player.y);
+            frames++;
+        }
+
+        process.stdout.write(JSON.stringify({
+            speedAfterTwo,
+            apex: round(apex),
+            exactly: round((JUMP_SPEED * JUMP_SPEED) / (2 * GRAVITY)),
+            landedAt: round(player.y),
+            airborne: round(frames * MAX_FRAME_SECONDS),
+        }));
+        JS);
+
+    // The height is the whole reason for the number: a 0.8 m ledge has to
+    // become somewhere you can get to, and a jump that reached 0.8 m exactly
+    // would make it barely, theoretically possible rather than possible. The
+    // apex measured frame by frame comes in just under the arithmetic, which is
+    // what sampling a parabola fifty times a second does and is worth seeing
+    // rather than rounding away.
+    expect($answer['exactly'])->toBeGreaterThan(0.89)
+        ->and($answer['apex'])->toBeGreaterThan(0.85)
+        ->and($answer['apex'])->toBeLessThanOrEqual($answer['exactly'])
+        ->and($answer['landedAt'])->toEqual(0)
+        ->and($answer['airborne'])->toBeGreaterThan(0.8);
+
+    // Jumping again in mid-air does nothing at all — not even a little.
+    expect($answer['speedAfterTwo'])->toEqual(4.2);
+});
+
+it('jumps the same height on a slow machine as on a fast one', function (): void {
+    $answer = playerStep(<<<'JS'
+        const { MAX_FRAME_SECONDS } = await import('@/lib/engine/constants.ts');
+
+        const hall = room('hall', [
+            corner(0, 0), corner(10, 0), corner(10, 10), corner(0, 10),
+        ], { ceilingHeight: 20 });
+
+        const built = level([hall], { x: 5, z: 5, angle: 0 });
+
+        const apexAt = (seconds) => {
+            const player = spawnPlayer(built, null);
+            jumpPlayer(player);
+
+            let apex = player.y;
+
+            while (!player.footing) {
+                fallPlayer(player, hall, seconds);
+                apex = Math.max(apex, player.y);
+            }
+
+            return round(apex);
+        };
+
+        process.stdout.write(JSON.stringify({
+            // A stalled tab, 144 Hz, and the two frame rates most people
+            // actually have.
+            slow: apexAt(MAX_FRAME_SECONDS),
+            sixty: apexAt(1 / 60),
+            oneTwenty: apexAt(1 / 120),
+            fast: apexAt(1 / 144),
+        }));
+        JS);
+
+    // Within a millimetre across a threefold change in frame rate, and the
+    // spread is sampling a parabola rather than integrating it wrong.
+    //
+    // Stepping the position by the speed at the *end* of the frame would put
+    // these at 0.797, 0.858, 0.878 and 0.882 — which is not a rounding error,
+    // it is how high you can jump depending on how fast your computer is, and
+    // the slow end of it is under the 0.8 m ledge the height exists to clear.
+    $apexes = [$answer['slow'], $answer['sixty'], $answer['oneTwenty'], $answer['fast']];
+
+    expect(max($apexes) - min($apexes))->toBeLessThan(0.005)
+        ->and(min($apexes))->toBeGreaterThan(0.85);
+});
+
+it('stops a jump dead against the ceiling and does not stick there', function (): void {
+    $answer = playerStep(<<<'JS'
+        const square = [corner(0, 0), corner(10, 0), corner(10, 10), corner(0, 10)];
+
+        // A cellar: floor to ceiling is the player's own height plus 40 cm, so
+        // there is room to stand and not much room to jump.
+        const cellar = room('cellar', square, { ceilingHeight: 0 });
+
+        const built = level([room('hall', square)], { x: 5, z: 5, angle: 0 });
+        const player = spawnPlayer(built, null);
+
+        cellar.ceilingHeight = player.stature + 0.4;
+
+        jumpPlayer(player);
+
+        const heights = [];
+
+        while (!player.footing && heights.length < 400) {
+            fallPlayer(player, cellar, 0.05);
+            heights.push(round(player.y));
+        }
+
+        const highest = Math.max(...heights);
+        const peak = heights.indexOf(highest);
+        const after = heights.slice(peak);
+
+        // A room nobody can stand up in. The floor wins: pushing the feet
+        // through it to make room for the head is a worse answer to bad
+        // authoring than leaving somebody standing in it.
+        const squashed = spawnPlayer(built, null);
+        const crawlspace = room('crawlspace', square, { ceilingHeight: 0 });
+        crawlspace.ceilingHeight = squashed.stature - 0.5;
+
+        jumpPlayer(squashed);
+        fallPlayer(squashed, crawlspace, 0.05);
+
+        process.stdout.write(JSON.stringify({
+            headroom: round(0.4),
+            highest: round(highest),
+            roseAgain: after.some((height, at) => at > 0 && height > after[at - 1]),
+            landedAt: round(player.y),
+            squashedAt: round(squashed.y),
+            squashedFooting: squashed.footing,
+        }));
+        JS);
+
+    // Stopped at the ceiling, not through it and not bounced off it: the head
+    // loses the speed it had and what happens next is gravity's, exactly as at
+    // the top of any other jump. Nothing goes upward again after the bump — a
+    // ceiling that pushed back would have somebody climbing it.
+    expect($answer['highest'])->toEqual($answer['headroom'])
+        ->and($answer['roseAgain'])->toBeFalse()
+        ->and($answer['landedAt'])->toEqual(0);
+
+    // And the room too short to stand up in leaves them standing on the floor
+    // rather than sunk into it.
+    expect($answer['squashedAt'])->toEqual(0)
+        ->and($answer['squashedFooting'])->toBeTrue();
 });

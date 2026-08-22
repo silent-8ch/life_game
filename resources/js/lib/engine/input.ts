@@ -63,6 +63,12 @@ export function createInput(
 ): GameInput {
     const pressed = new Set<string>();
 
+    // A jump is an event, not a held key: set by the keydown or the button and
+    // taken by the next `read()`. Held down, Space would otherwise ask to jump
+    // on every frame and the player would bounce off the floor for as long as
+    // the finger was there.
+    let jumpAsked = false;
+
     // On a phone there is no pointer to lock, so playing is just a flag, set by
     // the tap that starts the level and cleared by the Stop button.
     let started = false;
@@ -99,6 +105,10 @@ export function createInput(
             }
         });
 
+        if (event.code === 'Space' && !event.repeat) {
+            jumpAsked = true;
+        }
+
         if (event.code === 'KeyM' && !event.repeat) {
             actions.markHere?.();
         }
@@ -133,6 +143,7 @@ export function createInput(
 
     const handleBlur = (): void => {
         pressed.clear();
+        jumpAsked = false;
     };
 
     /** Play and full screen are the same state, so they come and go together. */
@@ -141,6 +152,7 @@ export function createInput(
 
         if (!locked) {
             pressed.clear();
+            jumpAsked = false;
 
             if (isFullscreen()) {
                 void document.exitFullscreen().catch(() => undefined);
@@ -174,6 +186,7 @@ export function createInput(
         controls.show(false);
         actions.onPlaying(false);
         pressed.clear();
+        jumpAsked = false;
         actions.onLockChange(false);
 
         if (isFullscreen()) {
@@ -258,6 +271,13 @@ export function createInput(
                 title: 'Save a snapshot of this spot',
                 press: actions.takeSnapshot,
             },
+            {
+                label: 'Jump',
+                title: 'Jump',
+                press: () => {
+                    jumpAsked = true;
+                },
+            },
             { label: 'Stop', title: 'Stop playing', press: stop },
         ],
     });
@@ -274,6 +294,14 @@ export function createInput(
      * only ever one or the other. Whichever is pushed harder wins. */
     const pick = (keyed: number, pushed: number): number =>
         Math.abs(pushed) > Math.abs(keyed) ? pushed : keyed;
+
+    /** Hands over a jump if one was asked for, and forgets it either way. */
+    const takeJump = (): boolean => {
+        const asked = jumpAsked;
+        jumpAsked = false;
+
+        return asked;
+    };
 
     const running = (): boolean =>
         pressed.has('ShiftLeft') ||
@@ -297,6 +325,7 @@ export function createInput(
 
         if (holding) {
             pressed.clear();
+            jumpAsked = false;
             controls.takeLook();
         }
 
@@ -318,6 +347,7 @@ export function createInput(
                     pushed.strafe,
                 ),
                 running: running(),
+                jumping: takeJump(),
             },
         };
     };

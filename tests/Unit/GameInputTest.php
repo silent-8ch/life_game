@@ -162,10 +162,54 @@ it('turns keys into a push, and the two sides cancel', function (): void {
         process.stdout.write(JSON.stringify({ both, cancelled, running, stopped }));
         JS);
 
-    expect($answer['both'])->toBe(['forward' => 1, 'strafe' => 1, 'running' => false])
+    expect($answer['both'])->toBe([
+        'forward' => 1,
+        'strafe' => 1,
+        'running' => false,
+        'jumping' => false,
+    ])
         ->and($answer['cancelled']['strafe'])->toBe(0)
         ->and($answer['running'])->toBeTrue()
         ->and($answer['stopped']['forward'])->toBe(0);
+});
+
+it('asks to jump once for a key held down, and forgets one dropped', function (): void {
+    $answer = gameInput(<<<'JS'
+        const holdDown = (code) => fire('window', 'keydown', { code, repeat: true });
+
+        lock();
+
+        press('Space');
+
+        const asked = input.read().push.jumping;
+
+        // Still down, and the browser is repeating it. Every other key means
+        // "still being pushed"; this one must not.
+        holdDown('Space');
+        holdDown('Space');
+
+        const stillDown = input.read().push.jumping;
+
+        release('Space');
+        press('Space');
+
+        // Asked for, and then the player let go of the mouse before the frame
+        // that would have spent it. Coming back should not owe them a jump.
+        unlock();
+        lock();
+
+        const afterUnlock = input.read().push.jumping;
+
+        process.stdout.write(JSON.stringify({ asked, stillDown, afterUnlock }));
+        JS);
+
+    // A jump is the one thing input reports as an event rather than as a state.
+    // Read as a state it would bounce the player off the floor for as long as
+    // the key was down, and a jump asked for and never spent would fire on
+    // whatever frame the game happened to resume on.
+    expect($answer['asked'])->toBeTrue()
+        ->and($answer['stillDown'])->toBeFalse()
+        ->and($answer['afterUnlock'])->toBeFalse();
 });
 
 it('lets go of everything when the lock breaks', function (): void {
@@ -186,7 +230,12 @@ it('lets go of everything when the lock breaks', function (): void {
     // Escape out of the game with a key down and the key stays down for ever:
     // the level would keep walking with nobody at the keyboard.
     expect($answer['held']['forward'])->toBe(1)
-        ->and($answer['dropped'])->toBe(['forward' => 0, 'strafe' => 0, 'running' => false])
+        ->and($answer['dropped'])->toBe([
+            'forward' => 0,
+            'strafe' => 0,
+            'running' => false,
+            'jumping' => false,
+        ])
         ->and($answer['done'])->toContain('lock:false');
 });
 

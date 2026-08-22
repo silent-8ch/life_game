@@ -152,8 +152,8 @@ export default function Explore({
                                         Click or tap to play
                                     </p>
                                     <p className="text-xs text-amber-100/60">
-                                        WASD to move · Shift to run · E to
-                                        examine · Esc to let go
+                                        WASD to move · Shift to run · Space to
+                                        jump · E to examine · Esc to let go
                                     </p>
 
                                     <p className="text-xs text-amber-100/60">
@@ -164,7 +164,8 @@ export default function Explore({
                                     <p className="text-xs text-amber-100/60">
                                         On a phone: left thumb to walk, push it
                                         right over to run, drag the right of the
-                                        screen to look
+                                        screen to look · Jump does what Space
+                                        does
                                     </p>
 
                                     <p className="text-xs text-amber-100/60">

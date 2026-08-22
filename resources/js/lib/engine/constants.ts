@@ -83,6 +83,21 @@ export const GRAVITY = 9.81;
  */
 export const TERMINAL_FALL = 55;
 
+/**
+ * How fast the feet leave the ground on a jump, in metres per second.
+ *
+ * Chosen from the height rather than by feel: a jump rises `v² / 2g`, so 4.2
+ * against `GRAVITY` reaches **0.899 m** and comes back down 0.86 s later. The
+ * height is what was asked for — a 0.8 m ledge should become somewhere you can
+ * get to — and the 10 cm over it is what makes landing on one possible rather
+ * than exactly, barely, theoretically possible.
+ *
+ * It is a speed rather than a height because that is what the integrator takes,
+ * and because a jump that set its own apex would have to know about gravity
+ * twice.
+ */
+export const JUMP_SPEED = 4.2;
+
 /** Radius of the sky drum. Far enough to read as distance, near enough to draw. */
 export const SKY_RADIUS = 90;
 
