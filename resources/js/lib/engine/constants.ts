@@ -1,5 +1,23 @@
-/** Where the camera sits above the floor, in metres. */
-export const EYE_HEIGHT = 1.62;
+/**
+ * How far up a person their eyes are, as a fraction of how tall they stand.
+ *
+ * A ratio rather than a height, because the camera belongs to whoever the level
+ * says the player is, and the six of them are not the same size. It was one
+ * number — 1.62 — which is exactly Luke's stature, so everybody stood at Luke's
+ * height and William, at 1.55, floated seven centimetres above his own head and
+ * looked down on his own reflection. Paul noticed it in a mirror, which is the
+ * only place the camera and the body are both on screen at once.
+ *
+ * And it is a fraction of stature rather than stature itself, because eyes are
+ * not on top of a skull. Standing eye height is about 93% of standing height in
+ * the anthropometric tables, and the remaining 7% is the top of the head. Using
+ * the stature would have fixed the ordering — William below Paul — while
+ * leaving everybody a little too tall, which is a subtler wrong than the one
+ * being fixed and would have been much harder to notice.
+ *
+ * Heights are in `sprite-actor.ts`, mirrored from `LevelAssets::HEIGHTS`.
+ */
+export const EYE_OF_STATURE = 0.93;
 
 /** The player is a circle on the floor plan, never a box. */
 export const PLAYER_RADIUS = 0.34;

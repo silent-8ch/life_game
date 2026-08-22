@@ -288,3 +288,49 @@ it('will not let the neck bend further than it bends', function (): void {
         ->and($answer['up'])->toBeLessThan(1.6)
         ->and($answer['yaw'])->toEqual(10);
 });
+
+it('gives each person their own eye, below their own head', function (): void {
+    $answer = playerStep(<<<'JS'
+        const { eyeHeightOf } = await import('@/lib/engine/player.ts');
+        const { HEIGHTS } = await import('@/lib/engine/sprite-actor.ts');
+
+        const only = room('only', [
+            corner(0, 0), corner(10, 0), corner(10, 10), corner(0, 10),
+        ]);
+
+        const eyes = Object.fromEntries(
+            Object.keys(HEIGHTS).map((who) => [
+                who,
+                round(spawnPlayer(
+                    { ...level([only], { x: 5, z: 5, angle: 0 }), playerSprite: who },
+                    null,
+                ).eye),
+            ]),
+        );
+
+        process.stdout.write(JSON.stringify({
+            eyes,
+            heights: HEIGHTS,
+            stranger: round(eyeHeightOf('nobody-by-that-name')),
+        }));
+        JS);
+
+    // Every person's eye is below the top of their own head. It was one number
+    // for all six — 1.62, which is exactly Luke's height — so William at 1.55
+    // stood seven centimetres above his own head and looked down on his own
+    // reflection. A mirror is the only place the camera and the body are both
+    // on screen, which is where Paul saw it.
+    foreach ($answer['heights'] as $who => $height) {
+        expect($answer['eyes'][$who])->toBeLessThan($height);
+    }
+
+    // And they are in the order the people are. Shortest to tallest, this is
+    // the assertion that would have failed the day HEIGHTS was written.
+    expect($answer['eyes']['william'])->toBeLessThan($answer['eyes']['luke'])
+        ->and($answer['eyes']['luke'])->toBeLessThan($answer['eyes']['luna'])
+        ->and($answer['eyes']['luna'])->toBeLessThan($answer['eyes']['krystal'])
+        ->and($answer['eyes']['krystal'])->toBeLessThan($answer['eyes']['wade'])
+        ->and($answer['eyes']['wade'])->toBeLessThan($answer['eyes']['paul'])
+        // Somebody nobody has measured gets the default stature, not a guess.
+        ->and($answer['stranger'])->toBeGreaterThan(1.5);
+});
