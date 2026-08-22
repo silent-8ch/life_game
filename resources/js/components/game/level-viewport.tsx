@@ -4,22 +4,22 @@ import * as THREE from 'three';
 import { store } from '@/actions/App/Http/Controllers/DebugSnapshotController';
 import { createActors } from '@/lib/engine/actors';
 import { buildLevel } from '@/lib/engine/build-level';
-import { moveWithCollisions } from '@/lib/engine/collision';
 import {
-    EYE_HEIGHT,
     MAX_FRAME_SECONDS,
     MAX_PITCH,
     MOUSE_SENSITIVITY,
-    PLAYER_RADIUS,
     REACH,
-    RUN_SPEED,
-    STEP_SMOOTHING,
-    WADE_DEPTH,
-    WALK_SPEED,
 } from '@/lib/engine/constants';
 import { createHands, HELD_ITEMS } from '@/lib/engine/hands';
 import type { HeldItem } from '@/lib/engine/hands';
-import { createPortals, crossPortal } from '@/lib/engine/portals';
+import {
+    aimCamera,
+    settleEye,
+    spawnPlayer,
+    turnPlayer,
+    walkPlayer,
+} from '@/lib/engine/player';
+import { createPortals } from '@/lib/engine/portals';
 import {
     createProbeBackdrop,
     paintWalls,
@@ -280,32 +280,12 @@ export default function LevelViewport({
 
         // A spot named in the address wins over the level's own spawn, so a
         // reported snapshot can be stood on again exactly.
-        const forced = spotFromSearch(window.location.search);
-
-        const spawnSector = sectorAt(
-            level.sectors,
-            level.spawn.x,
-            level.spawn.z,
+        // A spot named in the address wins over the level's own spawn, so a
+        // reported snapshot can be stood on again exactly.
+        const player = spawnPlayer(
+            level,
+            spotFromSearch(window.location.search),
         );
-
-        const standingOn =
-            forced === null
-                ? spawnSector
-                : sectorAt(level.sectors, forced.x, forced.z);
-
-        const player = {
-            x: forced?.x ?? level.spawn.x,
-            z: forced?.z ?? level.spawn.z,
-            // The level's angle runs the other way to the player's yaw, which
-            // is exactly the trap `?at=` exists to avoid: a snapshot's yaw goes
-            // in as it was written.
-            yaw:
-                forced === null
-                    ? -THREE.MathUtils.degToRad(level.spawn.angle)
-                    : THREE.MathUtils.degToRad(forced.yaw),
-            pitch: forced === null ? 0 : THREE.MathUtils.degToRad(forced.pitch),
-            eye: (standingOn?.floorHeight ?? 0) + EYE_HEIGHT,
-        };
 
         // The player's own hands, hung off the camera. The camera goes into the
         // scene for them: a child of something outside it is never drawn.
@@ -329,7 +309,6 @@ export default function LevelViewport({
         const screenCenter = new THREE.Vector2(0, 0);
 
         let focusedSlug: string | null = null;
-        let walked = 0;
         let frame = 0;
         let lastTime = performance.now();
 
@@ -394,21 +373,12 @@ export default function LevelViewport({
                 : controls.walk();
             const turned = holding ? { yaw: 0, pitch: 0 } : controls.takeLook();
 
-            if (turned.yaw !== 0 || turned.pitch !== 0) {
-                player.yaw += turned.yaw;
-                player.pitch = THREE.MathUtils.clamp(
-                    player.pitch + turned.pitch,
-                    -MAX_PITCH,
-                    MAX_PITCH,
-                );
-            }
+            turnPlayer(player, turned);
 
             const running =
                 pressed.has('ShiftLeft') ||
                 pressed.has('ShiftRight') ||
                 controls.running();
-
-            const speed = running ? RUN_SPEED : WALK_SPEED;
 
             // A stick reads anywhere between nothing and all the way over; a key
             // is only ever one or the other. Whichever is pushed harder wins.
@@ -426,58 +396,12 @@ export default function LevelViewport({
                 pushed.strafe,
             );
 
-            if (forward !== 0 || strafe !== 0) {
-                const sin = Math.sin(player.yaw);
-                const cos = Math.cos(player.yaw);
-
-                let moveX = forward * -sin + strafe * cos;
-                let moveZ = forward * -cos + strafe * -sin;
-
-                // A stick half over is a walk half as fast. A key is all the
-                // way over or not at all, so this changes nothing for one.
-                const throttle = Math.min(1, Math.hypot(forward, strafe));
-
-                const length = Math.hypot(moveX, moveZ);
-                moveX = (moveX / length) * speed * throttle * seconds;
-                moveZ = (moveZ / length) * speed * throttle * seconds;
-
-                const moved = moveWithCollisions(
-                    player,
-                    moveX,
-                    moveZ,
-                    built.colliders,
-                    PLAYER_RADIUS,
-                );
-
-                // A portal is asked about before the floor plan is, because
-                // walking into one leaves the room by design: the step that
-                // crosses it lands outside every sector until it is carried
-                // through to the far mouth.
-                const through = crossPortal(
-                    portals,
-                    player.x,
-                    player.z,
-                    moved.x,
-                    moved.z,
-                    player.yaw,
-                );
-
-                const next =
-                    through !== null &&
-                    sectorAt(level.sectors, through.x, through.z) !== null
-                        ? through
-                        : moved;
-
-                if (sectorAt(level.sectors, next.x, next.z) !== null) {
-                    walked += Math.hypot(moveX, moveZ);
-                    player.x = next.x;
-                    player.z = next.z;
-
-                    if (next === through) {
-                        player.yaw = through.yaw;
-                    }
-                }
-            }
+            walkPlayer(
+                player,
+                { forward, strafe, running },
+                { sectors: level.sectors, colliders: built.colliders, portals },
+                seconds,
+            );
 
             const standingIn = sectorAt(level.sectors, player.x, player.z);
 
@@ -486,28 +410,23 @@ export default function LevelViewport({
                 lid.mesh.visible = lid.room === standingIn?.slug;
             }
 
+            settleEye(player, standingIn, seconds);
+
             const floor = standingIn?.floorHeight ?? 0;
-            const wading = standingIn?.isWater === true ? WADE_DEPTH : 0;
 
-            // The eye catches up with the floor rather than jumping to it.
-            player.eye +=
-                (floor + EYE_HEIGHT - wading - player.eye) *
-                Math.min(1, STEP_SMOOTHING * seconds);
+            hands.update(seconds, player.walked, running);
 
-            hands.update(seconds, walked, running);
-
-            playerSprite.place(player.x, floor, player.z, player.yaw, walked);
+            playerSprite.place(
+                player.x,
+                floor,
+                player.z,
+                player.yaw,
+                player.walked,
+            );
             actors.update(seconds, built.colliders);
             actors.faceViewer(player.x, player.z, player.yaw);
 
-            camera.position.set(player.x, player.eye, player.z);
-            camera.rotation.y = player.yaw;
-            camera.rotation.x = player.pitch;
-
-            // Mirrors and portals are drawn from cameras derived from this one,
-            // and they run before the main render — which is where three would
-            // otherwise get round to working its world matrix out.
-            camera.updateMatrixWorld(true);
+            aimCamera(camera, player);
 
             sky?.follow(player.x, player.eye, player.z);
 
@@ -623,7 +542,9 @@ export default function LevelViewport({
 
             player.x = home.x;
             player.z = home.z;
-            walked = 0;
+            // The tally the walk frame and the hands ride on. A recall is not a
+            // stride, so it does not count as one.
+            player.walked = 0;
 
             magic.burst({ x: home.x, y: home.y + 0.6, z: home.z });
         };
