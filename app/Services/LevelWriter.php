@@ -62,6 +62,7 @@ class LevelWriter
                     'ceiling_texture' => $drawn['ceilingTexture'] ?? null,
                     'wall_texture' => $drawn['wallTexture'] ?? null,
                     'is_sky' => $drawn['isSky'],
+                    'is_invisible' => $drawn['isInvisible'] ?? false,
                     'is_water' => $drawn['isWater'],
                     'sort_order' => $order,
                 ]);

@@ -28,6 +28,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $ceiling_texture
  * @property string|null $wall_texture
  * @property bool $is_sky
+ * @property bool $is_invisible
  * @property bool $is_water
  * @property int $sort_order
  * @property Carbon|null $created_at
@@ -49,6 +50,7 @@ use Illuminate\Support\Carbon;
     'ceiling_texture',
     'wall_texture',
     'is_sky',
+    'is_invisible',
     'is_water',
     'sort_order',
 ])]
@@ -70,6 +72,7 @@ class LevelSector extends Model
             'ceiling_slope' => 'float',
             'ceiling_slope_edge' => 'integer',
             'is_sky' => 'boolean',
+            'is_invisible' => 'boolean',
             'is_water' => 'boolean',
         ];
     }

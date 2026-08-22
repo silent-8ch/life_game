@@ -284,6 +284,17 @@ export function buildSectorFlats(ctx: BuildContext): void {
             continue;
         }
 
+        // An invisible room gets a floor and nothing over it — no ceiling, and
+        // no lid either. The lid is the part worth saying out loud: a sky room
+        // has one precisely so that a sight-line cannot run out of the level,
+        // and this is the ruling that a sight-line *should*. Whatever lies
+        // beyond just shows, and where nothing lies beyond you see the
+        // backdrop. Anybody tempted to put an occluder back to be safe would be
+        // taking the feature out.
+        if (sector.isInvisible) {
+            continue;
+        }
+
         if (sector.isSky) {
             buildSkyCeiling(ctx, sector);
         } else {

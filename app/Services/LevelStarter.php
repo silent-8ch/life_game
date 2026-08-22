@@ -87,6 +87,7 @@ class LevelStarter
                 'ceiling_texture' => self::CEILING_TEXTURE,
                 'wall_texture' => self::WALL_TEXTURE,
                 'is_sky' => false,
+                'is_invisible' => false,
                 'is_water' => false,
                 'sort_order' => 0,
             ]);

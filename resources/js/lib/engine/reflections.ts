@@ -34,6 +34,14 @@ export function prepareReflections(
     props: PropSet,
     camera: THREE.PerspectiveCamera,
     sky: SkyDome | null,
+    /**
+     * Whether the player's own body should be drawn at all this frame.
+     *
+     * Asked rather than assumed because of invisible rooms: standing in one,
+     * you are not drawn, and a mirror or a portal is the only place that could
+     * possibly show it. Everywhere else the answer is always yes.
+     */
+    playerSeen: () => boolean = () => true,
 ): (renderer: THREE.WebGLRenderer, scene: THREE.Scene) => void {
     // A mirror is a pane like any other; only the camera that draws it differs.
     const panes = [...portals, ...mirrors];
@@ -58,7 +66,7 @@ export function prepareReflections(
         // looked at from somewhere else entirely, and a billboard left facing
         // the player is edge-on or backwards in every pane that holds it.
         props.faceViewer(at.x, at.z);
-        playerSprite.object.visible = true;
+        playerSprite.object.visible = playerSeen();
 
         // The sky is drawn around whoever is looking, and this pass is looked
         // at from somewhere else entirely. Left where the player is, it hangs

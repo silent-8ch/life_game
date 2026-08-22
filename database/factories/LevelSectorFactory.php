@@ -29,6 +29,7 @@ class LevelSectorFactory extends Factory
             'ceiling_texture' => null,
             'wall_texture' => null,
             'is_sky' => false,
+            'is_invisible' => false,
             'is_water' => false,
             'sort_order' => 0,
         ];

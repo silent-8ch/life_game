@@ -69,6 +69,8 @@ const COLORS = {
     roomSky: 'rgba(56, 189, 248, 0.16)',
     roomWater: 'rgba(45, 212, 191, 0.20)',
     roomSelected: 'rgba(251, 191, 36, 0.18)',
+    /** A room the camera sees through. Faint, because it barely exists. */
+    roomSeeThrough: 'rgba(148, 163, 184, 0.08)',
     sweep: 'rgba(251, 191, 36, 0.08)',
     wall: '#7dd3fc',
     wallSelected: '#fbbf24',
@@ -269,13 +271,19 @@ export default function MapView({
                 });
 
                 context.closePath();
+                // See-through beats the rest: a room that draws nothing is the
+                // one thing on this map you cannot check by looking at the
+                // level, since looking at the level is exactly what does not
+                // show it.
                 context.fillStyle = chosen
                     ? COLORS.roomSelected
-                    : sector.isWater
-                      ? COLORS.roomWater
-                      : sector.isSky
-                        ? COLORS.roomSky
-                        : COLORS.room;
+                    : sector.isInvisible
+                      ? COLORS.roomSeeThrough
+                      : sector.isWater
+                        ? COLORS.roomWater
+                        : sector.isSky
+                          ? COLORS.roomSky
+                          : COLORS.room;
                 context.fill();
 
                 // Walls, and the openings between rooms.

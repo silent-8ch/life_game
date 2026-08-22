@@ -50,6 +50,7 @@ export default function RoomsPanel({
     const ceiling = shared((sector) => sector.ceilingHeight);
     const sky = shared((sector) => sector.isSky);
     const water = shared((sector) => sector.isWater);
+    const seeThrough = shared((sector) => sector.isInvisible);
     const floorRise = shared((sector) => sector.floorSlope);
     const ceilingRise = shared((sector) => sector.ceilingSlope);
 
@@ -135,6 +136,17 @@ export default function RoomsPanel({
                         label={water === undefined ? 'Water ·' : 'Water'}
                         checked={water === true}
                         onChange={(isWater) => onChangeRooms({ isWater })}
+                    />
+                    <Toggle
+                        label={
+                            seeThrough === undefined
+                                ? 'See through ·'
+                                : 'See through'
+                        }
+                        checked={seeThrough === true}
+                        onChange={(isInvisible) =>
+                            onChangeRooms({ isInvisible })
+                        }
                     />
                 </div>
 

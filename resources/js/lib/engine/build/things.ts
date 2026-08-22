@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { HIGHLIGHT_COLOR } from '@/lib/engine/build/constants';
 import type { BuildContext } from '@/lib/engine/build/context';
 import type { BoxCollider } from '@/lib/engine/collision';
+import { sectorAt } from '@/lib/engine/sectors';
 import { tileUvs } from '@/lib/engine/textures';
 import type { LevelThing } from '@/types';
 
@@ -325,6 +326,13 @@ export function buildThings(ctx: BuildContext): PropSet {
                 flagged.push({ thing, material });
             }
         }
+
+        // Anything standing in a room the camera sees through is not drawn
+        // either. Settled here rather than every frame because a thing does not
+        // move — a person does, and `actors.ts` asks the same question of them
+        // as they walk.
+        holder.visible =
+            sectorAt(level.sectors, thing.x, thing.z)?.isInvisible !== true;
 
         scene.group.add(holder);
 

@@ -330,6 +330,15 @@ export function createActors(level: Level): Actors {
                     wanderer.yaw,
                     wanderer.walked,
                 );
+
+                // Somebody in a room the camera sees through is not drawn.
+                // Asked every frame because they walk, where a prop is asked
+                // once at build because it does not. They keep walking either
+                // way: collision is unchanged and a wanderer routed through one
+                // crosses it, unseen, and comes out the far side.
+                wanderer.sprite.object.visible =
+                    sectorAt(sectors, wanderer.x, wanderer.z)?.isInvisible !==
+                    true;
             }
         },
 

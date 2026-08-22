@@ -157,6 +157,19 @@ export type Sector = {
     isSky: boolean;
     /** The floor runs the water animation and the player wades in it. */
     isWater: boolean;
+    /**
+     * The camera sees straight through it: the floor draws and nothing else
+     * does — no ceiling, no walls, no props, and nobody standing in it.
+     *
+     * Not a quieter `isSky`. A sky room drops its ceiling and gets an invisible
+     * lid instead, so that a sight-line cannot run out of the level. This is the
+     * opposite ruling and deliberately so: whatever lies beyond just shows, and
+     * where nothing lies beyond you see the backdrop.
+     *
+     * Collision is untouched. You walk in as you always did; you are simply not
+     * drawn while you are there.
+     */
+    isInvisible: boolean;
     points: SectorPoint[];
 };
 

@@ -126,7 +126,22 @@ export default function RoomPanel({
                         checked={sector.isWater}
                         onChange={(isWater) => onChangeSector({ isWater })}
                     />
+                    <Toggle
+                        label="See through"
+                        checked={sector.isInvisible}
+                        onChange={(isInvisible) =>
+                            onChangeSector({ isInvisible })
+                        }
+                    />
                 </div>
+
+                {sector.isInvisible && (
+                    <p className="text-xs leading-relaxed text-slate-500">
+                        The floor draws and nothing else does — no ceiling, no
+                        walls from either side, and nobody standing in it. You
+                        can still walk in.
+                    </p>
+                )}
 
                 <TexturePicker
                     label="Floor texture"
@@ -137,7 +152,7 @@ export default function RoomPanel({
                     }
                 />
 
-                {!sector.isSky && (
+                {!sector.isSky && !sector.isInvisible && (
                     <TexturePicker
                         label="Ceiling texture"
                         value={sector.ceilingTexture}

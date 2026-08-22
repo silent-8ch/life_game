@@ -50,7 +50,7 @@ import { postTicket, ticketFromSpot } from '@/lib/engine/ticket';
 import { wantsTouchControls } from '@/lib/engine/touch';
 import { createView } from '@/lib/engine/view';
 import { cn } from '@/lib/utils';
-import type { Flags, Level, LevelThing } from '@/types';
+import type { Flags, Level, LevelThing, Sector } from '@/types';
 
 type LevelViewportProps = {
     level: Level;
@@ -363,6 +363,11 @@ export default function LevelViewport({
         );
         playerSprite.object.visible = false;
         scene.add(playerSprite.object);
+        // Where the player is standing, kept from the step that worked it out
+        // so that the pane passes can ask about it without asking the floor
+        // plan a second time.
+        let standingIn: Sector | null = null;
+
         const refreshReflections = prepareReflections(
             built.mirrors,
             built.portals,
@@ -371,6 +376,7 @@ export default function LevelViewport({
             built.props,
             camera,
             sky,
+            () => standingIn?.isInvisible !== true,
         );
 
         const thingsBySlug = new Map(
@@ -451,7 +457,7 @@ export default function LevelViewport({
                 seconds,
             );
 
-            const standingIn = sectorAt(level.sectors, player.x, player.z);
+            standingIn = sectorAt(level.sectors, player.x, player.z);
 
             // A lid belongs to the room it covers and to nobody else.
             for (const lid of built.skyLids) {
@@ -635,7 +641,7 @@ export default function LevelViewport({
                 return;
             }
 
-            const standingIn = sectorAt(level.sectors, player.x, player.z);
+            standingIn = sectorAt(level.sectors, player.x, player.z);
 
             magic.mark({
                 x: player.x,
@@ -656,7 +662,7 @@ export default function LevelViewport({
 
             // A handful thrown where they were, and another where they arrive,
             // so it reads as going rather than as blinking.
-            const standingIn = sectorAt(level.sectors, player.x, player.z);
+            standingIn = sectorAt(level.sectors, player.x, player.z);
 
             magic.burst({
                 x: player.x,

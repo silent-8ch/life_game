@@ -20,6 +20,22 @@ export function buildBoundaries(ctx: BuildContext): Edge[] {
         const { sector, beyond } = edge;
         const texture = edge.from.wallTexture ?? sector.wallTexture;
 
+        // A boundary with an invisible room on either side draws nothing, from
+        // either side — Paul's ruling, and the half of it that is easy to miss
+        // is the *outside*. A normal room looking towards an invisible one sees
+        // straight through it to whatever is beyond, so the wall between them
+        // cannot be drawn for the normal room either, or the room would be a
+        // painted box with an invisible inside.
+        //
+        // Everything below still runs. Only the drawing is skipped: the
+        // colliders, the portal mouths and the walkability gate all read the
+        // same as they always did, because collision is unchanged and an
+        // invisible room is a room you can walk into and not see.
+        const unseen = sector.isInvisible || (beyond?.isInvisible ?? false);
+
+        const drawWall: typeof buildWall = (...given) =>
+            unseen ? null : buildWall(...given);
+
         // Both surfaces are planes, so along a straight wall their heights are
         // linear and the two ends are the extremes. Everything below is decided
         // from these four numbers per room and nothing in between.
@@ -34,7 +50,11 @@ export function buildBoundaries(ctx: BuildContext): Edge[] {
             // player: it is a pane showing the far mouth's room, built once both
             // mouths are known.
             if (namesPortal(edge)) {
-                mouths.push(edge);
+                // Except one standing in a room that is not drawn: a pane is a
+                // surface, and an invisible room has none but its floor.
+                if (!unseen) {
+                    mouths.push(edge);
+                }
 
                 continue;
             }
@@ -53,7 +73,7 @@ export function buildBoundaries(ctx: BuildContext): Edge[] {
             // portal's own camera sees straight out through it: sky above and
             // below the far room for the last few centimetres of walking in,
             // where the tilted near plane has been dropped and cannot cut it.
-            buildWall(
+            drawWall(
                 ctx,
                 edge,
                 {
@@ -82,7 +102,7 @@ export function buildBoundaries(ctx: BuildContext): Edge[] {
         const blocks = edge.from.blocks || (edge.beyondFrom?.blocks ?? false);
 
         if (beyond === null || blocks) {
-            buildWall(
+            drawWall(
                 ctx,
                 edge,
                 {
@@ -111,7 +131,7 @@ export function buildBoundaries(ctx: BuildContext): Edge[] {
         // along the wall each side's own quad collapses into the triangle
         // covering the stretch where its floor is the lower of the two. The two
         // triangles together close the gap.
-        buildWall(
+        drawWall(
             ctx,
             edge,
             {
@@ -124,7 +144,7 @@ export function buildBoundaries(ctx: BuildContext): Edge[] {
         );
 
         if (!(sector.isSky && beyond.isSky)) {
-            buildWall(
+            drawWall(
                 ctx,
                 edge,
                 {

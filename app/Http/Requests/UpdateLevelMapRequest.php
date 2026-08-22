@@ -75,6 +75,12 @@ class UpdateLevelMapRequest extends FormRequest
             'sectors.*.wallTexture' => ['nullable', 'string', $textures],
             'sectors.*.isSky' => ['required', 'boolean'],
             'sectors.*.isWater' => ['required', 'boolean'],
+            // Nullable rather than required, unlike the two above it. Those
+            // have been in the payload since the editor could draw a room; a
+            // map saved by anything that has not been reloaded since invisible
+            // rooms landed will not mention this one, and refusing that save
+            // would lose somebody's work over a flag they never set.
+            'sectors.*.isInvisible' => ['nullable', 'boolean'],
             'sectors.*.points' => ['required', 'array', 'min:3', 'max:64'],
             'sectors.*.points.*.x' => ['required', 'numeric', 'between:-512,512'],
             'sectors.*.points.*.z' => ['required', 'numeric', 'between:-512,512'],

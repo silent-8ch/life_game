@@ -122,10 +122,20 @@ function readRoomsSeenFrom(level: Level): Map<string, string[]> {
         // and the nav graph both make. A portal mouth is `beyond === null` and
         // so is not a way through here — a portal pane already carries the room
         // on its far side as its own starting point.
+        //
+        // Except that an invisible room is see-through whether or not it is
+        // walk-through. This is about what can be *seen* from where, and a wall
+        // onto a room that draws nothing but its floor stops nobody's eye — so
+        // a mirror on one side of an invisible room has to be redrawn for a
+        // view from the other, or its reflection sits frozen. The nav graph
+        // makes the opposite reading of the same boundary on purpose: you still
+        // cannot walk through a wall you can see through.
+        const seeThrough = sector.isInvisible || (beyond?.isInvisible ?? false);
+
         if (
             beyond === null ||
-            edge.from.blocks ||
-            (edge.beyondFrom?.blocks ?? false)
+            (!seeThrough &&
+                (edge.from.blocks || (edge.beyondFrom?.blocks ?? false)))
         ) {
             continue;
         }
