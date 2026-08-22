@@ -2,6 +2,7 @@ import { Head, router } from '@inertiajs/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { show } from '@/actions/App/Http/Controllers/GameController';
 import { update } from '@/actions/App/Http/Controllers/LevelEditorController';
+import { HistoryButtons } from '@/components/editor/history-buttons';
 import Inspector from '@/components/editor/inspector';
 import MapView from '@/components/editor/map-view';
 import type { Tool } from '@/components/editor/map-view';
@@ -424,6 +425,13 @@ export default function LevelEditor({
                                     )}
                                 </button>
                             ))}
+
+                            <HistoryButtons
+                                canUndo={history.past.length > 0}
+                                canRedo={history.future.length > 0}
+                                onUndo={() => stepBack(undo(history, draft))}
+                                onRedo={() => stepBack(redo(history, draft))}
+                            />
 
                             <span className="ml-4 text-[11px] tracking-wider text-slate-500 uppercase">
                                 Grid
