@@ -31,6 +31,11 @@ ran dry every twenty minutes. **The split by path was right when the contention 
 thousand-line files — and A-01, A-09 and 1-12 split all three, which is what made the split
 that governs the work stop describing it.**
 
+**Paul's comments are priorities.** His words, and the standing rule from here: anything he says in
+passing goes to the **front** of the queue, not behind whatever is in flight. A-11 waits behind
+his door-pathfinding ask; 1-24/25/26 go ahead of the sky lids. The board orders by what he
+said last, not by what was planned first.
+
 **Ownership is by path, not by task.** The two agents collide on files, not on features, so
 the split below is designed to keep them out of each other's way. Two files are still the real
 contention risk — `level-viewport.tsx` (1017 lines) and `inspector.tsx` (1156) — and most of
