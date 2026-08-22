@@ -13,7 +13,7 @@ import {
 import { crossPortal } from '@/lib/engine/portals';
 import type { Portal } from '@/lib/engine/portals';
 import type { ForcedSpot } from '@/lib/engine/probe-backdrop';
-import { sectorAt } from '@/lib/engine/sectors';
+import { floorAt, sectorAt } from '@/lib/engine/sectors';
 import type { Level, Sector } from '@/types';
 
 /**
@@ -75,7 +75,14 @@ export function spawnPlayer(level: Level, forced: ForcedSpot | null): Player {
                 ? -THREE.MathUtils.degToRad(level.spawn.angle)
                 : THREE.MathUtils.degToRad(forced.yaw),
         pitch: forced === null ? 0 : THREE.MathUtils.degToRad(forced.pitch),
-        eye: (standingOn?.floorHeight ?? 0) + EYE_HEIGHT,
+        eye:
+            (standingOn === null
+                ? 0
+                : floorAt(
+                      standingOn,
+                      forced?.x ?? level.spawn.x,
+                      forced?.z ?? level.spawn.z,
+                  )) + EYE_HEIGHT,
         walked: 0,
     };
 }
@@ -185,7 +192,11 @@ export function settleEye(
     standingIn: Sector | null,
     seconds: number,
 ): void {
-    const floor = standingIn?.floorHeight ?? 0;
+    // The floor under the player rather than the room's base height, so the
+    // eye follows a ramp up it rather than floating along at the height of its
+    // hinge wall.
+    const floor =
+        standingIn === null ? 0 : floorAt(standingIn, player.x, player.z);
     const wading = standingIn?.isWater === true ? WADE_DEPTH : 0;
 
     player.eye +=

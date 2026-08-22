@@ -30,7 +30,7 @@ import {
     scanRowsOf,
     wantsScan,
 } from '@/lib/engine/scan';
-import { sectorAt } from '@/lib/engine/sectors';
+import { floorAt, sectorAt } from '@/lib/engine/sectors';
 import { createSky } from '@/lib/engine/sky';
 import { describeSpot, postSnapshot, readingOf } from '@/lib/engine/snapshot';
 import { createMagic } from '@/lib/engine/spells';
@@ -296,7 +296,10 @@ export default function LevelViewport({
 
             settleEye(player, standingIn, seconds);
 
-            const floor = standingIn?.floorHeight ?? 0;
+            const floor =
+                standingIn === null
+                    ? 0
+                    : floorAt(standingIn, player.x, player.z);
 
             hands.update(seconds, player.walked, push.running);
 
@@ -402,7 +405,10 @@ export default function LevelViewport({
 
             magic.mark({
                 x: player.x,
-                y: standingIn?.floorHeight ?? 0,
+                y:
+                    standingIn === null
+                        ? 0
+                        : floorAt(standingIn, player.x, player.z),
                 z: player.z,
             });
         };
@@ -420,7 +426,10 @@ export default function LevelViewport({
 
             magic.burst({
                 x: player.x,
-                y: (standingIn?.floorHeight ?? 0) + 0.6,
+                y:
+                    (standingIn === null
+                        ? 0
+                        : floorAt(standingIn, player.x, player.z)) + 0.6,
                 z: player.z,
             });
 

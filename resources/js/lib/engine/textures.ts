@@ -191,3 +191,37 @@ export function tileFlatUvs(geometry: THREE.BufferGeometry): void {
 
     uv.needsUpdate = true;
 }
+
+/**
+ * Tiles a wall built as an explicit quad, whose four corners carry their own
+ * heights.
+ *
+ * `tileUvs` scales a PlaneGeometry's unit UVs by the wall's size, which only
+ * works while every corner is the same height. A wall under a slope is a
+ * trapezoid, and scaling it that way shears the texture with the top edge —
+ * bricks leaning over as the ceiling rises.
+ *
+ * So V comes from each corner's own height in metres rather than from its share
+ * of the wall, which keeps the courses level whatever the top is doing. U still
+ * runs along the wall.
+ *
+ * @param  along  Each vertex's distance along the wall, in metres.
+ * @param  up     Each vertex's height, in metres, in the same order.
+ */
+export function tileWallUvs(
+    geometry: THREE.BufferGeometry,
+    along: number[],
+    up: number[],
+): void {
+    const uv = geometry.getAttribute('uv');
+
+    for (let index = 0; index < uv.count; index++) {
+        uv.setXY(
+            index,
+            along[index] / TEXTURE_METRES,
+            up[index] / TEXTURE_METRES,
+        );
+    }
+
+    uv.needsUpdate = true;
+}

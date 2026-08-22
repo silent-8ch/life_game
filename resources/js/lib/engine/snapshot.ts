@@ -1,4 +1,10 @@
-import { boundaryKey, edgesOf, sectorAt } from '@/lib/engine/sectors';
+import {
+    boundaryKey,
+    ceilingAt,
+    edgesOf,
+    floorAt,
+    sectorAt,
+} from '@/lib/engine/sectors';
 import type { Level } from '@/types';
 
 /**
@@ -37,6 +43,12 @@ export type Snapshot = {
     standingIn: {
         slug: string;
         name: string;
+        /**
+         * The floor and ceiling **under this spot**, not the room's base
+         * heights. On a sloped room those are the same number only along the
+         * hinge wall, and a snapshot exists to report where somebody actually
+         * stood.
+         */
         floorHeight: number;
         ceilingHeight: number;
         isSky: boolean;
@@ -160,8 +172,8 @@ export function describeSpot(spot: SpotToDescribe): Snapshot {
                 : {
                       slug: room.slug,
                       name: room.name,
-                      floorHeight: room.floorHeight,
-                      ceilingHeight: room.ceilingHeight,
+                      floorHeight: round(floorAt(room, spot.x, spot.z), 3),
+                      ceilingHeight: round(ceilingAt(room, spot.x, spot.z), 3),
                       isSky: room.isSky,
                       isWater: room.isWater,
                       wallTexture: room.wallTexture,
