@@ -25,6 +25,15 @@ export const MAX_SCALE = 160;
 /** Corners within this many metres of each other are the same corner. */
 export const CORNER_EPSILON = 0.001;
 
+/** Heights snap to this, in metres, however they are changed. */
+export const HEIGHT_STEP = 0.1;
+
+/** No room is ever squashed thinner than this. */
+export const MIN_ROOM_HEIGHT = 0.2;
+
+/** How far a duplicated room lands from the one it was copied from. */
+export const DUPLICATE_OFFSET = 1;
+
 export function toScreen(view: View, x: number, z: number): [number, number] {
     return [(x - view.originX) * view.scale, (z - view.originZ) * view.scale];
 }
@@ -267,6 +276,57 @@ export function updateSector(
     };
 }
 
+/** A height put back on the step it belongs to, and off 0.30000000000000004. */
+function snapHeight(value: number): number {
+    return (
+        Math.round(Math.round(value / HEIGHT_STEP) * HEIGHT_STEP * 1000) / 1000
+    );
+}
+
+/**
+ * Moves rooms' floors or ceilings by whole steps — the keyboard's answer to
+ * dragging a handle in the section, and clamped the same way that drag is, so
+ * a floor can never be nudged up through its own ceiling.
+ */
+export function nudgeHeights(
+    level: Level,
+    rooms: number[],
+    which: 'floor' | 'ceiling',
+    steps: number,
+): Level {
+    return rooms.reduce((current, index) => {
+        const sector = current.sectors[index];
+
+        if (sector === undefined) {
+            return current;
+        }
+
+        const moved = snapHeight(
+            (which === 'floor' ? sector.floorHeight : sector.ceilingHeight) +
+                steps * HEIGHT_STEP,
+        );
+
+        return updateSector(
+            current,
+            index,
+            which === 'floor'
+                ? {
+                      floorHeight: snapHeight(
+                          Math.min(
+                              moved,
+                              sector.ceilingHeight - MIN_ROOM_HEIGHT,
+                          ),
+                      ),
+                  }
+                : {
+                      ceilingHeight: snapHeight(
+                          Math.max(moved, sector.floorHeight + MIN_ROOM_HEIGHT),
+                      ),
+                  },
+        );
+    }, level);
+}
+
 function setEdge(
     level: Level,
     sectorIndex: number,
@@ -398,6 +458,9 @@ export function newPerson(
         kind: 'actor',
         sprite,
         behaviour: 'wander',
+        // Nobody starts overridden: null means whatever their sprite starts
+        // with, and the Inspector is where that is taken over.
+        stats: null,
         speed: 1.1,
         texture: null,
         x: at.x,
@@ -424,6 +487,7 @@ export function newProp(level: Level, at: Point): LevelThing {
         kind: 'prop',
         sprite: null,
         behaviour: null,
+        stats: null,
         speed: 0,
         texture: null,
         x: at.x,
@@ -495,6 +559,54 @@ export function newSector(level: Level, points: Point[]): Sector {
             portalLink: null,
         })),
     };
+}
+
+/**
+ * A copy of a room, shifted off the original so both can be seen, with a slug
+ * no other room is using. The walls come across as they are — textures, mirrors
+ * and all — but not their portal links, which pair two mouths by name and would
+ * otherwise leave three walls claiming to be the same portal.
+ */
+export function duplicateSector(
+    level: Level,
+    index: number,
+    offset = DUPLICATE_OFFSET,
+): Sector {
+    const sector = level.sectors[index];
+
+    return {
+        ...sector,
+        slug: freeSlug(level, sector.slug),
+        name: `${sector.name} copy`,
+        points: sector.points.map((point) => ({
+            ...point,
+            x: point.x + offset,
+            z: point.z + offset,
+            portalLink: null,
+        })),
+    };
+}
+
+/**
+ * Copies every picked room, one at a time so that each copy's slug is judged
+ * against the ones already made. The copies land at the end, so they are the
+ * last `rooms.length` sectors of the level that comes back.
+ */
+export function duplicateRooms(
+    level: Level,
+    rooms: number[],
+    offset = DUPLICATE_OFFSET,
+): Level {
+    return rooms.reduce(
+        (current, index) => ({
+            ...current,
+            sectors: [
+                ...current.sectors,
+                duplicateSector(current, index, offset),
+            ],
+        }),
+        level,
+    );
 }
 
 /** Twice the signed area; negative means the corners run the wrong way round. */

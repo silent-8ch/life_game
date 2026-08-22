@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
     centroid,
     closestOnEdge,
@@ -17,6 +17,7 @@ import {
     twinEdge,
 } from '@/lib/editor/map';
 import type { Point, Selection, View } from '@/lib/editor/map';
+import { boundsOf } from '@/lib/engine/sectors';
 import type { Level } from '@/types';
 
 /**
@@ -113,6 +114,7 @@ export default function MapView({
     /** Where a corner drag started, and whether it has moved anywhere yet. */
     const [grabbed, setGrabbed] = useState<Point | null>(null);
     const [draggingThing, setDraggingThing] = useState<number | null>(null);
+    const [draggingSpawn, setDraggingSpawn] = useState(false);
     const [moved, setMoved] = useState(false);
     const [panning, setPanning] = useState<{ x: number; y: number } | null>(
         null,
@@ -495,6 +497,10 @@ export default function MapView({
         return null;
     };
 
+    const nearSpawn = (spot: Point): boolean =>
+        Math.hypot(level.spawn.x - spot.x, level.spawn.z - spot.z) <
+        GRAB_PIXELS / (view?.scale ?? 1);
+
     /**
      * Every wall under a spot, topmost room first. Two rooms sharing a wall
      * both turn up, because each owns its own side of it.
@@ -639,6 +645,14 @@ export default function MapView({
             return;
         }
 
+        // The start marker is drawn over the things, so it is grabbed before
+        // them; a corner still wins, being the smaller target of the two.
+        if (nearSpawn(spot)) {
+            setDraggingSpawn(true);
+
+            return;
+        }
+
         const held = thingNear(level, spot, GRAB_PIXELS / (view?.scale ?? 1));
 
         if (held !== null) {
@@ -702,6 +716,12 @@ export default function MapView({
         }
 
         setPointer({ x: snap(spot.x, grid), z: snap(spot.z, grid) });
+
+        if (draggingSpawn) {
+            onMoveSpawn({ x: snap(spot.x, grid), z: snap(spot.z, grid) });
+
+            return;
+        }
 
         if (draggingThing !== null) {
             onMoveThing(draggingThing, {
@@ -767,9 +787,14 @@ export default function MapView({
         setGrabbed(null);
         setMoved(false);
         setDraggingThing(null);
+        setDraggingSpawn(false);
         setSweeping(null);
         setPanning(null);
     };
+
+    // How much floor plan there is, for the readout: a carve that goes wrong
+    // quietly leaves four rooms where one was expected.
+    const extent = useMemo(() => boundsOf(level.sectors), [level.sectors]);
 
     const handleWheel = (event: React.WheelEvent<HTMLCanvasElement>): void => {
         if (view === null || canvasRef.current === null) {
@@ -811,6 +836,13 @@ export default function MapView({
                     tool === 'select' ? 'cursor-default' : 'cursor-crosshair'
                 }
             />
+            <p className="pointer-events-none absolute bottom-2 left-3 text-[11px] text-slate-500">
+                {level.sectors.length === 1
+                    ? '1 room'
+                    : `${level.sectors.length} rooms`}
+                {level.sectors.length > 0 &&
+                    ` · ${(extent.maxX - extent.minX).toFixed(1)} × ${(extent.maxZ - extent.minZ).toFixed(1)} m`}
+            </p>
             <p className="pointer-events-none absolute right-3 bottom-2 text-[11px] text-slate-500">
                 {pointer === null
                     ? 'scroll to zoom · middle-drag to pan · shift-click to add a room'

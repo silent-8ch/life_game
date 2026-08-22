@@ -9,10 +9,12 @@ import SideView from '@/components/editor/side-view';
 import LevelViewport from '@/components/game/level-viewport';
 import { carveRooms, weldCorners } from '@/lib/editor/carve';
 import {
+    duplicateRooms,
     moveCorner,
     newPerson,
     newProp,
     newSector,
+    nudgeHeights,
     splitEdge,
     toggleRoom,
     updateEdge,
@@ -96,6 +98,28 @@ export default function LevelEditor({
         // reach for it again between each one is a nuisance. Esc puts it down.
     }, [drawing, draft]);
 
+    // Every room an edit works on: the whole picked set, or the one room the
+    // selection holds when nothing was gathered up.
+    const picked = useMemo(
+        () =>
+            rooms.length ? rooms : selection === null ? [] : [selection.sector],
+        [rooms, selection],
+    );
+
+    const duplicate = useCallback(() => {
+        if (picked.length === 0) {
+            return;
+        }
+
+        // The copies go on the end, in the order they were picked.
+        const first = draft.sectors.length;
+
+        setDraft((current) => duplicateRooms(current, picked));
+        setRooms(picked.map((_, index) => first + index));
+        setSelection({ sector: first, edge: null });
+        setThing(null);
+    }, [picked, draft.sectors.length]);
+
     useEffect(() => {
         const handleKey = (event: KeyboardEvent): void => {
             if (event.target instanceof HTMLElement) {
@@ -106,6 +130,35 @@ export default function LevelEditor({
                 if (typing) {
                     return;
                 }
+            }
+
+            // Before the tool keys, or duplicating would also put the draw
+            // tool in hand.
+            if ((event.metaKey || event.ctrlKey) && event.key === 'd') {
+                event.preventDefault();
+                duplicate();
+
+                return;
+            }
+
+            // Heights by the step the section's drag snaps to, on whatever is
+            // picked — shift for the ceiling, as the handles are stacked.
+            if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+                if (picked.length === 0) {
+                    return;
+                }
+
+                event.preventDefault();
+                setDraft((current) =>
+                    nudgeHeights(
+                        current,
+                        picked,
+                        event.shiftKey ? 'ceiling' : 'floor',
+                        event.key === 'ArrowUp' ? 1 : -1,
+                    ),
+                );
+
+                return;
             }
 
             if (event.key === 'Escape') {
@@ -305,9 +358,10 @@ export default function LevelEditor({
 
                             {tool === 'select' && (
                                 <span className="ml-auto text-xs text-slate-400">
-                                    Drag a corner or a person to move it ·
-                                    double-click a wall to add a corner ·
-                                    shift-click or sweep to take several rooms
+                                    Drag a corner, a person or the start to move
+                                    it · double-click a wall to add a corner ·
+                                    shift-click or sweep to take several rooms ·
+                                    ⌘D copies them
                                 </span>
                             )}
                         </div>
@@ -416,15 +470,12 @@ export default function LevelEditor({
                                 level={draft}
                                 selected={selection?.sector ?? null}
                                 onChangeHeights={(floorHeight, ceilingHeight) =>
-                                    selection !== null &&
+                                    picked.length > 0 &&
                                     setDraft((current) =>
                                         // A dragged handle takes every picked
                                         // room with it, not only the one the
                                         // section happens to be drawing.
-                                        (rooms.length
-                                            ? rooms
-                                            : [selection.sector]
-                                        ).reduce(
+                                        picked.reduce(
                                             (level, index) =>
                                                 updateSector(level, index, {
                                                     floorHeight,

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { HEIGHT_STEP, MIN_ROOM_HEIGHT } from '@/lib/editor/map';
 import type { Level } from '@/types';
 
 /**
@@ -30,9 +31,6 @@ const PADDING = 26;
 
 /** How close in pixels you have to be to grab a floor or ceiling. */
 const GRAB_PIXELS = 8;
-
-/** Heights snap to this, in metres. */
-const HEIGHT_STEP = 0.1;
 
 export default function SideView({
     level,
@@ -239,13 +237,13 @@ export default function SideView({
 
         if (dragging === 'floor') {
             onChangeHeights(
-                Math.min(height, sector.ceilingHeight - 0.2),
+                Math.min(height, sector.ceilingHeight - MIN_ROOM_HEIGHT),
                 sector.ceilingHeight,
             );
         } else {
             onChangeHeights(
                 sector.floorHeight,
-                Math.max(height, sector.floorHeight + 0.2),
+                Math.max(height, sector.floorHeight + MIN_ROOM_HEIGHT),
             );
         }
     };
@@ -269,7 +267,7 @@ export default function SideView({
             <p className="pointer-events-none absolute top-2 right-3 text-[11px] text-slate-500">
                 {selected === null
                     ? 'section · pick a room to change its heights'
-                    : 'drag the highlighted floor or ceiling'}
+                    : 'drag the highlighted floor or ceiling · ↑↓ nudges it, shift for the ceiling'}
             </p>
         </div>
     );
