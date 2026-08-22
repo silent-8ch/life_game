@@ -6,6 +6,8 @@ use App\Enums\ActorBehaviour;
 use App\Enums\ConditionType;
 use App\Enums\EffectType;
 use App\Enums\ThingKind;
+use App\Enums\ThingRender;
+use App\Enums\ThingUvMode;
 use App\Enums\Verb;
 use App\Models\Item;
 use App\Models\Level;
@@ -36,6 +38,7 @@ class UpdateLevelMapRequest extends FormRequest
     {
         $assets = app(LevelAssets::class);
         $textures = Rule::in($assets->textures());
+        $props = Rule::in($assets->props());
 
         return [
             'name' => ['required', 'string', 'max:255'],
@@ -88,6 +91,18 @@ class UpdateLevelMapRequest extends FormRequest
             'things.*.stats.*' => ['required', 'integer', 'between:'.PersonStats::MINIMUM.','.PersonStats::MAXIMUM],
             'things.*.speed' => ['required', 'numeric', 'between:0,10'],
             'things.*.texture' => ['nullable', 'string', $textures],
+            // Omittable rather than required, the way stats already are. Every
+            // one has a column default that is what a thing was doing before
+            // there was a choice, so a payload that says nothing about how a
+            // thing is drawn still saves and still draws the same. Checked
+            // strictly when they are sent.
+            'things.*.render' => ['sometimes', Rule::enum(ThingRender::class)],
+            'things.*.planeCount' => ['sometimes', 'integer', 'in:2,3'],
+            'things.*.uvMode' => ['sometimes', Rule::enum(ThingUvMode::class)],
+            'things.*.textureAlt' => ['nullable', 'string', $props],
+            'things.*.altFlag' => ['nullable', 'string', 'max:255'],
+            'things.*.animationFrames' => ['sometimes', 'integer', 'between:1,16'],
+            'things.*.animationFps' => ['sometimes', 'numeric', 'between:0.1,60'],
             'things.*.x' => ['required', 'numeric', 'between:-512,512'],
             'things.*.z' => ['required', 'numeric', 'between:-512,512'],
             'things.*.elevation' => ['required', 'numeric', 'between:-64,64'],
@@ -170,6 +185,7 @@ class UpdateLevelMapRequest extends FormRequest
                     }
 
                     $this->checkStats($validator, $index, $thing);
+                    $this->checkAltTexture($validator, $index, $thing);
                 }
 
                 $this->checkItemsExist($validator, $things);
@@ -184,6 +200,30 @@ class UpdateLevelMapRequest extends FormRequest
                 }
             },
         ];
+    }
+
+    /**
+     * An alternate texture and the flag that swaps it in are a pair.
+     *
+     * Either one alone means nothing — a second texture nothing can reach, or a
+     * flag naming a texture that does not exist — and both failures are silent
+     * at render time. Turned away rather than stored.
+     *
+     * @param  array<string, mixed>  $thing
+     */
+    private function checkAltTexture(Validator $validator, int|string $index, array $thing): void
+    {
+        $texture = $thing['textureAlt'] ?? null;
+        $flag = $thing['altFlag'] ?? null;
+
+        if (($texture === null) === ($flag === null)) {
+            return;
+        }
+
+        $validator->errors()->add(
+            $texture === null ? "things.{$index}.textureAlt" : "things.{$index}.altFlag",
+            'An alternate texture and the flag that shows it go together, or neither does.'
+        );
     }
 
     /**

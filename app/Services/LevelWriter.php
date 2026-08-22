@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Enums\ThingRender;
+use App\Enums\ThingUvMode;
 use App\Models\Item;
 use App\Models\Level;
 use App\Models\LevelThing;
@@ -109,6 +111,13 @@ class LevelWriter
                 'stats' => $thing['stats'] ?? null,
                 'speed' => $thing['speed'],
                 'texture' => $thing['texture'] ?? null,
+                'render' => $thing['render'] ?? ThingRender::Box->value,
+                'plane_count' => $thing['planeCount'] ?? 2,
+                'uv_mode' => $thing['uvMode'] ?? ThingUvMode::Tile->value,
+                'texture_alt' => $thing['textureAlt'] ?? null,
+                'alt_flag' => $thing['altFlag'] ?? null,
+                'animation_frames' => $thing['animationFrames'] ?? 1,
+                'animation_fps' => $thing['animationFps'] ?? 8,
                 'x' => $thing['x'],
                 'z' => $thing['z'],
                 'elevation' => $thing['elevation'],

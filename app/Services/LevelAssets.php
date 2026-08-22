@@ -56,6 +56,8 @@ class LevelAssets
 
     private const BACKDROP_PATH = 'sprites/bg';
 
+    private const PROP_PATH = 'sprites/props';
+
     /**
      * Tiling surface textures, by name.
      *
@@ -64,6 +66,21 @@ class LevelAssets
     public function textures(): array
     {
         return $this->pngNamesIn(self::TEXTURE_PATH);
+    }
+
+    /**
+     * Cutout art for props, by name.
+     *
+     * Kept apart from the tiling textures rather than thrown in with them.
+     * They differ in kind — a surface texture is opaque, square and seamless; a
+     * prop carries alpha, has a real aspect ratio and never repeats — and
+     * mixing them puts forty doors and pot plants in the wall-texture dropdown.
+     *
+     * @return list<string>
+     */
+    public function props(): array
+    {
+        return $this->pngNamesIn(self::PROP_PATH);
     }
 
     /**

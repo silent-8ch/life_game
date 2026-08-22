@@ -76,6 +76,8 @@ it('sends every thing as a box with a kind', function (): void {
                 ->hasAll([
                     'slug', 'name', 'description', 'kind',
                     'sprite', 'behaviour', 'stats', 'speed', 'texture',
+                    'render', 'planeCount', 'uvMode', 'textureAlt', 'altFlag',
+                    'animationFrames', 'animationFps',
                     'x', 'z', 'elevation', 'width', 'depth', 'height',
                     'angle', 'isSolid', 'verbs',
                 ])
