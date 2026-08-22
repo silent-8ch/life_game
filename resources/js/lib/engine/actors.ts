@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { moveWithCollisions } from '@/lib/engine/collision';
 import type { Collider, Point } from '@/lib/engine/collision';
 import { PLAYER_RADIUS } from '@/lib/engine/constants';
-import { boundsOf, sectorAt } from '@/lib/engine/sectors';
+import { boundsOf, floorAt, sectorAt } from '@/lib/engine/sectors';
 import { createSpriteActor } from '@/lib/engine/sprite-actor';
 import type { SpriteActor } from '@/lib/engine/sprite-actor';
 import type { Level, LevelThing, Sector } from '@/types';
@@ -52,7 +52,11 @@ export type Actors = {
 };
 
 function floorUnder(sectors: Sector[], x: number, z: number): number | null {
-    return sectorAt(sectors, x, z)?.floorHeight ?? null;
+    const standingOn = sectorAt(sectors, x, z);
+
+    // The floor under a spot, not the room's base height: on a ramp those are
+    // the same number only along the hinge wall.
+    return standingOn === null ? null : floorAt(standingOn, x, z);
 }
 
 /** Somewhere inside the level's sectors, chosen at random. */

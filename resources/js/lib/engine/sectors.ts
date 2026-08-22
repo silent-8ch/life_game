@@ -161,3 +161,104 @@ export function boundsOf(sectors: Sector[]): {
         maxZ: Math.max(...points.map((point) => point.z)),
     };
 }
+
+/**
+ * A sloped surface's height at a spot: the base along the hinge wall, plus the
+ * rise for however far into the room the spot is.
+ *
+ * `floorHeight` therefore means "how high this floor is **along its hinge
+ * wall**", not "how high this floor is". That is Build's convention and it is
+ * what makes shared walls line up for nothing: hinge two rooms on the wall
+ * between them at the same base height and they meet flush there, each rising
+ * into its own room, because `inwardNormal` points opposite ways for the two
+ * sides.
+ *
+ * Mirrored in PHP on `App\Models\LevelSector`, which validates what this draws.
+ * Two copies is the established cost here — the same note as `LevelAssets`.
+ */
+function heightAt(
+    sector: Sector,
+    base: number,
+    slope: number,
+    hinge: number | null,
+    x: number,
+    z: number,
+): number {
+    const corners = sector.points;
+
+    // A hinge past the end of the point list is an old row whose wall was
+    // carved away. Flat is the honest answer, not a crash.
+    if (!slope || hinge === null || corners.length < 3) {
+        return base;
+    }
+
+    if (hinge >= corners.length) {
+        return base;
+    }
+
+    const from = corners[hinge];
+    const to = corners[(hinge + 1) % corners.length];
+
+    if (Math.hypot(to.x - from.x, to.z - from.z) < 1e-9) {
+        return base;
+    }
+
+    const normal = inwardNormal(sector, from, to);
+    const into = (x - from.x) * normal.x + (z - from.z) * normal.z;
+
+    return base + slope * into;
+}
+
+/** How high the floor is at a spot in the room. */
+export function floorAt(sector: Sector, x: number, z: number): number {
+    // The two slope fields are read defensively rather than by type alone. The
+    // columns default to flat, so a row written before they existed carries no
+    // value for them, and neither does a hand-written fixture. Undefined means
+    // flat here, the same as zero.
+    return heightAt(
+        sector,
+        sector.floorHeight,
+        sector.floorSlope ?? 0,
+        sector.floorSlopeEdge ?? null,
+        x,
+        z,
+    );
+}
+
+/** How high the ceiling is at a spot in the room. */
+export function ceilingAt(sector: Sector, x: number, z: number): number {
+    return heightAt(
+        sector,
+        sector.ceilingHeight,
+        sector.ceilingSlope ?? 0,
+        sector.ceilingSlopeEdge ?? null,
+        x,
+        z,
+    );
+}
+
+/**
+ * The four numbers a wall between two rooms needs: each surface at each end of
+ * the wall.
+ *
+ * Both surfaces are planes, so their heights along a straight edge are linear
+ * and the extremes are always at the two ends. Nothing in the middle has to be
+ * sampled — which is what makes every check below exact rather than a guess.
+ */
+export function heightsAlong(
+    sector: Sector,
+    from: SectorPoint,
+    to: SectorPoint,
+): {
+    floorFrom: number;
+    floorTo: number;
+    ceilingFrom: number;
+    ceilingTo: number;
+} {
+    return {
+        floorFrom: floorAt(sector, from.x, from.z),
+        floorTo: floorAt(sector, to.x, to.z),
+        ceilingFrom: ceilingAt(sector, from.x, from.z),
+        ceilingTo: ceilingAt(sector, to.x, to.z),
+    };
+}

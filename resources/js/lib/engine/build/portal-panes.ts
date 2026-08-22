@@ -9,7 +9,7 @@ import {
 import { createPortalSurface } from '@/lib/engine/portal-surface';
 import type { PortalSurface } from '@/lib/engine/portal-surface';
 import { portalLinkOf, turnBetween } from '@/lib/engine/portals';
-import { inwardNormal } from '@/lib/engine/sectors';
+import { heightsAlong, inwardNormal } from '@/lib/engine/sectors';
 import type { Edge } from '@/lib/engine/sectors';
 
 /**
@@ -120,21 +120,82 @@ function buildPortalPane(
             ),
         );
 
-    const height = entry.sector.ceilingHeight - entry.sector.floorHeight;
-
     // Pulled back at each end to meet the face of whatever wall stands
     // there, which is very often only one of the two.
     const trim = trimOf(ctx, entry);
 
-    const geometry = materials.track(
-        new THREE.PlaneGeometry(near.length - trim.back - trim.front, height),
-    );
+    const width = near.length - trim.back - trim.front;
+
+    // A mouth covers its room's floor to its room's ceiling, and under a slope
+    // neither of those is one number. Both ends are taken, and the opening is
+    // the trapezoid between them.
+    const mouth = heightsAlong(entry.sector, entry.from, entry.to);
+    const flat =
+        mouth.floorFrom === mouth.floorTo &&
+        mouth.ceilingFrom === mouth.ceilingTo;
+
+    const bottom = Math.min(mouth.floorFrom, mouth.floorTo);
+    const top = Math.max(mouth.ceilingFrom, mouth.ceilingTo);
+    const height = top - bottom;
+    const middle = bottom + height / 2;
 
     // Trimming one end and not the other moves the middle of the pane off
     // the middle of the mouth.
     const shift = (trim.back - trim.front) / 2;
     const alongX = (entry.to.x - entry.from.x) / (near.length || 1);
     const alongZ = (entry.to.z - entry.from.z) / (near.length || 1);
+
+    /**
+     * Which way along the mouth the pane's own +x points, and how far along the
+     * mouth a point at a given local x is. The same reasoning as a wall's: the
+     * quarter turn that faces the pane into its room sends local +x one way or
+     * the other depending which way the room was wound, and a trapezoid put on
+     * back to front slopes against its own opening.
+     */
+    const towards =
+        (near.normal.z * (entry.to.x - entry.from.x) -
+            near.normal.x * (entry.to.z - entry.from.z)) /
+            (near.length || 1) >
+        0
+            ? 1
+            : -1;
+
+    const alongAt = (localX: number): number =>
+        0.5 + (shift + towards * localX) / (near.length || 1);
+
+    const trapezoid = (): THREE.BufferGeometry => {
+        const shaped = new THREE.BufferGeometry();
+        const points: number[] = [];
+        const uvs: number[] = [];
+
+        for (const localX of [-width / 2, width / 2]) {
+            const at = alongAt(localX);
+            const under =
+                mouth.floorFrom + (mouth.floorTo - mouth.floorFrom) * at;
+            const over = Math.max(
+                mouth.ceilingFrom + (mouth.ceilingTo - mouth.ceilingFrom) * at,
+                under,
+            );
+
+            points.push(localX, under - middle, 0);
+            points.push(localX, over - middle, 0);
+            uvs.push(0, 0, 0, 1);
+        }
+
+        shaped.setAttribute(
+            'position',
+            new THREE.Float32BufferAttribute(points, 3),
+        );
+        shaped.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+        shaped.setIndex([0, 2, 3, 0, 3, 1]);
+        shaped.computeVertexNormals();
+
+        return shaped;
+    };
+
+    const geometry = materials.track(
+        flat ? new THREE.PlaneGeometry(width, height) : trapezoid(),
+    );
 
     const carried = new THREE.Vector3();
 
@@ -177,7 +238,7 @@ function buildPortalPane(
     // one-pixel bright line all the way round the portal.
     surface.mesh.position.set(
         near.centre.x - near.normal.x * PORTAL_RECESS + alongX * shift,
-        entry.sector.floorHeight + height / 2,
+        middle,
         near.centre.z - near.normal.z * PORTAL_RECESS + alongZ * shift,
     );
     surface.mesh.rotation.y = Math.atan2(near.normal.x, near.normal.z);

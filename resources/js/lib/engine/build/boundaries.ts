@@ -2,7 +2,7 @@ import type { BuildContext } from '@/lib/engine/build/context';
 import { buildWall } from '@/lib/engine/build/walls';
 import { MAX_STEP, MIN_HEADROOM } from '@/lib/engine/constants';
 import { namesPortal, portalLinkOf } from '@/lib/engine/portals';
-import { edgesOf, inwardNormal } from '@/lib/engine/sectors';
+import { edgesOf, heightsAlong, inwardNormal } from '@/lib/engine/sectors';
 import type { Edge } from '@/lib/engine/sectors';
 
 /**
@@ -19,6 +19,13 @@ export function buildBoundaries(ctx: BuildContext): Edge[] {
     for (const edge of edgesOf(level.sectors)) {
         const { sector, beyond } = edge;
         const texture = edge.from.wallTexture ?? sector.wallTexture;
+
+        // Both surfaces are planes, so along a straight wall their heights are
+        // linear and the two ends are the extremes. Everything below is decided
+        // from these four numbers per room and nothing in between.
+        const here = heightsAlong(sector, edge.from, edge.to);
+        const over =
+            beyond === null ? null : heightsAlong(beyond, edge.from, edge.to);
 
         const link = portalLinkOf(edge);
 
@@ -49,8 +56,12 @@ export function buildBoundaries(ctx: BuildContext): Edge[] {
             buildWall(
                 ctx,
                 edge,
-                sector.floorHeight,
-                Math.max(sector.ceilingHeight, beyond?.ceilingHeight ?? 0),
+                {
+                    bottomFrom: here.floorFrom,
+                    bottomTo: here.floorTo,
+                    topFrom: Math.max(here.ceilingFrom, over?.ceilingFrom ?? 0),
+                    topTo: Math.max(here.ceilingTo, over?.ceilingTo ?? 0),
+                },
                 texture,
             );
 
@@ -74,8 +85,12 @@ export function buildBoundaries(ctx: BuildContext): Edge[] {
             buildWall(
                 ctx,
                 edge,
-                sector.floorHeight,
-                sector.ceilingHeight,
+                {
+                    bottomFrom: here.floorFrom,
+                    bottomTo: here.floorTo,
+                    topFrom: here.ceilingFrom,
+                    topTo: here.ceilingTo,
+                },
                 texture,
             );
             scene.colliders.push({
@@ -89,23 +104,52 @@ export function buildBoundaries(ctx: BuildContext): Edge[] {
             continue;
         }
 
-        // The step up to the next room, and the drop from its ceiling.
-        buildWall(ctx, edge, sector.floorHeight, beyond.floorHeight, texture);
+        const beyondHeights = over as NonNullable<typeof over>;
+
+        // The step up to the next room, and the drop from its ceiling. Each is
+        // a trapezoid between two planes, and where the two floors cross partway
+        // along the wall each side's own quad collapses into the triangle
+        // covering the stretch where its floor is the lower of the two. The two
+        // triangles together close the gap.
+        buildWall(
+            ctx,
+            edge,
+            {
+                bottomFrom: here.floorFrom,
+                bottomTo: here.floorTo,
+                topFrom: beyondHeights.floorFrom,
+                topTo: beyondHeights.floorTo,
+            },
+            texture,
+        );
 
         if (!(sector.isSky && beyond.isSky)) {
             buildWall(
                 ctx,
                 edge,
-                beyond.ceilingHeight,
-                sector.ceilingHeight,
+                {
+                    bottomFrom: beyondHeights.ceilingFrom,
+                    bottomTo: beyondHeights.ceilingTo,
+                    topFrom: here.ceilingFrom,
+                    topTo: here.ceilingTo,
+                },
                 texture,
             );
         }
 
-        const climb = Math.abs(beyond.floorHeight - sector.floorHeight);
-        const headroom =
-            Math.min(sector.ceilingHeight, beyond.ceilingHeight) -
-            Math.max(sector.floorHeight, beyond.floorHeight);
+        // Both are differences of linear functions along the wall, so their
+        // extremes are at the ends: the worst climb and the worst headroom
+        // decide, and the gate itself is unchanged.
+        const climb = Math.max(
+            Math.abs(beyondHeights.floorFrom - here.floorFrom),
+            Math.abs(beyondHeights.floorTo - here.floorTo),
+        );
+        const headroom = Math.min(
+            Math.min(here.ceilingFrom, beyondHeights.ceilingFrom) -
+                Math.max(here.floorFrom, beyondHeights.floorFrom),
+            Math.min(here.ceilingTo, beyondHeights.ceilingTo) -
+                Math.max(here.floorTo, beyondHeights.floorTo),
+        );
 
         if (climb > MAX_STEP || headroom < MIN_HEADROOM) {
             scene.colliders.push({

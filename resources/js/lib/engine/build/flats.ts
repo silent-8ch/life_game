@@ -3,7 +3,7 @@ import { SKY_CEILING_ORDER } from '@/lib/engine/build/constants';
 import type { BuildContext } from '@/lib/engine/build/context';
 import { gridGeometry, shapeOf } from '@/lib/engine/build/geometry';
 import { GRID_SPACING } from '@/lib/engine/constants';
-import { boundsOf } from '@/lib/engine/sectors';
+import { boundsOf, ceilingAt, floorAt } from '@/lib/engine/sectors';
 import { tileFlatUvs } from '@/lib/engine/textures';
 import type { Sector } from '@/types';
 
@@ -42,20 +42,65 @@ function faceDownwards(geometry: THREE.BufferGeometry): void {
     geometry.computeVertexNormals();
 }
 
-/** How a flat is laid: what it is for, and which way it faces. */
+/** How a flat is laid: what it is, and at what base height. */
 type FlatOptions = {
+    /** Which surface, since a ceiling faces down and slopes on its own hinge. */
+    surface: 'floor' | 'ceiling';
     height: number;
     textureName: string | null;
     isWater: boolean;
-    /** A ceiling. Floors face up; ceilings have to be turned over. */
-    facesDown: boolean;
 };
+
+/**
+ * Tilts a flat onto its slope, one vertex at a time.
+ *
+ * `ShapeGeometry` lays the polygon out in the local x/y plane as `(x, -z)` and
+ * the holder's quarter turn about x maps local +z onto world +y. So a vertex is
+ * raised by displacing its **local z**, and the group's own `position.y` stays
+ * at the sector's base height — which keeps `tileFlatUvs` correct and untouched,
+ * since the UVs go on projected from the horizontal and are meant to stretch
+ * along the slope. That is Build's behaviour.
+ *
+ * @param  offset  Where the geometry sits inside the holder, for the wireframe
+ *                 grid, which is built centred on its own origin and then moved.
+ * @param  at      The local z it already had, which the grid uses to sit a
+ *                 fraction proud of the surface it describes.
+ */
+function tiltToSlope(
+    geometry: THREE.BufferGeometry,
+    sector: Sector,
+    surface: 'floor' | 'ceiling',
+    base: number,
+    offset: { x: number; y: number } = { x: 0, y: 0 },
+    at = 0,
+): void {
+    const slope = surface === 'floor' ? sector.floorSlope : sector.ceilingSlope;
+    const hinge =
+        surface === 'floor' ? sector.floorSlopeEdge : sector.ceilingSlopeEdge;
+
+    if (slope === 0 || hinge === null) {
+        return;
+    }
+
+    const heightAt = surface === 'floor' ? floorAt : ceilingAt;
+    const position = geometry.getAttribute('position');
+
+    for (let index = 0; index < position.count; index++) {
+        const x = position.getX(index) + offset.x;
+        const y = position.getY(index) + offset.y;
+
+        position.setZ(index, at + heightAt(sector, x, -y) - base);
+    }
+
+    position.needsUpdate = true;
+    geometry.computeBoundingSphere();
+}
 
 /** A floor or a ceiling: the sector's polygon, laid flat at a height. */
 export function buildFlat(
     ctx: BuildContext,
     sector: Sector,
-    { height, textureName, isWater, facesDown }: FlatOptions,
+    { surface, height, textureName, isWater }: FlatOptions,
 ): void {
     const { scene, materials, textures } = ctx;
     const geometry = materials.track(new THREE.ShapeGeometry(shapeOf(sector)));
@@ -94,7 +139,9 @@ export function buildFlat(
         }
     }
 
-    if (facesDown) {
+    tiltToSlope(geometry, sector, surface, height);
+
+    if (surface === 'ceiling') {
         faceDownwards(geometry);
     }
 
@@ -120,11 +167,17 @@ export function buildFlat(
             materials.lines(materials.floorColor),
         );
 
-        lineMesh.position.set(
-            (bounds.minX + bounds.maxX) / 2,
-            -(bounds.minZ + bounds.maxZ) / 2,
-            0.004,
-        );
+        const middle = {
+            x: (bounds.minX + bounds.maxX) / 2,
+            y: -(bounds.minZ + bounds.maxZ) / 2,
+        };
+
+        // The grid describes the surface, so it has to follow it. Built centred
+        // on its own origin and then moved, so where each line actually falls in
+        // the room is its own position plus that move.
+        tiltToSlope(grid, sector, surface, height, middle, 0.004);
+
+        lineMesh.position.set(middle.x, middle.y, 0.004);
 
         holder.add(mesh, lineMesh);
         scene.targets.push(mesh);
@@ -166,6 +219,9 @@ export function buildSkyCeiling(ctx: BuildContext, sector: Sector): void {
     const { scene, materials } = ctx;
     const geometry = materials.track(new THREE.ShapeGeometry(shapeOf(sector)));
 
+    // A lid follows its room's ceiling slope, or it stops covering the room.
+    tiltToSlope(geometry, sector, 'ceiling', sector.ceilingHeight);
+
     // A lid is a ceiling, and is turned over with the rest of them. It paints
     // nothing and so cannot be lit, but a surface that reports which way it
     // faces should not be the one that lies about it.
@@ -194,20 +250,20 @@ export function buildSkyCeiling(ctx: BuildContext, sector: Sector): void {
 export function buildSectorFlats(ctx: BuildContext): void {
     for (const sector of ctx.level.sectors) {
         buildFlat(ctx, sector, {
+            surface: 'floor',
             height: sector.floorHeight,
             textureName: sector.floorTexture,
             isWater: sector.isWater,
-            facesDown: false,
         });
 
         if (sector.isSky) {
             buildSkyCeiling(ctx, sector);
         } else {
             buildFlat(ctx, sector, {
+                surface: 'ceiling',
                 height: sector.ceilingHeight,
                 textureName: sector.ceilingTexture,
                 isWater: false,
-                facesDown: true,
             });
         }
     }
