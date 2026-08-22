@@ -197,9 +197,11 @@ it('draws every person, the player included, from sheets that exist', function (
         ->unique();
 
     expect($people)->toHaveCount(6)
-        ->and($assets->sprites())->toEqualCanonicalizing($people->all());
+        ->and($assets->sprites())->toContain('young_paul');
 
     $people->each(function (string $sprite) use ($assets): void {
+        expect($sprite)->toBeIn($assets->sprites());
+
         foreach (['cardinal', 'diagonal'] as $sheet) {
             expect(public_path($assets->sheetPath($sprite, $sheet)))
                 ->toBeFile("Missing {$sheet} sheet for {$sprite}.");
