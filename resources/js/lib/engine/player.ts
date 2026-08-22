@@ -3,10 +3,13 @@ import { moveWithCollisions } from '@/lib/engine/collision';
 import type { Collider } from '@/lib/engine/collision';
 import {
     EYE_OF_STATURE,
+    GRAVITY,
     MAX_PITCH,
+    MAX_STEP,
     PLAYER_RADIUS,
     RUN_SPEED,
     STEP_SMOOTHING,
+    TERMINAL_FALL,
     WADE_DEPTH,
     WALK_SPEED,
 } from '@/lib/engine/constants';
@@ -32,6 +35,22 @@ export type Player = {
     z: number;
     yaw: number;
     pitch: number;
+    /**
+     * Where the feet are.
+     *
+     * State, integrated by `fallPlayer`, rather than a reading of the floor
+     * underneath. The difference is the whole of A-11a: while height was
+     * derived, there was no such thing as being off the ground, so there was
+     * nothing to fall and nothing a ceiling could be in the way of.
+     */
+    y: number;
+    /**
+     * How fast the feet are moving up or down, in metres per second. Negative
+     * is falling. Zero whenever there is something underneath.
+     */
+    fall: number;
+    /** Whether the feet are on something. */
+    footing: boolean;
     /** Height of the eye, which catches up with the floor rather than jumping. */
     eye: number;
     /**
@@ -79,22 +98,25 @@ export function spawnPlayer(level: Level, forced: ForcedSpot | null): Player {
             ? sectorAt(level.sectors, level.spawn.x, level.spawn.z)
             : sectorAt(level.sectors, forced.x, forced.z);
 
+    const x = forced?.x ?? level.spawn.x;
+    const z = forced?.z ?? level.spawn.z;
+    const y = standingOn === null ? 0 : floorAt(standingOn, x, z);
+
     return {
-        x: forced?.x ?? level.spawn.x,
-        z: forced?.z ?? level.spawn.z,
+        x,
+        z,
         yaw:
             forced === null
                 ? -THREE.MathUtils.degToRad(level.spawn.angle)
                 : THREE.MathUtils.degToRad(forced.yaw),
         pitch: forced === null ? 0 : THREE.MathUtils.degToRad(forced.pitch),
-        eye:
-            (standingOn === null
-                ? 0
-                : floorAt(
-                      standingOn,
-                      forced?.x ?? level.spawn.x,
-                      forced?.z ?? level.spawn.z,
-                  )) + eyeAbove,
+        y,
+        // Standing, not dropped in. A spawn point is a place somebody is
+        // already at, and starting every level with a frame of falling would
+        // show as a flinch on the first frame of every game.
+        fall: 0,
+        footing: true,
+        eye: y + eyeAbove,
         eyeAbove,
         walked: 0,
     };
@@ -205,27 +227,112 @@ export function walkPlayer(
 }
 
 /**
- * Brings the eye towards where it belongs over the floor underneath.
+ * The height of the floor under the player's feet, right now.
  *
- * It catches up rather than jumping, so a step up reads as a step rather than
- * as a cut. Wading takes the eye down into the water by the same amount the
- * body sinks.
+ * Outside the floor plan there is nothing to stand on and nothing to fall to
+ * either, so the feet are left where they are. `walkPlayer` refuses any step
+ * that would land there, so in play this only happens to a spawn point somebody
+ * put outside every room — and dropping them for ever is a worse answer to that
+ * than leaving them standing on nothing.
+ */
+function groundUnder(player: Player, standingIn: Sector | null): number {
+    return standingIn === null
+        ? player.y
+        : floorAt(standingIn, player.x, player.z);
+}
+
+/**
+ * Gravity, one frame of it: where the feet are, and how fast they are moving.
+ *
+ * ## Why this needs no sub-stepping, and horizontal movement does
+ *
+ * A fall gets fast. At `MAX_FRAME_SECONDS` it passes 0.68 m in a single frame
+ * after 1.39 s and 9.4 m, and level 8 has 15 m ceilings and a staircase, so
+ * anything that falls in it goes well past the 0.68 m that horizontal
+ * collision would need chopping up to survive.
+ *
+ * It does not need chopping up, and the reason is worth writing down because
+ * it is not the reason it holds sideways. A wall is an **infinitely thin
+ * segment**, so a step long enough to land on the far side of one passes
+ * through it without ever being inside it — which is why `RUN_SPEED *
+ * MAX_FRAME_SECONDS` has to stay under `2 * PLAYER_RADIUS`. A floor is not
+ * thin: it is a **plane under the whole room**, so there is no far side of it
+ * to arrive on. The test below is written against the interval the feet travel
+ * through — `y + step <= ground` — and that interval cannot straddle the floor
+ * without ending below it. Exact at any speed, evaluated where the feet are
+ * going rather than where they were, and it costs one comparison.
+ *
+ * So the danger a fast fall brings is not this line. It is that a falling
+ * player also moves sideways, and the sideways half is still the unswept test
+ * it always was.
+ *
+ * ## Why a short drop is not a fall
+ *
+ * A stair tread is `MAX_STEP` or less, and `build/boundaries.ts` has already
+ * decided that means walkable. Falling down it would be correct and would feel
+ * wrong: descending a flight would become a run of little drops, each with the
+ * eye catching up after it, and the whole staircase would stutter. So a drop no
+ * longer than a step, taken by somebody already on their feet, puts the feet
+ * down rather than starting a fall. Anything further is a fall.
+ */
+export function fallPlayer(
+    player: Player,
+    standingIn: Sector | null,
+    seconds: number,
+): void {
+    const ground = groundUnder(player, standingIn);
+
+    if (player.fall === 0 && player.y - ground <= MAX_STEP) {
+        player.y = ground;
+        player.footing = true;
+
+        return;
+    }
+
+    player.fall = Math.max(-TERMINAL_FALL, player.fall - GRAVITY * seconds);
+
+    const step = player.fall * seconds;
+
+    if (player.y + step <= ground) {
+        player.y = ground;
+        player.fall = 0;
+        player.footing = true;
+
+        return;
+    }
+
+    player.y += step;
+    player.footing = false;
+}
+
+/**
+ * Brings the eye towards where the head is.
+ *
+ * On the ground it catches up rather than jumping, so a step up reads as a step
+ * rather than as a cut. In the air it goes exactly where the head is: the
+ * smoothing is there to soften a change of floor, and a fall is not a change of
+ * floor. Smoothed, the camera would trail behind the body all the way down and
+ * the landing would arrive before the picture of it did.
+ *
+ * Wading takes the eye down into the water by the same amount the body sinks,
+ * and does it here rather than in the fall, so that standing in water is a
+ * thing the camera does and not a thing gravity does.
  */
 export function settleEye(
     player: Player,
     standingIn: Sector | null,
     seconds: number,
 ): void {
-    // The floor under the player rather than the room's base height, so the
-    // eye follows a ramp up it rather than floating along at the height of its
-    // hinge wall.
-    const floor =
-        standingIn === null ? 0 : floorAt(standingIn, player.x, player.z);
     const wading = standingIn?.isWater === true ? WADE_DEPTH : 0;
+    const want = player.y + player.eyeAbove - wading;
 
-    player.eye +=
-        (floor + player.eyeAbove - wading - player.eye) *
-        Math.min(1, STEP_SMOOTHING * seconds);
+    if (!player.footing) {
+        player.eye = want;
+
+        return;
+    }
+
+    player.eye += (want - player.eye) * Math.min(1, STEP_SMOOTHING * seconds);
 }
 
 /**
