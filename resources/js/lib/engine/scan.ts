@@ -59,6 +59,8 @@ export type ScanReading = {
         css: string;
         /** The wall this stretch belongs to, named, or null for anything else. */
         wall: string | null;
+        /** Looking out of the level: the backdrop, where the sky would be. */
+        backdrop?: true;
     }[];
 };
 
@@ -137,6 +139,7 @@ function describe(run: ScanRun): ScanReading['runs'][number] {
             run.wall === null
                 ? null
                 : `${run.wall.sector}#${run.wall.index}->${run.wall.beyond ?? 'outside'}`,
+        ...(run.backdrop === true ? { backdrop: true } : {}),
     };
 }
 
@@ -212,9 +215,11 @@ export function armConsoleScan(
                     width: run.to - run.from,
                     css: run.css,
                     wall:
-                        run.wall === null
-                            ? 'unpainted (floor, ceiling, sprite or pane)'
-                            : `${run.wall.sector} #${run.wall.index} -> ${run.wall.beyond ?? 'outside'} (${run.wall.from.x},${run.wall.from.z})-(${run.wall.to.x},${run.wall.to.z})`,
+                        run.backdrop === true
+                            ? 'the backdrop — you are looking out of the level'
+                            : run.wall === null
+                              ? 'unpainted (floor, ceiling, sprite or pane)'
+                              : `${run.wall.sector} #${run.wall.index} -> ${run.wall.beyond ?? 'outside'} (${run.wall.from.x},${run.wall.from.z})-(${run.wall.to.x},${run.wall.to.z})`,
                 }));
         };
 }

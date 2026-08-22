@@ -283,25 +283,29 @@
                     );
 
                     frame.addEventListener('load', () => {
-                        window.setTimeout(() => {
-                            const found = frame.contentWindow.scanCapture;
-
-                            window.clearTimeout(giveUp);
-                            release(frame);
-                            stage.replaceChildren();
+                        // Polled rather than waited for. The scan waits for
+                        // every texture to arrive before it draws, so how long
+                        // it takes is decided by the disk cache — a fixed pause
+                        // wins on a warm one and loses on a cold one, and a
+                        // spot that loses reads as a spot that moved.
+                        const asked = window.setInterval(() => {
+                            const found = frame.contentWindow?.scanCapture;
 
                             if (found === undefined) {
-                                fail(
-                                    new Error(
-                                        `${spot.label} drew nothing to read`,
-                                    ),
-                                );
-
                                 return;
                             }
 
+                            window.clearInterval(asked);
+                            window.clearTimeout(giveUp);
+                            release(frame);
+                            stage.replaceChildren();
                             settle(found);
                         }, 50);
+
+                        window.setTimeout(
+                            () => window.clearInterval(asked),
+                            20000,
+                        );
                     });
 
                     frame.src = urlFor(spot);
