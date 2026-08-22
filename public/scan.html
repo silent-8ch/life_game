@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <title>Frame scan</title>
+        <style>
+            body {
+                margin: 0;
+                padding: 24px;
+                background: #111;
+                color: #ddd;
+                font:
+                    13px/1.5 ui-monospace,
+                    monospace;
+            }
+            h1 {
+                font-size: 15px;
+                letter-spacing: 0.14em;
+                text-transform: uppercase;
+                color: #6ee7b7;
+            }
+            p {
+                max-width: 70ch;
+                color: #9ca3af;
+            }
+            button {
+                font: inherit;
+                padding: 6px 14px;
+                margin-right: 8px;
+                border: 1px solid #444;
+                border-radius: 4px;
+                background: #1b1b1b;
+                color: #ddd;
+                cursor: pointer;
+            }
+            button:disabled {
+                opacity: 0.4;
+                cursor: default;
+            }
+            #stage {
+                width: 1024px;
+                height: 576px;
+                margin: 16px 0;
+                border: 1px solid #333;
+            }
+            #stage iframe {
+                width: 100%;
+                height: 100%;
+                border: 0;
+            }
+            table {
+                border-collapse: collapse;
+                margin-top: 12px;
+            }
+            td,
+            th {
+                padding: 2px 12px 2px 0;
+                text-align: left;
+                vertical-align: top;
+            }
+            th {
+                color: #6ee7b7;
+                font-weight: normal;
+            }
+            .bad {
+                color: #f87171;
+            }
+            textarea {
+                width: 100%;
+                height: 180px;
+                margin-top: 12px;
+                background: #0b0b0b;
+                color: #9ca3af;
+                border: 1px solid #333;
+                font: inherit;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Frame scan</h1>
+
+        <p>
+            Loads each spot below in a fixed-size frame, lets the engine draw
+            thirty frames on a fixed timestep, and reads the picture back: which
+            surface holds which columns, by name, across three rows of the real
+            frame. Every other test in this project asserts on what is built.
+            This one asserts on what is drawn, which is where the portal, mirror
+            and sky-lid rules fail.
+        </p>
+        <p>
+            Run it, copy the JSON, make the change, run it again, and diff the
+            two with
+            <code>node tests/js/scan-diff.mjs before.json after.json</code>. The
+            frame is a fixed size on purpose — two captures taken at different
+            sizes are not comparable, and the diff refuses them.
+        </p>
+
+        <p>
+            <button id="run">Run all spots</button>
+            <button id="copy" disabled>Copy JSON</button>
+            <button id="keep" disabled>Keep as baseline</button>
+            <button id="compare" disabled>Compare with baseline</button>
+            <span id="progress"></span>
+        </p>
+
+        <div id="stage"></div>
+
+        <table id="results">
+            <tr>
+                <th>spot</th>
+                <th>level</th>
+                <th>at</th>
+                <th>runs</th>
+                <th>what it is for</th>
+            </tr>
+        </table>
+
+        <textarea id="json" readonly></textarea>
+
+        <script>
+            /**
+             * The spots, and why each one is here. Add to this list rather than
+             * replacing it: a spot that has ever caught something is worth
+             * keeping for ever. `at` is `x,z,yaw` as a snapshot prints them,
+             * or null for the level's own spawn.
+             */
+            const SPOTS = [
+                {
+                    label: 'portals-spawn',
+                    level: 'portals',
+                    at: null,
+                    why: "The level's own spawn. The cheapest baseline there is: if this moves, something general moved.",
+                },
+                {
+                    label: 'portals-mouth-near',
+                    level: 'portals',
+                    at: '4,-9,0',
+                    why: 'A metre in front of the long-hall mouth, square on. The pane fills the middle of the view; its rim is where a bright hairline shows if the read drifts outside the opening.',
+                },
+                {
+                    label: 'portals-arrival',
+                    level: 'portals',
+                    at: '21,-0.07,180',
+                    why: 'Exactly where crossPortal puts the player down on the far side, facing away from the mouth they came out of. The spot the reported flash of sky was taken at, and the one hug() must refuse.',
+                },
+                {
+                    label: 'portals-turn',
+                    level: 'portals',
+                    at: '9,4,-90',
+                    why: 'The turn portal, whose two mouths do not face the same way. Pins that the pane’s camera is carried through by the same turn the walk is.',
+                },
+                {
+                    label: 'portals-loop-wide',
+                    level: 'portals',
+                    at: '7,12,-90',
+                    why: 'The eight-metre mouth of the loop portal, the widest in any level, so the pane covers most of the view and anything wrong with its edges has room to show.',
+                },
+                {
+                    label: 'portals-gallery-mirrors',
+                    level: 'portals',
+                    at: '25,-15,-90',
+                    why: 'The gallery has a mirror down each long side facing the other. The deepest recursion in the project and the only place the bounce budget is really spent.',
+                },
+                {
+                    label: 'portals-gallery-mirrors-far',
+                    level: 'portals',
+                    at: '17,-15,90',
+                    why: 'The same pair from the other side. Kept because the two mirrors are not the same wall and have caught different faults.',
+                },
+                {
+                    label: 'house-spawn',
+                    level: 'house',
+                    at: null,
+                    why: 'The house from its own spawn: a corridor with doorways down it, so step walls, lintels and the wall overhang are all in one view.',
+                },
+                {
+                    label: 'house-yard',
+                    level: 'house',
+                    at: '6.03,13.33,0',
+                    why: 'Standing in the yard, which is open to the sky, looking back at the house. The lid over this room is what stops sight-lines running out over its walls into the rooms next door.',
+                },
+                {
+                    label: 'house-yard-from-inside',
+                    level: 'house',
+                    at: '6.03,9,0',
+                    why: 'Looking into the sky room from inside the house — the known trade in the sky-lid rule, where the lid is not shown. Here to catch it getting worse.',
+                },
+                {
+                    label: 'house-bathroom-mirror',
+                    level: 'house',
+                    at: '9.75,-11,0',
+                    why: 'A mirror in a small room, where the reflected camera is close to the glass and the near plane has least room.',
+                },
+                {
+                    label: 'tech-demo-spawn',
+                    level: 'tech-demo',
+                    at: null,
+                    why: 'The tech demo from its spawn: people, a mirror and a doorway to the garden in one view.',
+                },
+                {
+                    label: 'tech-demo-mirror',
+                    level: 'tech-demo',
+                    at: '4,5,180',
+                    why: "The hall mirror square on, with the player's own body in it — the only pass that draws the player at all.",
+                },
+                {
+                    label: 'tech-demo-pond',
+                    level: 'tech-demo',
+                    at: '12,8,0',
+                    why: 'Standing in the water, in a room open to the sky. Water floor, wading eye height and the sky lid at once.',
+                },
+            ];
+
+            const GAME = '/games/life';
+
+            const stage = document.getElementById('stage');
+            const results = document.getElementById('results');
+            const progress = document.getElementById('progress');
+            const output = document.getElementById('json');
+            const runButton = document.getElementById('run');
+            const copyButton = document.getElementById('copy');
+            const keepButton = document.getElementById('keep');
+            const compareButton = document.getElementById('compare');
+
+            const BASELINE = 'life-game:scan-baseline';
+
+            const urlFor = (spot) => {
+                const search = new URLSearchParams({
+                    level: spot.level,
+                    scan: '',
+                });
+
+                if (spot.at !== null) {
+                    search.set('at', spot.at);
+                }
+
+                return `${GAME}?${search.toString()}`;
+            };
+
+            /** Loads one spot and waits for the capture it publishes. */
+            const capture = (spot) =>
+                new Promise((settle, fail) => {
+                    const frame = document.createElement('iframe');
+
+                    // The engine reads the picture back the moment it has drawn
+                    // it, on load, so there is nothing to poll for beyond the
+                    // frame's own load event. The timeout is for a level that
+                    // fails to build at all, which would otherwise hang the run.
+                    const giveUp = window.setTimeout(
+                        () => fail(new Error(`${spot.label} never reported`)),
+                        20000,
+                    );
+
+                    frame.addEventListener('load', () => {
+                        window.setTimeout(() => {
+                            const found = frame.contentWindow.scanCapture;
+
+                            window.clearTimeout(giveUp);
+                            stage.replaceChildren();
+
+                            if (found === undefined) {
+                                fail(
+                                    new Error(
+                                        `${spot.label} drew nothing to read`,
+                                    ),
+                                );
+
+                                return;
+                            }
+
+                            settle(found);
+                        }, 50);
+                    });
+
+                    frame.src = urlFor(spot);
+                    stage.replaceChildren(frame);
+                });
+
+            const runAll = async () => {
+                runButton.disabled = true;
+                copyButton.disabled = true;
+                results
+                    .querySelectorAll('tr:not(:first-child)')
+                    .forEach((row) => row.remove());
+
+                const captures = {};
+
+                for (const [index, spot] of SPOTS.entries()) {
+                    progress.textContent = ` ${index + 1} of ${SPOTS.length}: ${spot.label}`;
+
+                    const row = results.insertRow();
+                    let runs = '';
+                    let failed = false;
+
+                    try {
+                        const found = await capture(spot);
+
+                        captures[spot.label] = found;
+                        runs = found.readings
+                            .map((reading) => reading.runs.length)
+                            .join(' / ');
+                    } catch (trouble) {
+                        failed = true;
+                        runs = trouble.message;
+                    }
+
+                    for (const text of [
+                        spot.label,
+                        spot.level,
+                        spot.at ?? 'spawn',
+                        runs,
+                        spot.why,
+                    ]) {
+                        const cell = row.insertCell();
+
+                        cell.textContent = text;
+
+                        if (failed) {
+                            cell.className = 'bad';
+                        }
+                    }
+                }
+
+                output.value = JSON.stringify(captures, null, 1);
+                progress.textContent = ` done — ${Object.keys(captures).length} of ${SPOTS.length} captured`;
+                runButton.disabled = false;
+                copyButton.disabled = false;
+                keepButton.disabled = false;
+                compareButton.disabled =
+                    sessionStorage.getItem(BASELINE) === null;
+            };
+
+            runButton.addEventListener('click', () => void runAll());
+
+            copyButton.addEventListener('click', () => {
+                output.select();
+                document.execCommand('copy');
+            });
+
+            /**
+             * Keeping a run and comparing against it, without anything leaving
+             * the browser. Coarse on purpose: it says which spots moved, which
+             * is what you need to know while you are working. For what moved
+             * within a spot, copy both runs out and use scan-diff.mjs, which is
+             * the same comparison written out in full.
+             *
+             * The baseline lives in sessionStorage, so it survives the page
+             * being reloaded after a code change and goes away with the tab.
+             */
+            keepButton.addEventListener('click', () => {
+                sessionStorage.setItem(BASELINE, output.value);
+                compareButton.disabled = false;
+                progress.textContent = ' kept as the baseline for this tab';
+            });
+
+            compareButton.addEventListener('click', () => {
+                const kept = sessionStorage.getItem(BASELINE);
+
+                if (kept === null || output.value === '') {
+                    return;
+                }
+
+                const was = JSON.parse(kept);
+                const now = JSON.parse(output.value);
+                const labels = new Set([
+                    ...Object.keys(was),
+                    ...Object.keys(now),
+                ]);
+
+                const moved = [...labels].filter(
+                    (label) =>
+                        JSON.stringify(was[label]) !==
+                        JSON.stringify(now[label]),
+                );
+
+                progress.textContent =
+                    moved.length === 0
+                        ? ` ${labels.size} spots, every one the same picture`
+                        : ` moved: ${moved.join(', ')}`;
+                progress.className = moved.length === 0 ? '' : 'bad';
+            });
+
+            compareButton.disabled = sessionStorage.getItem(BASELINE) === null;
+        </script>
+    </body>
+</html>
