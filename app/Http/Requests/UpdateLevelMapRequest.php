@@ -5,6 +5,7 @@ namespace App\Http\Requests;
 use App\Enums\ActorBehaviour;
 use App\Enums\ConditionType;
 use App\Enums\EffectType;
+use App\Enums\DoorSwing;
 use App\Enums\ThingKind;
 use App\Enums\ThingRender;
 use App\Enums\ThingUvMode;
@@ -123,6 +124,12 @@ class UpdateLevelMapRequest extends FormRequest
             'things.*.height' => ['required', 'numeric', 'between:0.05,64'],
             'things.*.angle' => ['required', 'numeric'],
             'things.*.isSolid' => ['required', 'boolean'],
+            'things.*.isDoor' => ['sometimes', 'boolean'],
+            'things.*.swing' => ['sometimes', Rule::enum(DoorSwing::class)],
+            'things.*.openAngle' => ['sometimes', 'numeric', 'between:15,180'],
+            'things.*.openSeconds' => ['sometimes', 'numeric', 'between:0.05,10'],
+            'things.*.isOpen' => ['sometimes', 'boolean'],
+            'things.*.opensFlag' => ['nullable', 'string', 'max:255'],
 
             // What the player can do to a thing. Absent means the thing has
             // none, which is most of them; present and empty clears them.
@@ -200,6 +207,7 @@ class UpdateLevelMapRequest extends FormRequest
 
                     $this->checkStats($validator, $index, $thing);
                     $this->checkAltTexture($validator, $index, $thing);
+                    $this->checkDoor($validator, $index, $thing, $sectors);
                 }
 
                 $this->checkItemsExist($validator, $things);
@@ -308,6 +316,123 @@ class UpdateLevelMapRequest extends FormRequest
         }
 
         return true;
+    }
+
+    /**
+     * A door has to stand in a doorway.
+     *
+     * The hole in the wall and the thing in the hole are authored separately —
+     * two runs of wall with a gap, and a thing placed in the gap — so nothing
+     * has ever stopped them drifting apart. Move a wall and the door is left
+     * standing in the middle of a room; place one carelessly and it is inside
+     * solid brick. Both look plausible in plan and neither is found until
+     * somebody walks at it.
+     *
+     * So a door is checked against the boundaries near it: at least one has to
+     * be a real doorway, meaning shared by two rooms and open from both sides.
+     * Passability belongs to the boundary rather than to one room's idea of it,
+     * so both sides are read.
+     *
+     * @param  array<string, mixed>  $thing
+     * @param  array<int, array<string, mixed>>  $sectors
+     */
+    private function checkDoor(
+        Validator $validator,
+        int|string $index,
+        array $thing,
+        array $sectors,
+    ): void {
+        if (($thing['isDoor'] ?? false) !== true) {
+            return;
+        }
+
+        $x = (float) ($thing['x'] ?? 0);
+        $z = (float) ($thing['z'] ?? 0);
+
+        // How far from a boundary still counts as standing in it. A door is
+        // placed by eye on a grid, so it wants more slack than a hinge does.
+        $reach = max(
+            (float) ($thing['width'] ?? 0),
+            (float) ($thing['depth'] ?? 0),
+        ) / 2 + 0.5;
+
+        foreach ($this->doorwaysNear($sectors, $x, $z, $reach) as $found) {
+            if ($found) {
+                return;
+            }
+        }
+
+        $validator->errors()->add(
+            "things.{$index}.isDoor",
+            'A door has to stand in a doorway — a wall shared by two rooms and open from both sides.'
+        );
+    }
+
+    /**
+     * Whether each boundary within reach of a spot is a doorway.
+     *
+     * @param  array<int, array<string, mixed>>  $sectors
+     * @return iterable<bool>
+     */
+    private function doorwaysNear(array $sectors, float $x, float $z, float $reach): iterable
+    {
+        /** @var array<string, list<bool>> $sides */
+        $sides = [];
+
+        foreach ($sectors as $sector) {
+            /** @var array<int, array<string, mixed>> $points */
+            $points = $sector['points'] ?? [];
+            $corners = count($points);
+
+            for ($at = 0; $at < $corners; $at++) {
+                $from = $points[$at];
+                $to = $points[($at + 1) % $corners];
+
+                if (! $this->within($x, $z, $from, $to, $reach)) {
+                    continue;
+                }
+
+                // Keyed so the same boundary from either room lands together,
+                // however each of them wound it.
+                $ends = [
+                    sprintf('%.3f,%.3f', (float) $from['x'], (float) $from['z']),
+                    sprintf('%.3f,%.3f', (float) $to['x'], (float) $to['z']),
+                ];
+
+                sort($ends);
+
+                $sides[implode('|', $ends)][] = (bool) ($from['blocks'] ?? false);
+            }
+        }
+
+        foreach ($sides as $blocks) {
+            // Two rooms naming it, and neither of them blocking it.
+            yield count($blocks) === 2 && ! in_array(true, $blocks, true);
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $from
+     * @param  array<string, mixed>  $to
+     */
+    private function within(float $x, float $z, array $from, array $to, float $reach): bool
+    {
+        $fromX = (float) $from['x'];
+        $fromZ = (float) $from['z'];
+        $spanX = (float) $to['x'] - $fromX;
+        $spanZ = (float) $to['z'] - $fromZ;
+        $length = $spanX * $spanX + $spanZ * $spanZ;
+
+        if ($length <= 0.0) {
+            return false;
+        }
+
+        $along = max(0.0, min(1.0, (($x - $fromX) * $spanX + ($z - $fromZ) * $spanZ) / $length));
+
+        return hypot(
+            $x - ($fromX + $along * $spanX),
+            $z - ($fromZ + $along * $spanZ),
+        ) <= $reach;
     }
 
     /**

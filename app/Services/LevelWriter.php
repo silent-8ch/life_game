@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\DoorSwing;
 use App\Enums\ThingRender;
 use App\Enums\ThingUvMode;
 use App\Models\Item;
@@ -130,6 +131,12 @@ class LevelWriter
                 'height' => $thing['height'],
                 'angle' => $thing['angle'],
                 'is_solid' => $thing['isSolid'],
+                'is_door' => $thing['isDoor'] ?? false,
+                'swing' => $thing['swing'] ?? DoorSwing::Swing->value,
+                'open_angle' => $thing['openAngle'] ?? 90,
+                'open_seconds' => $thing['openSeconds'] ?? 0.4,
+                'is_open' => $thing['isOpen'] ?? false,
+                'opens_flag' => $thing['opensFlag'] ?? null,
                 'sort_order' => $order,
             ]);
 

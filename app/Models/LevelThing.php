@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\DoorSwing;
 use App\Enums\ThingKind;
 use App\Enums\ThingRender;
 use App\Enums\ThingUvMode;
@@ -44,6 +45,12 @@ use Illuminate\Support\Carbon;
  * @property float $height
  * @property float $angle
  * @property bool $is_solid
+ * @property bool $is_door
+ * @property DoorSwing $swing
+ * @property float $open_angle
+ * @property float $open_seconds
+ * @property bool $is_open
+ * @property string|null $opens_flag
  * @property int $sort_order
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -76,6 +83,12 @@ use Illuminate\Support\Carbon;
     'height',
     'angle',
     'is_solid',
+    'is_door',
+    'swing',
+    'open_angle',
+    'open_seconds',
+    'is_open',
+    'opens_flag',
     'sort_order',
 ])]
 class LevelThing extends Model
@@ -105,6 +118,11 @@ class LevelThing extends Model
             'height' => 'float',
             'angle' => 'float',
             'is_solid' => 'boolean',
+            'is_door' => 'boolean',
+            'swing' => DoorSwing::class,
+            'open_angle' => 'float',
+            'open_seconds' => 'float',
+            'is_open' => 'boolean',
         ];
     }
 

@@ -100,6 +100,12 @@ class LevelPayload
                 'height' => $thing->height,
                 'angle' => $thing->angle,
                 'isSolid' => $thing->is_solid,
+                'isDoor' => $thing->is_door,
+                'swing' => $thing->swing->value,
+                'openAngle' => $thing->open_angle,
+                'openSeconds' => $thing->open_seconds,
+                'isOpen' => $thing->is_open,
+                'opensFlag' => $thing->opens_flag,
                 'verbs' => $this->verbsFor($thing),
             ])->all(),
         ];
