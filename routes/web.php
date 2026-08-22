@@ -4,6 +4,7 @@ use App\Http\Controllers\DebugSnapshotController;
 use App\Http\Controllers\GameController;
 use App\Http\Controllers\InteractionController;
 use App\Http\Controllers\LevelEditorController;
+use App\Http\Controllers\LevelWallController;
 use App\Http\Controllers\SaveController;
 use App\Http\Controllers\SupportTicketController;
 use Illuminate\Support\Facades\Route;
@@ -18,6 +19,11 @@ Route::middleware('auth')->group(function () {
     Route::get('tickets/{ticket}/{kind}', [SupportTicketController::class, 'shot'])
         ->name('tickets.shot');
     Route::put('editor/{level}', [LevelEditorController::class, 'update'])->name('levels.editor.update');
+
+    // Changing one wall from inside the level. Same authority as the editor,
+    // because it writes to the level everybody sees — playing stays read-only.
+    Route::patch('editor/{level}/wall', [LevelWallController::class, 'update'])
+        ->name('levels.wall.update');
 });
 
 // Somewhere to put "this spot looks wrong" while playing. Local only; the
