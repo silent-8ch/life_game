@@ -1,4 +1,8 @@
 import * as THREE from 'three';
+import {
+    PANE_TEXELS_ACROSS,
+    PANE_TEXELS_DOWN,
+} from '@/lib/engine/constants';
 
 /**
  * The pane that fills a portal mouth. It is drawn with the view from the far
@@ -309,14 +313,61 @@ export function createPortalSurface(
         null,
     );
 
+    /**
+     * How big the panes are drawn at, which is not a constant.
+     *
+     * A mirror hangs on a wall and is looked at from across the room, so a
+     * coarse buffer is fine and is half the point of how they look. A portal is
+     * walked up to: within CLIP_MINIMUM of the mouth the pane is hugged across
+     * the entire screen, and then the buffer *is* the picture. Stretched from
+     * 512 wide to a retina display that is a six-fold magnification, and every
+     * edge in the far room turns into a band several pixels across that crawls
+     * as the player moves — which is what has been reported as flashing along
+     * room boundaries near a portal.
+     *
+     * So the size asked for is a floor, not a fixed size: panes grow to match
+     * the surface they are drawn on and never shrink below what was asked.
+     * Capped, because this is a target per pane per depth and they are several
+     * megabytes each.
+     */
+    const wanted = new THREE.Vector2(
+        options.textureWidth,
+        options.textureHeight,
+    );
+
+    const drawnAt = new THREE.Vector2();
+
+    const fitTo = (renderer: THREE.WebGLRenderer): void => {
+        renderer.getDrawingBufferSize(drawnAt);
+
+        const width = Math.min(
+            PANE_TEXELS_ACROSS,
+            Math.max(options.textureWidth, Math.round(drawnAt.x)),
+        );
+        const height = Math.min(
+            PANE_TEXELS_DOWN,
+            Math.max(options.textureHeight, Math.round(drawnAt.y)),
+        );
+
+        if (width === wanted.x && height === wanted.y) {
+            return;
+        }
+
+        wanted.set(width, height);
+
+        for (const target of targets) {
+            target?.setSize(width, height);
+        }
+
+        material.uniforms.paneTexels.value.set(width / 2, height / 2);
+    };
+
     const targetAt = (depth: number): THREE.WebGLRenderTarget => {
         const at = Math.min(Math.max(depth, 0), depths - 1);
 
-        targets[at] ??= new THREE.WebGLRenderTarget(
-            options.textureWidth,
-            options.textureHeight,
-            { samples: 0 },
-        );
+        targets[at] ??= new THREE.WebGLRenderTarget(wanted.x, wanted.y, {
+            samples: 0,
+        });
 
         return targets[at];
     };
@@ -540,6 +591,8 @@ export function createPortalSurface(
         },
 
         render: (renderer, scene, camera, depth) => {
+            fitTo(renderer);
+
             const beyond = surface.aim(camera);
             const target = targetAt(depth);
             const partnerWasVisible = surface.partner?.visible ?? false;

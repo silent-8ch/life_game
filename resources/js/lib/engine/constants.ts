@@ -61,6 +61,19 @@ export const BACKDROP_LAG = 0.12;
 export const MIRROR_TEXTURE_WIDTH = 512;
 export const MIRROR_TEXTURE_HEIGHT = 288;
 
+/**
+ * The largest a pane's buffer may grow to when it is matched to the screen.
+ *
+ * Panes are sized to the surface they are drawn on rather than fixed, because a
+ * portal walked up to covers the whole view and is then the picture itself. The
+ * cap is here because that is a buffer per pane per bounce, several megabytes
+ * apiece, and a very large display would otherwise ask for all of them at once.
+ * Above this the pane is magnified again, but from a size where the stretch is
+ * small enough not to crawl.
+ */
+export const PANE_TEXELS_ACROSS = 2048;
+export const PANE_TEXELS_DOWN = 1152;
+
 /** Mirrors give back less light than they take. */
 export const MIRROR_TINT = '#8a9aa4';
 
