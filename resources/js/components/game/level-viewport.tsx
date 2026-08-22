@@ -354,7 +354,18 @@ export default function LevelViewport({
             // its fixed timestep.
             const moving = scanning ? 0 : seconds;
 
-            hands.update(seconds, player.walked, push.running);
+            // Last frame's answer, deliberately. The raycast that finds what
+            // the crosshair is on needs the camera already aimed, and aiming
+            // happens further down this same function — so asking now would
+            // read a camera one frame out of date to avoid an answer one frame
+            // out of date. The hands take about a ninth of a second to change
+            // pose anyway, which is nine frames to hide one.
+            hands.update(
+                seconds,
+                player.walked,
+                push.running,
+                focusedSlug !== null,
+            );
 
             playerSprite.place(
                 player.x,

@@ -105,6 +105,103 @@ it('turns each drawing round for whichever side it was not made for', function (
     ]);
 });
 
+it('turns the back-of-hand drawings round by their own measurements', function (): void {
+    // The reaching pair, which the crosshair resting on something brings up.
+    // These were read off all twelve cards one at a time rather than carried
+    // over from the edge rows, and they are not the same pattern: every
+    // person's open back-of-hand has the thumb on the left, and every person's
+    // fist has it on the right. So each person's two back cards disagree with
+    // each other, where on the edge cards only Paul and Wade did.
+    $answer = handsAnswer(<<<'JS'
+        const who = ['paul', 'krystal', 'luna', 'wade', 'luke', 'william'];
+        const turned = {};
+
+        for (const sprite of who) {
+            const { hands, right } = cards(sprite);
+
+            // Reaching but not gripping: the open hand, seen from the back.
+            for (let i = 0; i < 40; i++) {
+                hands.update(0.05, 0, false, true);
+            }
+
+            const reach = right.scale.x;
+
+            // Reaching and gripping: the fist, seen from the back.
+            for (let i = 0; i < 40; i++) {
+                hands.update(0.05, 0, true, true);
+            }
+
+            turned[sprite] = [reach, right.scale.x];
+        }
+
+        process.stdout.write(JSON.stringify({ turned }));
+        JS);
+
+    expect($answer['turned'])->toBe([
+        'paul' => [-1, 1],
+        'krystal' => [-1, 1],
+        'luna' => [-1, 1],
+        'wade' => [-1, 1],
+        'luke' => [-1, 1],
+        'william' => [-1, 1],
+    ]);
+});
+
+it('leaves the hands edge on until the crosshair is on something', function (): void {
+    // The whole point of the pose: a hand held edge on reads as swinging past,
+    // and the same hand turned to show its back reads as going for the thing.
+    // If it turned for everything it would say nothing.
+    $answer = handsAnswer(<<<'JS'
+        const { hands, right } = cards('paul');
+
+        for (let i = 0; i < 40; i++) {
+            hands.update(0.05, 0, false, false);
+        }
+
+        const idle = right.scale.x;
+
+        for (let i = 0; i < 40; i++) {
+            hands.update(0.05, 0, false, true);
+        }
+
+        const reaching = right.scale.x;
+
+        // And back again when they look away.
+        for (let i = 0; i < 40; i++) {
+            hands.update(0.05, 0, false, false);
+        }
+
+        process.stdout.write(JSON.stringify({
+            idle,
+            reaching,
+            after: right.scale.x,
+        }));
+        JS);
+
+    // Paul's walking card and his reaching card face opposite ways, so the
+    // turn is visible in `scale.x` — and it goes back when the crosshair does.
+    expect($answer['idle'])->toBe(1)
+        ->and($answer['reaching'])->toBe(-1)
+        ->and($answer['after'])->toBe(1);
+});
+
+it('still works for a caller that says nothing about reaching', function (): void {
+    // The argument is optional so that anything calling `update` with three
+    // arguments keeps the behaviour it had, rather than silently reaching for
+    // everything or for nothing.
+    $answer = handsAnswer(<<<'JS'
+        const { hands, right } = cards('paul');
+
+        for (let i = 0; i < 40; i++) {
+            hands.update(0.05, 0, false);
+        }
+
+        process.stdout.write(JSON.stringify({ walk: right.scale.x }));
+        JS);
+
+    expect($answer['walk'])->toBe(1);
+});
+
 it('always ends up with a right hand on the right of the screen', function (): void {
     $answer = handsAnswer(<<<'JS'
         const who = ['paul', 'krystal', 'luna', 'wade', 'luke', 'william', 'nobody'];
