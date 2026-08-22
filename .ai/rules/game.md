@@ -12,4 +12,4 @@ Left parked at the player, the backdrop bands appear in the pane's view as slabs
 
 `drawPane` in `prepareReflections` now calls `sky.follow(at.x, from.position.y, at.z)` using the pane's own `viewerAt`, and the refresh puts it back around the player before the main render. Any new pass that renders the scene from a different viewpoint has to do the same.
 
-Not covered by a test: `prepareReflections` is unexported inside a .tsx, which the node-based unit harness cannot load. Verified by eye at the coordinates from a debug snapshot.
+`prepareReflections` is `resources/js/lib/engine/reflections.ts` now, not a closure in this file, so the node harness can load it. `tests/Unit/ReflectionsTest.php` pins the sky moving to whoever is looking and back to the player last, along with the rest of the order of a frame. The viewport imports it and calls it once a frame; nothing else should.

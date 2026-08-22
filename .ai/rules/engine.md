@@ -58,7 +58,7 @@ Two traps that both render as "the portal shows only sky":
 Also: a pane is RECESSED behind its mouth (`PORTAL_RECESS`), not inset toward the room like an ordinary wall. Standing proud makes the pane cover more of the screen than the mouth does and its rim reads the sky the tilted near plane left outside the opening — a bright one-pixel line around the portal.
 
 ## Portal recursion: a target per bounce, filtered by room
-Each pane holds `PORTAL_BOUNCES + 1` render targets, one per depth, and `show(depth)` picks which the pane displays. `deepen()` in level-viewport draws depth-first — the panes visible from this pane's own camera are drawn one level in FIRST, then this pane. One target per surface cannot do this: a nested draw would overwrite the view the player is meant to see.
+Each pane holds `PORTAL_BOUNCES + 1` render targets, one per depth, and `show(depth)` picks which the pane displays. `deepen()` in engine/reflections.ts draws depth-first — the panes visible from this pane's own camera are drawn one level in FIRST, then this pane. One target per surface cannot do this: a nested draw would overwrite the view the player is meant to see.
 
 Two things that are load-bearing:
 - Recursion only follows panes whose `home` room is this pane's `onto` room. A frustum knows nothing of walls, so without the filter every pane in the level that fell in the cone got drawn and the depth budget went on rooms that are not through this portal at all.
@@ -166,9 +166,9 @@ The oblique near plane still works: clipping is done in clip space and the tilt 
 `SKIN` holds a colour per person, read off the middle of the skin showing in their own front-facing sprite rather than picked by eye. Anybody new gets `DEFAULT_SKIN` until measured.
 
 ## Walls only overhang where they turn a corner
-Every wall is nudged `WALL_INSET` into its own room, which pulls corners apart, so `buildWall` draws each wall past its ends to close the notch. It must only do that at a real corner: where a wall carries straight on into another one in the same plane facing the same way — a long side split by carving, or by a doorway opposite, whether or not the halves belong to the same room — the overhang put two faces in one plane and they flickered. Level 8 had 51 such strips, some 15 m tall.
+Every wall is nudged `WALL_INSET` into its own room, which pulls corners apart, so `buildWall` (`build/walls.ts`) draws each wall past its ends to close the notch. It must only do that at a real corner: where a wall carries straight on into another one in the same plane facing the same way — a long side split by carving, or by a doorway opposite, whether or not the halves belong to the same room — the overhang put two faces in one plane and they flickered. Level 8 had 51 such strips, some 15 m tall.
 
-`carriedOn` in build-level.ts decides this over the whole level, keyed by corner + direction + inward normal. A per-sector check is not enough: the wall that carries on is often the next room's. Pinned by `tests/Unit/WallOverhangTest.php`, which also asserts no two coplanar faces overlap.
+`carriedOn` in `build/topology.ts` decides this over the whole level, keyed by corner + direction + inward normal. A per-sector check is not enough: the wall that carries on is often the next room's. Pinned by `tests/Unit/WallOverhangTest.php`, which also asserts no two coplanar faces overlap.
 
 ## A portal mouth is one-sided, and the room behind it keeps its wall
 `portalLinkOf(edge)` reads the link off *either* face of a wall, so build-level can recognise the far face; `namesPortal(edge)` says which face the author actually set it on. Only that face is a mouth (pane, no wall, no collider). The far face builds its wall as normal.
@@ -198,7 +198,7 @@ The pane's camera stands in the room behind its far mouth, so that whole room is
 
 `PortalSurface.behind` is that room's meshes, hidden during `render` alongside `partner`. `standingIn()` in build-level picks them from `drawnByRoom`, keeping only what is on the camera's side within `WALL_INSET * 2`, so a room that genuinely wraps past its own mouth's plane (a mouth set in a notch) keeps the parts that should show.
 
-`drawnByRoom` must be declared **above** `buildWall`/`buildFlat` — they call `remember()` during the first build pass, and declaring it lower down is a temporal dead zone crash at runtime that tsc will not catch.
+`drawnByRoom` and `remember()` live on the build's scene (`build/scene.ts`), made before any builder runs, so every builder can call `remember()` whenever it likes. They used to be `const`s inside `buildLevel` declared above `buildWall`/`buildFlat`; put lower down, that was a temporal dead zone crash at runtime which tsc would not catch. The split took the trap away — do not put them back inside a function.
 
 ## hug() must check the eye is in the opening, not just near its plane
 A mouth is a rectangle in a wall, not the whole wall. `hug()` used to test only `|distance to the pane's plane| < clearance`, so it pulled the pane across the whole view **anywhere along that wall's infinite plane** — however far to one side the opening was.

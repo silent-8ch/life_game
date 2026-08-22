@@ -7,13 +7,55 @@ import { boundsOf } from '@/lib/engine/sectors';
 import { tileFlatUvs } from '@/lib/engine/textures';
 import type { Sector } from '@/types';
 
+/**
+ * Turns a flat over so that it faces down.
+ *
+ * A ceiling is the same polygon as a floor, laid at a different height, and
+ * both are made by rotating the shape a quarter turn about x. That leaves a
+ * ceiling's normal pointing **up**, exactly like a floor's — harmless while
+ * nothing is lit and every surface is drawn double-sided, and fatal the moment
+ * anything is, because every ceiling in the level then lights as though it were
+ * the floor.
+ *
+ * Rotating it the other way is not the fix: keeping the polygon where it is
+ * while turning its normal over is a reflection rather than a rotation, and the
+ * reflection moves the room. So the triangles are wound the other way round
+ * instead and the normals worked out again from that — the polygon does not
+ * move a millimetre, and the face that is the front of it becomes the one
+ * underneath, which is what a ceiling drawn `FrontSide` will want.
+ */
+function faceDownwards(geometry: THREE.BufferGeometry): void {
+    const index = geometry.getIndex();
+
+    if (index === null) {
+        return;
+    }
+
+    for (let at = 0; at < index.count; at += 3) {
+        const second = index.getX(at + 1);
+
+        index.setX(at + 1, index.getX(at + 2));
+        index.setX(at + 2, second);
+    }
+
+    index.needsUpdate = true;
+    geometry.computeVertexNormals();
+}
+
+/** How a flat is laid: what it is for, and which way it faces. */
+type FlatOptions = {
+    height: number;
+    textureName: string | null;
+    isWater: boolean;
+    /** A ceiling. Floors face up; ceilings have to be turned over. */
+    facesDown: boolean;
+};
+
 /** A floor or a ceiling: the sector's polygon, laid flat at a height. */
 export function buildFlat(
     ctx: BuildContext,
     sector: Sector,
-    height: number,
-    textureName: string | null,
-    isWater: boolean,
+    { height, textureName, isWater, facesDown }: FlatOptions,
 ): void {
     const { scene, materials, textures } = ctx;
     const geometry = materials.track(new THREE.ShapeGeometry(shapeOf(sector)));
@@ -50,6 +92,10 @@ export function buildFlat(
         if (material !== null) {
             tileFlatUvs(geometry);
         }
+    }
+
+    if (facesDown) {
+        faceDownwards(geometry);
     }
 
     const holder = new THREE.Group();
@@ -119,6 +165,12 @@ export function buildFlat(
 export function buildSkyCeiling(ctx: BuildContext, sector: Sector): void {
     const { scene, materials } = ctx;
     const geometry = materials.track(new THREE.ShapeGeometry(shapeOf(sector)));
+
+    // A lid is a ceiling, and is turned over with the rest of them. It paints
+    // nothing and so cannot be lit, but a surface that reports which way it
+    // faces should not be the one that lies about it.
+    faceDownwards(geometry);
+
     const material = materials.keep(
         new THREE.MeshBasicMaterial({
             colorWrite: false,
@@ -141,24 +193,22 @@ export function buildSkyCeiling(ctx: BuildContext, sector: Sector): void {
 /** Every room's floor, and its ceiling or the lid that stands in for one. */
 export function buildSectorFlats(ctx: BuildContext): void {
     for (const sector of ctx.level.sectors) {
-        buildFlat(
-            ctx,
-            sector,
-            sector.floorHeight,
-            sector.floorTexture,
-            sector.isWater,
-        );
+        buildFlat(ctx, sector, {
+            height: sector.floorHeight,
+            textureName: sector.floorTexture,
+            isWater: sector.isWater,
+            facesDown: false,
+        });
 
         if (sector.isSky) {
             buildSkyCeiling(ctx, sector);
         } else {
-            buildFlat(
-                ctx,
-                sector,
-                sector.ceilingHeight,
-                sector.ceilingTexture,
-                false,
-            );
+            buildFlat(ctx, sector, {
+                height: sector.ceilingHeight,
+                textureName: sector.ceilingTexture,
+                isWater: false,
+                facesDown: true,
+            });
         }
     }
 }
