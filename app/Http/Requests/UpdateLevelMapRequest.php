@@ -97,7 +97,12 @@ class UpdateLevelMapRequest extends FormRequest
             'things.*.stats' => ['nullable', 'array', 'size:'.count(PersonStats::ATTRIBUTES)],
             'things.*.stats.*' => ['required', 'integer', 'between:'.PersonStats::MINIMUM.','.PersonStats::MAXIMUM],
             'things.*.speed' => ['required', 'numeric', 'between:0,10'],
-            'things.*.texture' => ['nullable', 'string', $textures],
+            // Either kind of picture. A box wants a tiling texture; a billboard
+            // or a cross wants cutout art from the props folder, and which one
+            // is right depends on how the thing is drawn rather than on what it
+            // is. Accepting both here and letting the picker offer the sensible
+            // one beats two columns that mean the same thing.
+            'things.*.texture' => ['nullable', 'string', Rule::in([...$assets->textures(), ...$assets->props()])],
             // Omittable rather than required, the way stats already are. Every
             // one has a column default that is what a thing was doing before
             // there was a choice, so a payload that says nothing about how a

@@ -7,6 +7,7 @@ use App\Models\Level;
 use App\Models\LevelThing;
 use App\Models\User;
 use App\Services\LevelAssets;
+use Illuminate\Support\Facades\File;
 use Illuminate\Testing\TestResponse;
 
 /**
@@ -148,4 +149,34 @@ it('lists the prop art apart from the tiling textures', function (): void {
     // the wall-texture dropdown.
     expect($assets->props())->toBeArray()
         ->and(array_intersect($assets->props(), $assets->textures()))->toBe([]);
+});
+
+it('lets a thing be drawn from prop art as well as from a tiling texture', function (): void {
+    // A billboard or a cross needs cutout art, which lives in the props folder,
+    // so `texture` accepts either kind of picture. Which one is right depends on
+    // how the thing is drawn rather than on what it is, and the editor's picker
+    // offers the matching list.
+    //
+    // Written against a real file because LevelAssets reads the folder. There
+    // is no prop art in the repo yet — it is coming from outside — so this
+    // makes its own and takes it away again.
+    $folder = public_path('sprites/props');
+    $file = $folder.'/test-fern.png';
+
+    File::ensureDirectoryExists($folder);
+    File::put($file, (string) base64_decode(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
+    ));
+
+    try {
+        saveMap(aMapWithThing([
+            'render' => 'cross',
+            'texture' => 'test-fern',
+        ]))->assertRedirect()->assertSessionHasNoErrors();
+
+        expect(LevelThing::where('slug', 'pot-plant')->firstOrFail()->texture)
+            ->toBe('test-fern');
+    } finally {
+        File::delete($file);
+    }
 });
