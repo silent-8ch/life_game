@@ -134,6 +134,54 @@ describe('one wall', () => {
         expect(
             screen.queryByText(/A portal is a pair, so none of them work/i),
         ).not.toBeInTheDocument();
+
+        // Both mouths are eight metres. The panel used to say "give both walls
+        // the same length" here anyway — on every correctly paired portal it
+        // ever showed, because it never compared them. Paul reported it as
+        // always on, and he was right: the condition was that the pair was
+        // complete, which is when there is least to complain about.
+        expect(
+            screen.queryByText(/give both the same length/i),
+        ).not.toBeInTheDocument();
+    });
+
+    it('says so when the two ends of a portal are different lengths', () => {
+        showInspector({
+            level: level({
+                sectors: [
+                    room({
+                        slug: 'south',
+                        points: [
+                            corner(0, 0),
+                            corner(8, 0),
+                            corner(8, 4, { portalLink: 'hop' }),
+                            corner(0, 4),
+                        ],
+                    }),
+                    room({
+                        slug: 'away',
+                        points: [
+                            // Five metres against the south wall's eight, so
+                            // the player can walk in past where the far mouth
+                            // ends and come out beyond it.
+                            corner(40, 0, { portalLink: 'hop' }),
+                            corner(45, 0),
+                            corner(45, 8),
+                            corner(40, 8),
+                        ],
+                    }),
+                ],
+            }),
+            selection: { sector: 0, edge: 2 },
+            rooms: [0],
+        });
+
+        // The numbers, not just the complaint. "Give both walls the same
+        // length" leaves an author to go and measure two walls by eye; saying
+        // which is which tells them what to change and by how much.
+        expect(
+            screen.getByText(/8\.00 m and its partner is 5\.00 m/i),
+        ).toBeInTheDocument();
     });
 
     it('changes the wall rather than the room it belongs to', () => {

@@ -141,7 +141,7 @@
                     label: 'portals-arrival',
                     level: 'portals',
                     at: '21,-0.07,180',
-                    why: 'Exactly where crossPortal puts the player down on the far side, facing away from the mouth they came out of. The spot the reported flash of sky was taken at, and the one hug() must refuse.',
+                    why: 'Exactly where crossPortal puts the player down on the far side, facing away from the mouth they came out of. The spot the reported flash of sky was taken at. hug() used to have to refuse it by name — it tested which way the player was looking, because a pane squared up to the camera is pasted in front of them whichever way they face. A pane that stays in its own plane is simply behind them, so there is nothing to refuse and nothing to get wrong. Kept because that is a claim, and this is what checks it: the picture here moved by one pixel when the refusal came out.',
                 },
                 {
                     label: 'portals-turn',

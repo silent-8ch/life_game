@@ -18,8 +18,15 @@
  * real colliders at a fixed timestep, so what it prints is what the game does.
  *
  * It settled one: the landing sits inside `PANE_CLEARANCE` of the mouth just
- * stepped out of, exactly as feared, but facing away from it — so `hug()`
- * releases and there is no flash on arrival. The flash is on the approach.
+ * stepped out of, exactly as feared, but facing away from it — so there is no
+ * flash on arrival. The flash is on the approach.
+ *
+ * `hug()` used to be what made that true, by testing which way the player was
+ * looking and refusing to move the pane when they were looking away. It no
+ * longer tests anything of the kind: a hugged pane stays in its own plane now,
+ * so a mouth behind you is behind you. The measurement above still holds and
+ * still matters — it is why nobody has to think about the arrival case — but it
+ * is the geometry that keeps it, not a special case in the code.
  */
 
 import { readFileSync } from 'node:fs';

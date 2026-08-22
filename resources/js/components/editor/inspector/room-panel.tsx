@@ -26,6 +26,7 @@ export default function RoomPanel({
     across,
     partner,
     portalEnds,
+    mouth,
     openDoorway,
     edgeIndex,
     textures,
@@ -39,6 +40,7 @@ export default function RoomPanel({
     across: Sector | null;
     partner: Sector | null;
     portalEnds: number;
+    mouth: { here: number; there: number } | null;
     openDoorway: boolean;
     /** Which wall is picked, for saying "Wall 3 of 4". */
     edgeIndex: number;
@@ -250,8 +252,17 @@ export default function RoomPanel({
                                 <span className="text-slate-200">
                                     {partner.name}
                                 </span>
-                                . Give both walls the same length, or the player
-                                can come out beyond the far one.
+                                .
+                            </p>
+                        )}
+
+                    {mouth !== null &&
+                        Math.abs(mouth.here - mouth.there) > 0.001 && (
+                            <p className="text-xs leading-relaxed text-amber-300/80">
+                                This wall is {mouth.here.toFixed(2)} m and its
+                                partner is {mouth.there.toFixed(2)} m. Give both
+                                the same length, or the player can come out
+                                beyond the far one.
                             </p>
                         )}
 

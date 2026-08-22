@@ -62,7 +62,7 @@ export default function Inspector({
 
     // No `twin` here: it was only ever read to work out `across` and whether
     // the doorway is open, and both of those are worked out for us now.
-    const { across, partner, portalEnds, openDoorway } = wallFacts(
+    const { across, partner, portalEnds, openDoorway, mouth } = wallFacts(
         level,
         selection,
     );
@@ -115,6 +115,7 @@ export default function Inspector({
                     across={across}
                     partner={partner}
                     portalEnds={portalEnds}
+                    mouth={mouth}
                     openDoorway={openDoorway}
                     edgeIndex={selection?.edge ?? 0}
                     textures={assets.textures}

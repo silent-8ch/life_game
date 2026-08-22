@@ -1,5 +1,9 @@
 import * as THREE from 'three';
-import { PANE_TEXELS_ACROSS, PANE_TEXELS_DOWN } from '@/lib/engine/constants';
+import {
+    NEAR_PLANE,
+    PANE_TEXELS_ACROSS,
+    PANE_TEXELS_DOWN,
+} from '@/lib/engine/constants';
 
 /**
  * The pane that fills a portal mouth. It is drawn with the view from the far
@@ -123,25 +127,48 @@ const CLIP_BIAS = 0.005;
  * There has to be some threshold. The oblique construction scales the clip
  * plane by the reciprocal of the camera's distance to it, so as that distance
  * goes to zero the whole depth range collapses and the far room falls out of
- * the picture. But every millimetre of the threshold is a millimetre where the
- * pane draws whatever stands between its camera and the mouth — the wall beside
- * the opening, the room over the way — and the pane is hugged across the whole
- * screen at exactly that range, so it is all anyone can see.
+ * the picture — the pane goes flat black. Measured walking into the demo's
+ * `loop`: black from about half a centimetre out to somewhere past one, sound
+ * again by five.
  *
- * 0.15 was a guess, and it was wide enough to walk through and notice: the
- * snapshots of the fault were all taken between 1 and 2 cm out. The right value
- * is much smaller than the usual advice, because that advice assumes a normal
- * depth buffer and this renderer uses a logarithmic one, which does not lose
- * precision the same way when the near plane tilts hard. Measured on screen at
- * the recorded fault spots: 0.002 renders the far room correctly right up
- * against the mouth. Lower it further only with the same check, on a machine
- * with a different GPU as well.
+ * It was 0.002, which is smaller than the band that fails, so the band failed.
+ * The number is now `NEAR_PLANE`, and it is a derivation rather than a
+ * measurement, which is why it is trustworthy in a way the old one was not.
+ * The tilt exists to cut away whatever stands between the pane's camera and the
+ * mouth — and all of that lies within `d` of the camera, where `d` is the
+ * distance being tested. Once `d` is inside the near plane, the ordinary near
+ * plane has already clipped every bit of it and the tilt has nothing left to
+ * do. So this is not "close enough to get away with": it is the exact distance
+ * below which the tilt is redundant.
  *
- * Do not close it entirely by pushing the plane forward instead of dropping the
+ * What the tilt used to be relied on for at that range, `behind` now does
+ * outright by taking the room out of the pass. That is why this can be raised
+ * twenty-five-fold without the wall behind the mouth coming back.
+ *
+ * Do not close the gap by pushing the plane forward instead of dropping the
  * tilt: that was tried, and it wedges the card hard enough that the page stops
  * painting while its scripts carry on.
  */
-const CLIP_MINIMUM = 0.002;
+const CLIP_MINIMUM = NEAR_PLANE;
+
+/**
+ * The most a hugged pane may be blown up to hold its outline still.
+ *
+ * The growth needed is `clearance / distance to the pane`, and that runs away
+ * as the eye lands on the mouth — which at the moment of crossing it does. So
+ * there has to be a cap, and where the cap bites the outline shifts a little
+ * rather than not at all.
+ *
+ * 60 puts the bite at two millimetres out of a twelve-centimetre stand-off. At
+ * a walk that is a single frame; at a run it is not even that, because a frame
+ * covers 0.27 m and the whole window is 0.24 m across. Nobody has ever seen
+ * the last two millimetres of a portal crossing and nobody ever will.
+ *
+ * What it buys is a pane held to a few hundred metres across instead of to
+ * infinity, which is the difference between a large quad and a coordinate that
+ * has stopped being a number.
+ */
+const HUG_GROWTH = 60;
 
 /**
  * Tilts a camera's near plane onto a plane in front of it, so everything behind
@@ -215,17 +242,27 @@ export type PortalSurface = {
      */
     release: () => void;
     /**
-     * Squares the pane up to the screen when the eye comes too close for the
-     * near plane to keep it, and puts it back once the eye is clear. Without
-     * this, the last few centimetres of walking into a portal show whatever
-     * lies past the opening, which is nothing, so the sky.
+     * Slides the pane back through its own mouth, far enough that the near
+     * plane cannot reach it, and puts it back once the eye is clear.
      *
-     * Covering the screen is not a cheat at that range: a mouth two metres
-     * across fills the whole view from closer than about seventy centimetres,
-     * so there is nothing of the near room left to see around it. And nothing
-     * is lost by moving the pane, because it reads the far view by where its
-     * fragments land on the screen — the picture stays put while the surface
-     * carrying it comes forward.
+     * Without this the last few centimetres of approaching a portal show
+     * whatever lies past the opening, which is nothing, so the sky — a mouth
+     * builds no wall, and the pane standing in for one is the only thing there.
+     *
+     * It slides **along its own normal** rather than squaring up to the screen,
+     * and that is the whole of the fix for ISSUE-101. Squared up, the pane is a
+     * sheet across the whole view: right when a mouth is straight ahead and
+     * filling it anyway, and wrong the moment the player is beside the opening
+     * looking along it, where most of the screen is the near room and only a
+     * wedge of it is the far one. Slid back, the pane keeps its own shape and
+     * its own place in the world, so what it covers is what the mouth covers,
+     * at every angle, with no case to get right.
+     *
+     * Nothing is lost by moving it: the pane reads the far view from where its
+     * fragments land on the screen, so the picture stays put while the surface
+     * carrying it goes back. What it costs is parallax — the far rim of the
+     * opening shifts by the few centimetres of the slide, about two degrees at
+     * a mouth's own width — which is a smaller lie than a hole.
      */
     hug: (camera: THREE.PerspectiveCamera, clearance: number) => void;
     /** The room this pane stands in. */
@@ -510,7 +547,8 @@ export function createPortalSurface(
     /** What a hug took out of the picture, and how each was before it did. */
     const hugHid = new Map<THREE.Object3D, boolean>();
     const toEye = new THREE.Vector3();
-    const look = new THREE.Vector3();
+    const toFoot = new THREE.Vector3();
+    const toPane = new THREE.Vector3();
 
     // How big the pane is in its own right, so covering the screen is a matter
     // of scaling it rather than building another one.
@@ -619,58 +657,59 @@ export function createPortalSurface(
 
             const ahead = toEye.dot(face);
 
-            look.set(0, 0, -1).applyQuaternion(camera.quaternion);
-
             // How far along the opening the eye is, and how far up it. A mouth
             // is a rectangle in a wall, not the whole wall: measuring only the
-            // distance to its plane hauls the pane across the view anywhere
-            // along that wall, however far to one side the opening is. Level 8
-            // has a portal in the same wall as a wide doorway, so walking
-            // through the doorway filled the screen with the portal's view.
+            // distance to its plane moves the pane anywhere along that wall,
+            // however far to one side the opening is. Level 8 has a portal in
+            // the same wall as a wide doorway, so walking through the doorway
+            // used to fill the screen with the portal's view.
             beside.copy(sideways).applyQuaternion(restTurn);
             upright.copy(vertical).applyQuaternion(restTurn);
 
             const along = Math.abs(toEye.dot(beside));
             const up = Math.abs(toEye.dot(upright));
 
-            // Only while the eye is nearly on the pane, within the opening, AND
-            // looking at it. The last matters on the way out: a portal puts the
-            // player down a couple of centimetres inside the far room, right
-            // against that room's own pane, walking away from it. Without the
-            // check that pane is hauled across their face for the first few
-            // steps — and what it holds is the view from behind the mouth they
-            // just came out of, which is to say the sky.
+            // Only while the eye is nearly on the pane and within the opening.
+            //
+            // There is no longer a test for whether the player is *looking* at
+            // the mouth, and taking it out is part of the fix rather than an
+            // oversight. It was there because a squared-up pane is pasted in
+            // front of the camera whichever way the camera faces, so coming out
+            // of a portal — which puts the player a couple of centimetres
+            // inside the far room, against that room's own pane, walking away —
+            // hauled a sheet of sky across their face. A pane that stays in its
+            // own plane is simply behind them, and needs nobody to say so.
+            //
+            // Keeping the test would have been worse than useless here. It read
+            // `look.dot(face) >= 0`, and looking *along* a mouth is exactly
+            // where that dot product is zero, so the one angle that most needed
+            // the pane moved was the one angle guaranteed not to move it.
             if (
-                ahead >= clearance ||
-                ahead <= -clearance ||
+                Math.abs(ahead) >= clearance ||
                 along > size.x / 2 + clearance ||
-                up > size.y / 2 + clearance ||
-                look.dot(face) >= 0
+                up > size.y / 2 + clearance
             ) {
                 surface.release();
 
                 return;
             }
 
-            // Big enough to reach the corners of the view at that distance,
-            // with a little to spare so no edge of it can creep in.
             // The room on the other side of this mouth must not draw over the
             // pane that is standing in for it.
             //
-            // A hugged pane sits `clearance` from the eye — 12 cm — while the
-            // wall behind the mouth is its own room's face, nudged WALL_INSET
-            // past the plane. At 8 cm from the mouth that wall is 9 cm away and
-            // **nearer than the pane**, so it wins the depth test and is drawn
-            // straight across the portal: measured at 180 pixels of 298, half
-            // the view, at the moment of walking through. That is the flash
-            // after a crossing, as distinct from the one before it.
+            // The wall behind the mouth is that room's own face, nudged
+            // WALL_INSET past the plane, so at 8 cm from the mouth it is 9 cm
+            // away — and a pane slid back to sit `clearance` from the eye is
+            // 12 cm away, so the wall wins the depth test and is drawn straight
+            // across the portal. Measured at 180 pixels of 298 at the moment of
+            // walking through, back when the buffer was that size.
             //
-            // Moving the pane nearer cannot fix it. A mouth carries no collider,
-            // so the eye can come closer to it than to any wall, and there is
-            // always a range where the wall is inside NEAR_PLANE and no legal
-            // position for the pane is nearer still. Taking the room out of the
-            // frame is the certain way — the same answer `behind` already gives
-            // to the same problem inside a pane's own render.
+            // Sliding the pane nearer instead cannot fix it. A mouth carries no
+            // collider, so the eye can come closer to it than to any wall, and
+            // there is always a range where the wall is inside NEAR_PLANE and
+            // no legal position for the pane is nearer still. Taking the room
+            // out of the frame is the certain way — the same answer `behind`
+            // already gives to the same problem inside a pane's own render.
             for (const what of surface.blocking) {
                 if (!hugHid.has(what)) {
                     hugHid.set(what, what.visible);
@@ -679,15 +718,57 @@ export function createPortalSurface(
                 what.visible = false;
             }
 
-            const tall =
-                2 *
-                clearance *
-                Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) *
-                1.3;
+            // Back through the mouth, far enough that the eye stands
+            // `clearance` off the pane and the near plane has nothing of it to
+            // cut — and grown by exactly as much as it went back, about the
+            // point on it nearest the eye, so that its outline on screen does
+            // not move at all.
+            //
+            // Sliding alone is not enough, and the leftover is small and ugly:
+            // the far end of the mouth is drawn a few centimetres further off
+            // than it belongs, and where that end meets the corner of the room
+            // it pulls away from it. Measured at eight pixels of nine hundred,
+            // a sliver of sky down the middle of the view. Eight pixels of sky
+            // is the same class of fault as the hairline this file already
+            // fights round a pane's rim, and it is not worth trading a big one
+            // for a small one when the small one has a closed form.
+            //
+            // The form: a point on the pane `L` from the foot of the
+            // perpendicular subtends `atan(L / d)` where `d` is the eye's
+            // distance to the plane. Moving the plane from `ahead` to
+            // `clearance` and multiplying every in-plane offset by the same
+            // ratio leaves every one of those angles alone. So the pane comes
+            // back the same shape on screen, drawn on a rectangle that is
+            // bigger and further away — which is all a portal pane ever was.
+            // Measured to the **pane's** own plane rather than to the mouth's,
+            // which are not always the same plane: a pane is recessed behind
+            // its opening so that its rim cannot read outside it. The ratio
+            // below is a stand-off divided by a stand-off, so a couple of
+            // centimetres of difference between the two is a large error in it,
+            // and a large error in it is the corners of the opening jumping as
+            // the pane takes hold — the exact thing this is here to stop.
+            const paneAhead = toPane.copy(eye).sub(rest).dot(face);
 
-            mesh.position.copy(eye).addScaledVector(look, clearance);
-            mesh.quaternion.copy(camera.quaternion);
-            mesh.scale.set((tall * camera.aspect) / size.x, tall / size.y, 1);
+            // The floor under the divisor is `HUG_GROWTH` read the other way
+            // round, so the cap and the thing it caps cannot disagree. It is
+            // deliberately not `CLIP_MINIMUM`: that answers a different
+            // question — how near the tilt stops being worth applying — and
+            // sharing a number between two unrelated questions is how a change
+            // to one of them silently becomes a change to the other.
+            const grow =
+                clearance /
+                Math.max(Math.abs(paneAhead), clearance / HUG_GROWTH);
+            const side = paneAhead < 0 ? -1 : 1;
+
+            toFoot.copy(rest).sub(eye).addScaledVector(face, paneAhead);
+
+            mesh.position
+                .copy(eye)
+                .addScaledVector(face, -side * clearance)
+                .addScaledVector(beside, toFoot.dot(beside) * grow)
+                .addScaledVector(upright, toFoot.dot(upright) * grow);
+            mesh.quaternion.copy(restTurn);
+            mesh.scale.set(grow, grow, 1);
             mesh.updateMatrixWorld(true);
         },
 

@@ -29,7 +29,27 @@ export type WallFacts = {
     portalEnds: number;
     /** Whether the player can walk through it, which is a property of both sides. */
     openDoorway: boolean;
+    /**
+     * How long this mouth is and how long the one it is paired with, in metres.
+     * Null unless the link is a complete pair, since one length is not a
+     * comparison.
+     *
+     * Here so that the panel can *check* what it has always asserted. It told
+     * every correctly paired portal to give both walls the same length whether
+     * or not they already had it, which Paul saw on mouths that were equal in
+     * two different levels. A warning that is always on is not a warning; it is
+     * a decoration that hides the one time it means something.
+     */
+    mouth: { here: number; there: number } | null;
 };
+
+/** How long one of a room's walls is, in metres. */
+function edgeLength(sector: Sector, edge: number): number {
+    const from = sector.points[edge];
+    const to = sector.points[(edge + 1) % sector.points.length];
+
+    return Math.hypot(to.x - from.x, to.z - from.z);
+}
 
 export function wallFacts(level: Level, selection: Selection): WallFacts {
     const sector =
@@ -85,6 +105,37 @@ export function wallFacts(level: Level, selection: Selection): WallFacts {
                   0,
               );
 
+    // The far end as a wall rather than as a room, which is what a length needs.
+    // A room can hold both ends of a wrap-around portal, so this cannot be
+    // found by looking for the link in some *other* room: it is the first wall
+    // naming this link that is not this wall.
+    const partnerEnd =
+        edge === null || edge.portalLink === null || edge.portalLink === ''
+            ? null
+            : (level.sectors.flatMap((other, index) =>
+                  other.points.flatMap((point, at) =>
+                      point.portalLink === edge.portalLink &&
+                      !(index === selection?.sector && at === selection?.edge)
+                          ? [{ sector: index, edge: at }]
+                          : [],
+                  ),
+              )[0] ?? null);
+
+    const mouth =
+        sector === null ||
+        selection === null ||
+        selection.edge === null ||
+        partnerEnd === null ||
+        portalEnds !== 2
+            ? null
+            : {
+                  here: edgeLength(sector, selection.edge),
+                  there: edgeLength(
+                      level.sectors[partnerEnd.sector],
+                      partnerEnd.edge,
+                  ),
+              };
+
     const openDoorway =
         edge !== null &&
         twin !== null &&
@@ -92,7 +143,7 @@ export function wallFacts(level: Level, selection: Selection): WallFacts {
         !edge.blocks &&
         !across.points[twin.edge].blocks;
 
-    return { twin, across, partner, portalEnds, openDoorway };
+    return { twin, across, partner, portalEnds, openDoorway, mouth };
 }
 
 /**

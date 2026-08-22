@@ -76,6 +76,10 @@ function wallAnswer(string $body): array
             partner: facts.partner === null ? null : facts.partner.slug,
             portalEnds: facts.portalEnds,
             openDoorway: facts.openDoorway,
+            mouth: facts.mouth === null ? null : {
+                here: Number(facts.mouth.here.toFixed(4)),
+                there: Number(facts.mouth.there.toFixed(4)),
+            },
         });
 
         {$body}
@@ -274,4 +278,50 @@ it('names each wall by the side of the room it is on', function (): void {
     sort($sides);
 
     expect($sides)->toBe(['east', 'north', 'south', 'west']);
+});
+
+it('measures both ends of a portal, so the panel can stop crying wolf', function (): void {
+    $answer = wallAnswer(<<<'JS'
+        // south's west wall runs z 4 to 0, four metres. away's south wall runs
+        // x 40 to 48, eight. A pair, and a mismatched one.
+        const uneven = JSON.parse(JSON.stringify(level));
+        uneven.sectors[0].points[3].portalLink = 'hop';
+
+        // south's south wall is x 0 to 8, which matches away exactly.
+        const even = JSON.parse(JSON.stringify(level));
+        even.sectors[0].points[0].portalLink = 'hop';
+
+        // One end only, so there is nothing to compare it with.
+        const lonely = JSON.parse(JSON.stringify(level));
+
+        // Three ends, where "the other one" is not a question with an answer.
+        const tripled = JSON.parse(JSON.stringify(even));
+        tripled.sectors[1].points[2].portalLink = 'hop';
+
+        process.stdout.write(JSON.stringify({
+            uneven: named(wallFacts(uneven, { sector: 0, edge: 3 })),
+            even: named(wallFacts(even, { sector: 0, edge: 0 })),
+            fromTheFarEnd: named(wallFacts(even, { sector: 2, edge: 0 })),
+            lonely: named(wallFacts(lonely, { sector: 2, edge: 0 })),
+            tripled: named(wallFacts(tripled, { sector: 0, edge: 0 })),
+            noLink: named(wallFacts(level, { sector: 0, edge: 1 })),
+        }));
+        JS);
+
+    // The panel warned every correctly paired portal that its two walls should
+    // be the same length, whether or not they already were, because it never
+    // looked. Paul saw it on equal mouths in two different levels. Both
+    // numbers are here now, so the panel can compare them and say which is
+    // which — and the same reading from the far end has to agree, or an author
+    // gets a different answer depending on which wall they clicked.
+    expect($answer['uneven']['mouth'])->toEqual(['here' => 4, 'there' => 8])
+        ->and($answer['even']['mouth'])->toEqual(['here' => 8, 'there' => 8])
+        ->and($answer['fromTheFarEnd']['mouth'])->toEqual(['here' => 8, 'there' => 8]);
+
+    // Null rather than a pair of zeroes wherever there is no comparison to
+    // make: one end, three ends, or no link at all. A zero would read as a
+    // measurement and put the warning on things that have no second wall.
+    expect($answer['lonely']['mouth'])->toBeNull()
+        ->and($answer['tripled']['mouth'])->toBeNull()
+        ->and($answer['noLink']['mouth'])->toBeNull();
 });
