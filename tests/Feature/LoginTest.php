@@ -14,6 +14,14 @@ use Livewire\Livewire;
  * everybody at once, so it is worth a test that actually submits it.
  */
 beforeEach(function (): void {
+    // Nothing in this file is about assets. Resolving the Vite manifest was
+    // never part of what these check — it came along for the ride because an
+    // Inertia page renders a blade view that asks for the bundle, and it made
+    // every one of them green or red depending on whether anybody had run
+    // `npm run build` lately. `public/build` is gitignored, so on a clean
+    // checkout or a cold runner that answer was no.
+    $this->withoutVite();
+
     $this->seed(PlayersSeeder::class);
 });
 
