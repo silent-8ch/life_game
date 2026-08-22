@@ -117,11 +117,19 @@ own.
 Two sets of numbers are written down twice, in two languages, with nothing checking they
 agree:
 
-1. `tests/Pest.php:59-63` hardcodes `MAX_STEP = 0.55`, `MIN_HEADROOM = 1.2` and
-   `CLEARANCE = 0.4`, copied from `resources/js/lib/engine/constants.ts`. The level-geometry
-   invariants in `tests/Feature/LevelGeometryTest.php` are asserted against the **copies**,
-   so if the engine's real values changed, those tests would keep passing while every seeded
-   level quietly stopped matching the engine.
+1. `tests/Pest.php:59-63` hardcodes `MAX_STEP = 0.55` and `MIN_HEADROOM = 1.2`, copied from
+   `resources/js/lib/engine/constants.ts`. The level-geometry invariants in
+   `tests/Feature/LevelGeometryTest.php` are asserted against the **copies**, so if the
+   engine's real values changed, those tests would keep passing while every seeded level
+   quietly stopped matching the engine.
+
+   **Correction, from writing it (ISSUE-22).** This section used to name `CLEARANCE = 0.4`
+   as a third copy. It is not one: `constants.ts` has no `CLEARANCE`. Pest's is a judgement
+   the tests make about how much room counts as clear, and the engine's `CLEARANCE` lives in
+   `portals.ts` at `0.02` meaning the nudge that lands a body inside the far room after a
+   portal crossing. Two unrelated constants sharing a name, which reads as a bug six months
+   from now. `ConstantsMatchTest` pins it as a relationship to `PLAYER_RADIUS` instead of an
+   equality, and says why.
 2. `LevelAssets::HEIGHTS` (`app/Services/LevelAssets.php:28`) is mirrored in
    `sprite-actor.ts`. `.ai/rules/services.md` flags it: "Two copies of heights exist by
    necessity (PHP + TS) — change one, change the other". `NewLevelTest` pins the order but
@@ -170,9 +178,28 @@ future bug into a red CI run with an explanation attached.
 
 Worth adding alongside it: `RESOLVE_PASSES` in `collision.ts` is 12 rather than 3 because
 two walls at a sharp angle need several passes, each only halving what is left, and at 3 the
-player noticeably sank into acute corners. A test that resolves a circle against a
-twelve-degree wedge and asserts the settled distance is at least `PLAYER_RADIUS` would pin
-that too — the rules file even quotes the measured figure, 0.28 m.
+player noticeably sank into acute corners.
+
+**Two corrections here too, both found by writing the test (ISSUE-22, ISSUE-30).**
+
+*A single shot at the wedge tests nothing.* This section used to say "resolves a circle
+against a twelve-degree wedge and asserts the settled distance is at least `PLAYER_RADIUS`".
+Written that way it **passes at `RESOLVE_PASSES = 3`** — shoving the player hard at the point
+of a wedge pushes them straight back out of the mouth and settles in one pass. The first
+version of `CollisionLimitsTest` did exactly that and pinned nothing. What needs twelve
+passes is a *partial* move that stops the player inside, where leaving one wall pushes them
+into the other, and finding it needs sweeping across start positions and push distances
+rather than one fixed shot. See the test; it explains this where somebody changing it will
+read it.
+
+*And the 0.28 m figure was wrong.* `.ai/rules/engine.md` used to claim the solver settles the
+player "no closer than 0.28 m to a wall even in a 12-degree wedge". Swept, the worst case is
+0.154 m at twelve passes and 0.064 m at three. Below about six degrees it stops being a
+clearance at all: there is nowhere within thirteen metres of a three-degree apex to stand a
+circle of `PLAYER_RADIUS` clear of both walls, so the solver pushes the player out through
+the corner rather than settling them. Fixed in the rules file under A-10.
+
+Do not restate any of those numbers here. They will drift; the tests will not.
 
 ### Hand poses
 
