@@ -195,6 +195,15 @@ export type PortalSurface = {
      * of the pass is the certain way.
      */
     behind: THREE.Object3D[];
+    /**
+     * The room on **this** pane's own far side, taken out of the picture while
+     * the pane is hugged across the player's view.
+     *
+     * `behind` keeps a room out of the frame a pane *draws*. This keeps it out
+     * of the frame the player is *shown*. Same problem, different frame, same
+     * answer.
+     */
+    blocking: THREE.Object3D[];
     /** Where in the world the pane is, for judging whether it is worth drawing. */
     bounds: THREE.Sphere;
     /** Takes the pane's present position as the one it belongs in. */
@@ -497,6 +506,9 @@ export function createPortalSurface(
 
     const rest = new THREE.Vector3();
     const restTurn = new THREE.Quaternion();
+
+    /** What a hug took out of the picture, and how each was before it did. */
+    const hugHid = new Map<THREE.Object3D, boolean>();
     const toEye = new THREE.Vector3();
     const look = new THREE.Vector3();
 
@@ -513,6 +525,7 @@ export function createPortalSurface(
         mesh,
         partner: null,
         behind: [],
+        blocking: [],
         bounds: new THREE.Sphere(),
         home: options.home,
         onto: options.onto,
@@ -580,6 +593,12 @@ export function createPortalSurface(
         },
 
         release: () => {
+            for (const [what, was] of hugHid) {
+                what.visible = was;
+            }
+
+            hugHid.clear();
+
             mesh.position.copy(rest);
             mesh.quaternion.copy(restTurn);
             mesh.scale.set(1, 1, 1);
@@ -635,6 +654,31 @@ export function createPortalSurface(
 
             // Big enough to reach the corners of the view at that distance,
             // with a little to spare so no edge of it can creep in.
+            // The room on the other side of this mouth must not draw over the
+            // pane that is standing in for it.
+            //
+            // A hugged pane sits `clearance` from the eye — 12 cm — while the
+            // wall behind the mouth is its own room's face, nudged WALL_INSET
+            // past the plane. At 8 cm from the mouth that wall is 9 cm away and
+            // **nearer than the pane**, so it wins the depth test and is drawn
+            // straight across the portal: measured at 180 pixels of 298, half
+            // the view, at the moment of walking through. That is the flash
+            // after a crossing, as distinct from the one before it.
+            //
+            // Moving the pane nearer cannot fix it. A mouth carries no collider,
+            // so the eye can come closer to it than to any wall, and there is
+            // always a range where the wall is inside NEAR_PLANE and no legal
+            // position for the pane is nearer still. Taking the room out of the
+            // frame is the certain way — the same answer `behind` already gives
+            // to the same problem inside a pane's own render.
+            for (const what of surface.blocking) {
+                if (!hugHid.has(what)) {
+                    hugHid.set(what, what.visible);
+                }
+
+                what.visible = false;
+            }
+
             const tall =
                 2 *
                 clearance *
