@@ -404,5 +404,12 @@ export function buildPortals(ctx: BuildContext, found: Edge[]): void {
 
         made[0].behind = standingIn(ctx, pair[1]);
         made[1].behind = standingIn(ctx, pair[0]);
+
+        // And what stands behind each pane's *own* mouth, which is what would
+        // otherwise be drawn over it while it is hugged across the player's
+        // view. The other way round from `behind`, and needed for the frame the
+        // player is shown rather than the one the pane draws.
+        made[0].blocking = standingIn(ctx, pair[0]);
+        made[1].blocking = standingIn(ctx, pair[1]);
     }
 }
