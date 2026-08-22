@@ -31,6 +31,13 @@ ran dry every twenty minutes. **The split by path was right when the contention 
 thousand-line files — and A-01, A-09 and 1-12 split all three, which is what made the split
 that governs the work stop describing it.**
 
+**No reviews. Commits always merge.** Paul's rule, replacing the review-and-land handover: when
+a task is green on its branch, it merges to `main` — by the author, or by planning if the
+author's permissions block the push. The gate (`composer ci:check`) is the review. The lane
+owner still gets told, and still owns the file afterwards; what they no longer do is stand
+between a green branch and `main`. Hands sat unreviewed for two hours while Paul asked where
+they were; that is the cost this rule removes.
+
 **Paul's comments are priorities.** His words, and the standing rule from here: anything he says in
 passing goes to the **front** of the queue, not behind whatever is in flight. A-11 waits behind
 his door-pathfinding ask; 1-24/25/26 go ahead of the sky lids. The board orders by what he
@@ -137,7 +144,7 @@ under Vitest, Pest **455 of 455, 3079 assertions**, ten levels seeding. Level 8 
 **Two constraints, and the first is fatal if missed.** `scanRow(canvas, legend, row)` **takes the legend**, and `paintWalls` assigns colours by walking the scene graph with an incrementing step — so the legend is a property of that build, not of the image. **A colour screen saved without its legend cannot be decoded by anything, ever.** Save the legend JSON beside the images or the feature does not work. Second: `preserveDrawingBuffer` is `probe !== null`, so a normal play session cannot read its own frame today — say what turning it on for everybody costs before doing it. |
 | A-13 | Save where you are — client half | **next, after A-11b** | 1-17 in | Read `standingAt` at load, post to `games.position.store` while walking. The contract is landed and waiting. **The four columns match `?at=` exactly — same numbers, same units, same sign — and that sign is the whole trap**: `levels.spawn_angle` is the *negative* of `?at=` yaw, because the engine reads `yaw = -degToRad(spawn.angle)`. Reaching for the convention already in the schema would have put every reloaded save facing backwards. A test exists whose entire job is that the sign survives the round trip. |
 | A-12 | Doors that open — engine | **next** | ~~1-15~~ in, A-03 in | The collider entering and leaving the built set as the state changes, and the swing animated. Both blockers are gone. |
-| A-05 | Hand poses — wiring | **written at `26ba280`, awaiting A's review — Paul is asking** | ~~ISSUE-1~~ closed | `POSES` gains `reach` and `grip`; `DRAWN` gains twelve handedness entries; `hands.update()` takes a focus argument fed from `lookedAtSlug()`. Cannot start until the art exists. Plan: `plan-hand-poses.md`. |
+| A-05 | Hand poses — wiring | **landed** `6798d43` — merged by planning under the no-review rule | ~~ISSUE-1~~ closed | `POSES` gains `reach` and `grip`; `DRAWN` gains twelve handedness entries; `hands.update()` takes a focus argument fed from `lookedAtSlug()`. Cannot start until the art exists. Plan: `plan-hand-poses.md`. |
 
 ## Art — outside this repo
 
