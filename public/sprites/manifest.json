@@ -1,0 +1,1904 @@
+{
+ "generated": "2026-08-22T23:44:15+00:00",
+ "sprites": [
+  {
+   "folder": "bg",
+   "sub": null,
+   "file": "farms_1.png",
+   "name": "farms_1",
+   "url": "/sprites/bg/farms_1.png",
+   "w": 2048,
+   "h": 512
+  },
+  {
+   "folder": "bg",
+   "sub": null,
+   "file": "farms_2.png",
+   "name": "farms_2",
+   "url": "/sprites/bg/farms_2.png",
+   "w": 2048,
+   "h": 512
+  },
+  {
+   "folder": "bg",
+   "sub": null,
+   "file": "farms_3.png",
+   "name": "farms_3",
+   "url": "/sprites/bg/farms_3.png",
+   "w": 2048,
+   "h": 512
+  },
+  {
+   "folder": "bg",
+   "sub": null,
+   "file": "forest_1.png",
+   "name": "forest_1",
+   "url": "/sprites/bg/forest_1.png",
+   "w": 2048,
+   "h": 512
+  },
+  {
+   "folder": "bg",
+   "sub": null,
+   "file": "forest_2.png",
+   "name": "forest_2",
+   "url": "/sprites/bg/forest_2.png",
+   "w": 2048,
+   "h": 512
+  },
+  {
+   "folder": "bg",
+   "sub": null,
+   "file": "forest_3.png",
+   "name": "forest_3",
+   "url": "/sprites/bg/forest_3.png",
+   "w": 2048,
+   "h": 512
+  },
+  {
+   "folder": "bg",
+   "sub": null,
+   "file": "hills_1.png",
+   "name": "hills_1",
+   "url": "/sprites/bg/hills_1.png",
+   "w": 2048,
+   "h": 512
+  },
+  {
+   "folder": "bg",
+   "sub": null,
+   "file": "hills_2.png",
+   "name": "hills_2",
+   "url": "/sprites/bg/hills_2.png",
+   "w": 2048,
+   "h": 512
+  },
+  {
+   "folder": "bg",
+   "sub": null,
+   "file": "hills_3.png",
+   "name": "hills_3",
+   "url": "/sprites/bg/hills_3.png",
+   "w": 2048,
+   "h": 512
+  },
+  {
+   "folder": "bg",
+   "sub": null,
+   "file": "industrial_1.png",
+   "name": "industrial_1",
+   "url": "/sprites/bg/industrial_1.png",
+   "w": 2048,
+   "h": 512
+  },
+  {
+   "folder": "bg",
+   "sub": null,
+   "file": "industrial_2.png",
+   "name": "industrial_2",
+   "url": "/sprites/bg/industrial_2.png",
+   "w": 2048,
+   "h": 512
+  },
+  {
+   "folder": "bg",
+   "sub": null,
+   "file": "industrial_3.png",
+   "name": "industrial_3",
+   "url": "/sprites/bg/industrial_3.png",
+   "w": 2048,
+   "h": 512
+  },
+  {
+   "folder": "bg",
+   "sub": null,
+   "file": "mountains_1.png",
+   "name": "mountains_1",
+   "url": "/sprites/bg/mountains_1.png",
+   "w": 2048,
+   "h": 512
+  },
+  {
+   "folder": "bg",
+   "sub": null,
+   "file": "mountains_2.png",
+   "name": "mountains_2",
+   "url": "/sprites/bg/mountains_2.png",
+   "w": 2048,
+   "h": 512
+  },
+  {
+   "folder": "bg",
+   "sub": null,
+   "file": "mountains_3.png",
+   "name": "mountains_3",
+   "url": "/sprites/bg/mountains_3.png",
+   "w": 2048,
+   "h": 512
+  },
+  {
+   "folder": "bg",
+   "sub": "retired",
+   "file": "sky-day.png",
+   "name": "sky-day",
+   "url": "/sprites/bg/retired/sky-day.png",
+   "w": 1024,
+   "h": 256
+  },
+  {
+   "folder": "bg",
+   "sub": "retired",
+   "file": "sky-night.png",
+   "name": "sky-night",
+   "url": "/sprites/bg/retired/sky-night.png",
+   "w": 1024,
+   "h": 256
+  },
+  {
+   "folder": "bg",
+   "sub": "retired",
+   "file": "sky-sunset.png",
+   "name": "sky-sunset",
+   "url": "/sprites/bg/retired/sky-sunset.png",
+   "w": 1024,
+   "h": 256
+  },
+  {
+   "folder": "bg",
+   "sub": null,
+   "file": "sky-day.png",
+   "name": "sky-day",
+   "url": "/sprites/bg/sky-day.png",
+   "w": 4096,
+   "h": 512
+  },
+  {
+   "folder": "bg",
+   "sub": null,
+   "file": "sky-night.png",
+   "name": "sky-night",
+   "url": "/sprites/bg/sky-night.png",
+   "w": 4096,
+   "h": 512
+  },
+  {
+   "folder": "bg",
+   "sub": null,
+   "file": "sky-sunset.png",
+   "name": "sky-sunset",
+   "url": "/sprites/bg/sky-sunset.png",
+   "w": 4096,
+   "h": 512
+  },
+  {
+   "folder": "bg",
+   "sub": null,
+   "file": "skyline_1.png",
+   "name": "skyline_1",
+   "url": "/sprites/bg/skyline_1.png",
+   "w": 2048,
+   "h": 512
+  },
+  {
+   "folder": "bg",
+   "sub": null,
+   "file": "skyline_2.png",
+   "name": "skyline_2",
+   "url": "/sprites/bg/skyline_2.png",
+   "w": 2048,
+   "h": 512
+  },
+  {
+   "folder": "bg",
+   "sub": null,
+   "file": "skyline_3.png",
+   "name": "skyline_3",
+   "url": "/sprites/bg/skyline_3.png",
+   "w": 2048,
+   "h": 512
+  },
+  {
+   "folder": "bg",
+   "sub": null,
+   "file": "suburbs_1.png",
+   "name": "suburbs_1",
+   "url": "/sprites/bg/suburbs_1.png",
+   "w": 2048,
+   "h": 512
+  },
+  {
+   "folder": "bg",
+   "sub": null,
+   "file": "suburbs_2.png",
+   "name": "suburbs_2",
+   "url": "/sprites/bg/suburbs_2.png",
+   "w": 2048,
+   "h": 512
+  },
+  {
+   "folder": "bg",
+   "sub": null,
+   "file": "suburbs_3.png",
+   "name": "suburbs_3",
+   "url": "/sprites/bg/suburbs_3.png",
+   "w": 2048,
+   "h": 512
+  },
+  {
+   "folder": "bg",
+   "sub": null,
+   "file": "trees_1.png",
+   "name": "trees_1",
+   "url": "/sprites/bg/trees_1.png",
+   "w": 2048,
+   "h": 512
+  },
+  {
+   "folder": "bg",
+   "sub": null,
+   "file": "trees_2.png",
+   "name": "trees_2",
+   "url": "/sprites/bg/trees_2.png",
+   "w": 2048,
+   "h": 512
+  },
+  {
+   "folder": "bg",
+   "sub": null,
+   "file": "trees_3.png",
+   "name": "trees_3",
+   "url": "/sprites/bg/trees_3.png",
+   "w": 2048,
+   "h": 512
+  },
+  {
+   "folder": "bg",
+   "sub": null,
+   "file": "water-surface.png",
+   "name": "water-surface",
+   "url": "/sprites/bg/water-surface.png",
+   "w": 1024,
+   "h": 256
+  },
+  {
+   "folder": "hands",
+   "sub": null,
+   "file": "krystal-back-fist.png",
+   "name": "krystal-back-fist",
+   "url": "/sprites/hands/krystal-back-fist.png",
+   "w": 887,
+   "h": 887
+  },
+  {
+   "folder": "hands",
+   "sub": null,
+   "file": "krystal-back.png",
+   "name": "krystal-back",
+   "url": "/sprites/hands/krystal-back.png",
+   "w": 887,
+   "h": 887
+  },
+  {
+   "folder": "hands",
+   "sub": null,
+   "file": "krystal-edge-open.png",
+   "name": "krystal-edge-open",
+   "url": "/sprites/hands/krystal-edge-open.png",
+   "w": 887,
+   "h": 887
+  },
+  {
+   "folder": "hands",
+   "sub": null,
+   "file": "krystal-edge.png",
+   "name": "krystal-edge",
+   "url": "/sprites/hands/krystal-edge.png",
+   "w": 887,
+   "h": 887
+  },
+  {
+   "folder": "hands",
+   "sub": null,
+   "file": "krystal-palm-fist.png",
+   "name": "krystal-palm-fist",
+   "url": "/sprites/hands/krystal-palm-fist.png",
+   "w": 887,
+   "h": 887
+  },
+  {
+   "folder": "hands",
+   "sub": null,
+   "file": "krystal-palm.png",
+   "name": "krystal-palm",
+   "url": "/sprites/hands/krystal-palm.png",
+   "w": 887,
+   "h": 887
+  },
+  {
+   "folder": "hands",
+   "sub": null,
+   "file": "luke-back-fist.png",
+   "name": "luke-back-fist",
+   "url": "/sprites/hands/luke-back-fist.png",
+   "w": 887,
+   "h": 887
+  },
+  {
+   "folder": "hands",
+   "sub": null,
+   "file": "luke-back.png",
+   "name": "luke-back",
+   "url": "/sprites/hands/luke-back.png",
+   "w": 887,
+   "h": 887
+  },
+  {
+   "folder": "hands",
+   "sub": null,
+   "file": "luke-edge-open.png",
+   "name": "luke-edge-open",
+   "url": "/sprites/hands/luke-edge-open.png",
+   "w": 887,
+   "h": 887
+  },
+  {
+   "folder": "hands",
+   "sub": null,
+   "file": "luke-edge.png",
+   "name": "luke-edge",
+   "url": "/sprites/hands/luke-edge.png",
+   "w": 887,
+   "h": 887
+  },
+  {
+   "folder": "hands",
+   "sub": null,
+   "file": "luke-palm-fist.png",
+   "name": "luke-palm-fist",
+   "url": "/sprites/hands/luke-palm-fist.png",
+   "w": 887,
+   "h": 887
+  },
+  {
+   "folder": "hands",
+   "sub": null,
+   "file": "luke-palm.png",
+   "name": "luke-palm",
+   "url": "/sprites/hands/luke-palm.png",
+   "w": 887,
+   "h": 887
+  },
+  {
+   "folder": "hands",
+   "sub": null,
+   "file": "luna-back-fist.png",
+   "name": "luna-back-fist",
+   "url": "/sprites/hands/luna-back-fist.png",
+   "w": 887,
+   "h": 887
+  },
+  {
+   "folder": "hands",
+   "sub": null,
+   "file": "luna-back.png",
+   "name": "luna-back",
+   "url": "/sprites/hands/luna-back.png",
+   "w": 887,
+   "h": 887
+  },
+  {
+   "folder": "hands",
+   "sub": null,
+   "file": "luna-edge-open.png",
+   "name": "luna-edge-open",
+   "url": "/sprites/hands/luna-edge-open.png",
+   "w": 887,
+   "h": 887
+  },
+  {
+   "folder": "hands",
+   "sub": null,
+   "file": "luna-edge.png",
+   "name": "luna-edge",
+   "url": "/sprites/hands/luna-edge.png",
+   "w": 887,
+   "h": 887
+  },
+  {
+   "folder": "hands",
+   "sub": null,
+   "file": "luna-palm-fist.png",
+   "name": "luna-palm-fist",
+   "url": "/sprites/hands/luna-palm-fist.png",
+   "w": 887,
+   "h": 887
+  },
+  {
+   "folder": "hands",
+   "sub": null,
+   "file": "luna-palm.png",
+   "name": "luna-palm",
+   "url": "/sprites/hands/luna-palm.png",
+   "w": 887,
+   "h": 887
+  },
+  {
+   "folder": "hands",
+   "sub": "overlays",
+   "file": "phone.png",
+   "name": "phone",
+   "url": "/sprites/hands/overlays/phone.png",
+   "w": 887,
+   "h": 887
+  },
+  {
+   "folder": "hands",
+   "sub": "overlays",
+   "file": "pistol.png",
+   "name": "pistol",
+   "url": "/sprites/hands/overlays/pistol.png",
+   "w": 887,
+   "h": 887
+  },
+  {
+   "folder": "hands",
+   "sub": "overlays",
+   "file": "tablet.png",
+   "name": "tablet",
+   "url": "/sprites/hands/overlays/tablet.png",
+   "w": 887,
+   "h": 887
+  },
+  {
+   "folder": "hands",
+   "sub": "overlays",
+   "file": "wand.png",
+   "name": "wand",
+   "url": "/sprites/hands/overlays/wand.png",
+   "w": 887,
+   "h": 887
+  },
+  {
+   "folder": "hands",
+   "sub": null,
+   "file": "paul-back-fist.png",
+   "name": "paul-back-fist",
+   "url": "/sprites/hands/paul-back-fist.png",
+   "w": 887,
+   "h": 887
+  },
+  {
+   "folder": "hands",
+   "sub": null,
+   "file": "paul-back.png",
+   "name": "paul-back",
+   "url": "/sprites/hands/paul-back.png",
+   "w": 887,
+   "h": 887
+  },
+  {
+   "folder": "hands",
+   "sub": null,
+   "file": "paul-edge-open.png",
+   "name": "paul-edge-open",
+   "url": "/sprites/hands/paul-edge-open.png",
+   "w": 887,
+   "h": 887
+  },
+  {
+   "folder": "hands",
+   "sub": null,
+   "file": "paul-edge.png",
+   "name": "paul-edge",
+   "url": "/sprites/hands/paul-edge.png",
+   "w": 887,
+   "h": 887
+  },
+  {
+   "folder": "hands",
+   "sub": null,
+   "file": "paul-palm-fist.png",
+   "name": "paul-palm-fist",
+   "url": "/sprites/hands/paul-palm-fist.png",
+   "w": 887,
+   "h": 887
+  },
+  {
+   "folder": "hands",
+   "sub": null,
+   "file": "paul-palm.png",
+   "name": "paul-palm",
+   "url": "/sprites/hands/paul-palm.png",
+   "w": 887,
+   "h": 887
+  },
+  {
+   "folder": "hands",
+   "sub": null,
+   "file": "wade-back-fist.png",
+   "name": "wade-back-fist",
+   "url": "/sprites/hands/wade-back-fist.png",
+   "w": 887,
+   "h": 887
+  },
+  {
+   "folder": "hands",
+   "sub": null,
+   "file": "wade-back.png",
+   "name": "wade-back",
+   "url": "/sprites/hands/wade-back.png",
+   "w": 887,
+   "h": 887
+  },
+  {
+   "folder": "hands",
+   "sub": null,
+   "file": "wade-edge-open.png",
+   "name": "wade-edge-open",
+   "url": "/sprites/hands/wade-edge-open.png",
+   "w": 887,
+   "h": 887
+  },
+  {
+   "folder": "hands",
+   "sub": null,
+   "file": "wade-edge.png",
+   "name": "wade-edge",
+   "url": "/sprites/hands/wade-edge.png",
+   "w": 887,
+   "h": 887
+  },
+  {
+   "folder": "hands",
+   "sub": null,
+   "file": "wade-palm-fist.png",
+   "name": "wade-palm-fist",
+   "url": "/sprites/hands/wade-palm-fist.png",
+   "w": 887,
+   "h": 887
+  },
+  {
+   "folder": "hands",
+   "sub": null,
+   "file": "wade-palm.png",
+   "name": "wade-palm",
+   "url": "/sprites/hands/wade-palm.png",
+   "w": 887,
+   "h": 887
+  },
+  {
+   "folder": "hands",
+   "sub": null,
+   "file": "william-back-fist.png",
+   "name": "william-back-fist",
+   "url": "/sprites/hands/william-back-fist.png",
+   "w": 887,
+   "h": 887
+  },
+  {
+   "folder": "hands",
+   "sub": null,
+   "file": "william-back.png",
+   "name": "william-back",
+   "url": "/sprites/hands/william-back.png",
+   "w": 887,
+   "h": 887
+  },
+  {
+   "folder": "hands",
+   "sub": null,
+   "file": "william-edge-open.png",
+   "name": "william-edge-open",
+   "url": "/sprites/hands/william-edge-open.png",
+   "w": 887,
+   "h": 887
+  },
+  {
+   "folder": "hands",
+   "sub": null,
+   "file": "william-edge.png",
+   "name": "william-edge",
+   "url": "/sprites/hands/william-edge.png",
+   "w": 887,
+   "h": 887
+  },
+  {
+   "folder": "hands",
+   "sub": null,
+   "file": "william-palm-fist.png",
+   "name": "william-palm-fist",
+   "url": "/sprites/hands/william-palm-fist.png",
+   "w": 887,
+   "h": 887
+  },
+  {
+   "folder": "hands",
+   "sub": null,
+   "file": "william-palm.png",
+   "name": "william-palm",
+   "url": "/sprites/hands/william-palm.png",
+   "w": 887,
+   "h": 887
+  },
+  {
+   "folder": "illustrated",
+   "sub": null,
+   "file": "krystal-illustrated-cardinal-4step.png",
+   "name": "krystal-illustrated-cardinal-4step",
+   "url": "/sprites/illustrated/krystal-illustrated-cardinal-4step.png",
+   "w": 1024,
+   "h": 1024
+  },
+  {
+   "folder": "illustrated",
+   "sub": null,
+   "file": "krystal-illustrated-cardinal-aligned-4step.png",
+   "name": "krystal-illustrated-cardinal-aligned-4step",
+   "url": "/sprites/illustrated/krystal-illustrated-cardinal-aligned-4step.png",
+   "w": 1024,
+   "h": 1024
+  },
+  {
+   "folder": "illustrated",
+   "sub": null,
+   "file": "krystal-illustrated-diagonal-4step.png",
+   "name": "krystal-illustrated-diagonal-4step",
+   "url": "/sprites/illustrated/krystal-illustrated-diagonal-4step.png",
+   "w": 1024,
+   "h": 1024
+  },
+  {
+   "folder": "illustrated",
+   "sub": null,
+   "file": "krystal-illustrated-diagonal-aligned-4step.png",
+   "name": "krystal-illustrated-diagonal-aligned-4step",
+   "url": "/sprites/illustrated/krystal-illustrated-diagonal-aligned-4step.png",
+   "w": 1024,
+   "h": 1024
+  },
+  {
+   "folder": "illustrated",
+   "sub": null,
+   "file": "luke-illustrated-cardinal-aligned-4step.png",
+   "name": "luke-illustrated-cardinal-aligned-4step",
+   "url": "/sprites/illustrated/luke-illustrated-cardinal-aligned-4step.png",
+   "w": 1024,
+   "h": 1024
+  },
+  {
+   "folder": "illustrated",
+   "sub": null,
+   "file": "luke-illustrated-diagonal-aligned-4step.png",
+   "name": "luke-illustrated-diagonal-aligned-4step",
+   "url": "/sprites/illustrated/luke-illustrated-diagonal-aligned-4step.png",
+   "w": 1024,
+   "h": 1024
+  },
+  {
+   "folder": "illustrated",
+   "sub": null,
+   "file": "luna-illustrated-cardinal-aligned-4step.png",
+   "name": "luna-illustrated-cardinal-aligned-4step",
+   "url": "/sprites/illustrated/luna-illustrated-cardinal-aligned-4step.png",
+   "w": 1024,
+   "h": 1024
+  },
+  {
+   "folder": "illustrated",
+   "sub": null,
+   "file": "luna-illustrated-diagonal-aligned-4step.png",
+   "name": "luna-illustrated-diagonal-aligned-4step",
+   "url": "/sprites/illustrated/luna-illustrated-diagonal-aligned-4step.png",
+   "w": 1024,
+   "h": 1024
+  },
+  {
+   "folder": "illustrated",
+   "sub": null,
+   "file": "paul-illustrated-cardinal-4step.png",
+   "name": "paul-illustrated-cardinal-4step",
+   "url": "/sprites/illustrated/paul-illustrated-cardinal-4step.png",
+   "w": 1024,
+   "h": 1024
+  },
+  {
+   "folder": "illustrated",
+   "sub": null,
+   "file": "paul-illustrated-cardinal-aligned-4step.png",
+   "name": "paul-illustrated-cardinal-aligned-4step",
+   "url": "/sprites/illustrated/paul-illustrated-cardinal-aligned-4step.png",
+   "w": 1024,
+   "h": 1024
+  },
+  {
+   "folder": "illustrated",
+   "sub": null,
+   "file": "paul-illustrated-diagonal-4step.png",
+   "name": "paul-illustrated-diagonal-4step",
+   "url": "/sprites/illustrated/paul-illustrated-diagonal-4step.png",
+   "w": 1024,
+   "h": 1024
+  },
+  {
+   "folder": "illustrated",
+   "sub": null,
+   "file": "paul-illustrated-diagonal-aligned-4step.png",
+   "name": "paul-illustrated-diagonal-aligned-4step",
+   "url": "/sprites/illustrated/paul-illustrated-diagonal-aligned-4step.png",
+   "w": 1024,
+   "h": 1024
+  },
+  {
+   "folder": "illustrated",
+   "sub": null,
+   "file": "wade-illustrated-cardinal-aligned-4step.png",
+   "name": "wade-illustrated-cardinal-aligned-4step",
+   "url": "/sprites/illustrated/wade-illustrated-cardinal-aligned-4step.png",
+   "w": 1024,
+   "h": 1024
+  },
+  {
+   "folder": "illustrated",
+   "sub": null,
+   "file": "wade-illustrated-diagonal-aligned-4step.png",
+   "name": "wade-illustrated-diagonal-aligned-4step",
+   "url": "/sprites/illustrated/wade-illustrated-diagonal-aligned-4step.png",
+   "w": 1024,
+   "h": 1024
+  },
+  {
+   "folder": "illustrated",
+   "sub": null,
+   "file": "william-illustrated-cardinal-aligned-4step.png",
+   "name": "william-illustrated-cardinal-aligned-4step",
+   "url": "/sprites/illustrated/william-illustrated-cardinal-aligned-4step.png",
+   "w": 1024,
+   "h": 1024
+  },
+  {
+   "folder": "illustrated",
+   "sub": null,
+   "file": "william-illustrated-diagonal-aligned-4step.png",
+   "name": "william-illustrated-diagonal-aligned-4step",
+   "url": "/sprites/illustrated/william-illustrated-diagonal-aligned-4step.png",
+   "w": 1024,
+   "h": 1024
+  },
+  {
+   "folder": "props",
+   "sub": null,
+   "file": "armchair.png",
+   "name": "armchair",
+   "url": "/sprites/props/armchair.png",
+   "w": 116,
+   "h": 116
+  },
+  {
+   "folder": "props",
+   "sub": null,
+   "file": "bathroom-sink.png",
+   "name": "bathroom-sink",
+   "url": "/sprites/props/bathroom-sink.png",
+   "w": 70,
+   "h": 108
+  },
+  {
+   "folder": "props",
+   "sub": null,
+   "file": "bathtub.png",
+   "name": "bathtub",
+   "url": "/sprites/props/bathtub.png",
+   "w": 218,
+   "h": 76
+  },
+  {
+   "folder": "props",
+   "sub": null,
+   "file": "bed-double.png",
+   "name": "bed-double",
+   "url": "/sprites/props/bed-double.png",
+   "w": 192,
+   "h": 76
+  },
+  {
+   "folder": "props",
+   "sub": null,
+   "file": "bookshelf.png",
+   "name": "bookshelf",
+   "url": "/sprites/props/bookshelf.png",
+   "w": 104,
+   "h": 232
+  },
+  {
+   "folder": "props",
+   "sub": null,
+   "file": "ceiling-light.png",
+   "name": "ceiling-light",
+   "url": "/sprites/props/ceiling-light.png",
+   "w": 44,
+   "h": 16
+  },
+  {
+   "folder": "props",
+   "sub": null,
+   "file": "desk.png",
+   "name": "desk",
+   "url": "/sprites/props/desk.png",
+   "w": 154,
+   "h": 96
+  },
+  {
+   "folder": "props",
+   "sub": null,
+   "file": "dining-chair.png",
+   "name": "dining-chair",
+   "url": "/sprites/props/dining-chair.png",
+   "w": 58,
+   "h": 116
+  },
+  {
+   "folder": "props",
+   "sub": null,
+   "file": "dining-table.png",
+   "name": "dining-table",
+   "url": "/sprites/props/dining-table.png",
+   "w": 204,
+   "h": 96
+  },
+  {
+   "folder": "props",
+   "sub": null,
+   "file": "door-bifold.png",
+   "name": "door-bifold",
+   "url": "/sprites/props/door-bifold.png",
+   "w": 96,
+   "h": 260
+  },
+  {
+   "folder": "props",
+   "sub": null,
+   "file": "door-frame.png",
+   "name": "door-frame",
+   "url": "/sprites/props/door-frame.png",
+   "w": 124,
+   "h": 272
+  },
+  {
+   "folder": "props",
+   "sub": null,
+   "file": "door-front.png",
+   "name": "door-front",
+   "url": "/sprites/props/door-front.png",
+   "w": 116,
+   "h": 260
+  },
+  {
+   "folder": "props",
+   "sub": null,
+   "file": "door-interior.png",
+   "name": "door-interior",
+   "url": "/sprites/props/door-interior.png",
+   "w": 104,
+   "h": 260
+  },
+  {
+   "folder": "props",
+   "sub": null,
+   "file": "door-sliding-glass.png",
+   "name": "door-sliding-glass",
+   "url": "/sprites/props/door-sliding-glass.png",
+   "w": 232,
+   "h": 268
+  },
+  {
+   "folder": "props",
+   "sub": null,
+   "file": "floor-lamp.png",
+   "name": "floor-lamp",
+   "url": "/sprites/props/floor-lamp.png",
+   "w": 44,
+   "h": 204
+  },
+  {
+   "folder": "props",
+   "sub": null,
+   "file": "fridge.png",
+   "name": "fridge",
+   "url": "/sprites/props/fridge.png",
+   "w": 90,
+   "h": 232
+  },
+  {
+   "folder": "props",
+   "sub": null,
+   "file": "grass-tuft.png",
+   "name": "grass-tuft",
+   "url": "/sprites/props/grass-tuft.png",
+   "w": 52,
+   "h": 40
+  },
+  {
+   "folder": "props",
+   "sub": null,
+   "file": "kitchen-counter.png",
+   "name": "kitchen-counter",
+   "url": "/sprites/props/kitchen-counter.png",
+   "w": 256,
+   "h": 116
+  },
+  {
+   "folder": "props",
+   "sub": null,
+   "file": "light-switch-off.png",
+   "name": "light-switch-off",
+   "url": "/sprites/props/light-switch-off.png",
+   "w": 12,
+   "h": 16
+  },
+  {
+   "folder": "props",
+   "sub": null,
+   "file": "light-switch-on.png",
+   "name": "light-switch-on",
+   "url": "/sprites/props/light-switch-on.png",
+   "w": 12,
+   "h": 16
+  },
+  {
+   "folder": "props",
+   "sub": null,
+   "file": "pendant-light.png",
+   "name": "pendant-light",
+   "url": "/sprites/props/pendant-light.png",
+   "w": 34,
+   "h": 76
+  },
+  {
+   "folder": "props",
+   "sub": null,
+   "file": "plant-fern.png",
+   "name": "plant-fern",
+   "url": "/sprites/props/plant-fern.png",
+   "w": 76,
+   "h": 72
+  },
+  {
+   "folder": "props",
+   "sub": null,
+   "file": "plant-monstera.png",
+   "name": "plant-monstera",
+   "url": "/sprites/props/plant-monstera.png",
+   "w": 104,
+   "h": 154
+  },
+  {
+   "folder": "props",
+   "sub": null,
+   "file": "plant-pot.png",
+   "name": "plant-pot",
+   "url": "/sprites/props/plant-pot.png",
+   "w": 44,
+   "h": 40
+  },
+  {
+   "folder": "props",
+   "sub": null,
+   "file": "plant-snake.png",
+   "name": "plant-snake",
+   "url": "/sprites/props/plant-snake.png",
+   "w": 52,
+   "h": 116
+  },
+  {
+   "folder": "props",
+   "sub": null,
+   "file": "plant-succulent.png",
+   "name": "plant-succulent",
+   "url": "/sprites/props/plant-succulent.png",
+   "w": 24,
+   "h": 20
+  },
+  {
+   "folder": "props",
+   "sub": null,
+   "file": "shrub-round.png",
+   "name": "shrub-round",
+   "url": "/sprites/props/shrub-round.png",
+   "w": 128,
+   "h": 116
+  },
+  {
+   "folder": "props",
+   "sub": null,
+   "file": "small-tree.png",
+   "name": "small-tree",
+   "url": "/sprites/props/small-tree.png",
+   "w": 204,
+   "h": 332
+  },
+  {
+   "folder": "props",
+   "sub": null,
+   "file": "sofa.png",
+   "name": "sofa",
+   "url": "/sprites/props/sofa.png",
+   "w": 256,
+   "h": 108
+  },
+  {
+   "folder": "props",
+   "sub": null,
+   "file": "table-lamp.png",
+   "name": "table-lamp",
+   "url": "/sprites/props/table-lamp.png",
+   "w": 40,
+   "h": 58
+  },
+  {
+   "folder": "props",
+   "sub": null,
+   "file": "thermostat.png",
+   "name": "thermostat",
+   "url": "/sprites/props/thermostat.png",
+   "w": 16,
+   "h": 16
+  },
+  {
+   "folder": "props",
+   "sub": null,
+   "file": "toilet.png",
+   "name": "toilet",
+   "url": "/sprites/props/toilet.png",
+   "w": 52,
+   "h": 100
+  },
+  {
+   "folder": "props",
+   "sub": null,
+   "file": "tv-off.png",
+   "name": "tv-off",
+   "url": "/sprites/props/tv-off.png",
+   "w": 154,
+   "h": 90
+  },
+  {
+   "folder": "props",
+   "sub": null,
+   "file": "tv-screen-1.png",
+   "name": "tv-screen-1",
+   "url": "/sprites/props/tv-screen-1.png",
+   "w": 154,
+   "h": 90
+  },
+  {
+   "folder": "props",
+   "sub": null,
+   "file": "tv-screen-2.png",
+   "name": "tv-screen-2",
+   "url": "/sprites/props/tv-screen-2.png",
+   "w": 154,
+   "h": 90
+  },
+  {
+   "folder": "props",
+   "sub": null,
+   "file": "tv-screen-3.png",
+   "name": "tv-screen-3",
+   "url": "/sprites/props/tv-screen-3.png",
+   "w": 154,
+   "h": 90
+  },
+  {
+   "folder": "props",
+   "sub": null,
+   "file": "tv-screen-4.png",
+   "name": "tv-screen-4",
+   "url": "/sprites/props/tv-screen-4.png",
+   "w": 154,
+   "h": 90
+  },
+  {
+   "folder": "props",
+   "sub": null,
+   "file": "wall-clock.png",
+   "name": "wall-clock",
+   "url": "/sprites/props/wall-clock.png",
+   "w": 40,
+   "h": 40
+  },
+  {
+   "folder": "props",
+   "sub": null,
+   "file": "wall-outlet.png",
+   "name": "wall-outlet",
+   "url": "/sprites/props/wall-outlet.png",
+   "w": 12,
+   "h": 16
+  },
+  {
+   "folder": "props",
+   "sub": null,
+   "file": "wardrobe.png",
+   "name": "wardrobe",
+   "url": "/sprites/props/wardrobe.png",
+   "w": 128,
+   "h": 256
+  },
+  {
+   "folder": "props",
+   "sub": null,
+   "file": "window-blind.png",
+   "name": "window-blind",
+   "url": "/sprites/props/window-blind.png",
+   "w": 116,
+   "h": 156
+  },
+  {
+   "folder": "props",
+   "sub": null,
+   "file": "window-picture-broken.png",
+   "name": "window-picture-broken",
+   "url": "/sprites/props/window-picture-broken.png",
+   "w": 204,
+   "h": 140
+  },
+  {
+   "folder": "props",
+   "sub": null,
+   "file": "window-picture.png",
+   "name": "window-picture",
+   "url": "/sprites/props/window-picture.png",
+   "w": 204,
+   "h": 140
+  },
+  {
+   "folder": "props",
+   "sub": null,
+   "file": "window-single-hung.png",
+   "name": "window-single-hung",
+   "url": "/sprites/props/window-single-hung.png",
+   "w": 116,
+   "h": 156
+  },
+  {
+   "folder": "realistic",
+   "sub": null,
+   "file": "krystal-realistic-cardinal-aligned-4step.png",
+   "name": "krystal-realistic-cardinal-aligned-4step",
+   "url": "/sprites/realistic/krystal-realistic-cardinal-aligned-4step.png",
+   "w": 1024,
+   "h": 1024
+  },
+  {
+   "folder": "realistic",
+   "sub": null,
+   "file": "krystal-realistic-diagonal-aligned-4step.png",
+   "name": "krystal-realistic-diagonal-aligned-4step",
+   "url": "/sprites/realistic/krystal-realistic-diagonal-aligned-4step.png",
+   "w": 1024,
+   "h": 1024
+  },
+  {
+   "folder": "realistic",
+   "sub": null,
+   "file": "luke-realistic-cardinal-aligned-4step.png",
+   "name": "luke-realistic-cardinal-aligned-4step",
+   "url": "/sprites/realistic/luke-realistic-cardinal-aligned-4step.png",
+   "w": 1024,
+   "h": 1024
+  },
+  {
+   "folder": "realistic",
+   "sub": null,
+   "file": "luke-realistic-diagonal-aligned-4step.png",
+   "name": "luke-realistic-diagonal-aligned-4step",
+   "url": "/sprites/realistic/luke-realistic-diagonal-aligned-4step.png",
+   "w": 1024,
+   "h": 1024
+  },
+  {
+   "folder": "realistic",
+   "sub": null,
+   "file": "luna-realistic-cardinal-aligned-4step.png",
+   "name": "luna-realistic-cardinal-aligned-4step",
+   "url": "/sprites/realistic/luna-realistic-cardinal-aligned-4step.png",
+   "w": 1024,
+   "h": 1024
+  },
+  {
+   "folder": "realistic",
+   "sub": null,
+   "file": "luna-realistic-diagonal-aligned-4step.png",
+   "name": "luna-realistic-diagonal-aligned-4step",
+   "url": "/sprites/realistic/luna-realistic-diagonal-aligned-4step.png",
+   "w": 1024,
+   "h": 1024
+  },
+  {
+   "folder": "realistic",
+   "sub": null,
+   "file": "paul-realistic-cardinal-aligned-4step.png",
+   "name": "paul-realistic-cardinal-aligned-4step",
+   "url": "/sprites/realistic/paul-realistic-cardinal-aligned-4step.png",
+   "w": 1024,
+   "h": 1024
+  },
+  {
+   "folder": "realistic",
+   "sub": null,
+   "file": "paul-realistic-diagonal-aligned-4step.png",
+   "name": "paul-realistic-diagonal-aligned-4step",
+   "url": "/sprites/realistic/paul-realistic-diagonal-aligned-4step.png",
+   "w": 1024,
+   "h": 1024
+  },
+  {
+   "folder": "realistic",
+   "sub": null,
+   "file": "wade-realistic-cardinal-aligned-4step.png",
+   "name": "wade-realistic-cardinal-aligned-4step",
+   "url": "/sprites/realistic/wade-realistic-cardinal-aligned-4step.png",
+   "w": 1024,
+   "h": 1024
+  },
+  {
+   "folder": "realistic",
+   "sub": null,
+   "file": "wade-realistic-diagonal-aligned-4step.png",
+   "name": "wade-realistic-diagonal-aligned-4step",
+   "url": "/sprites/realistic/wade-realistic-diagonal-aligned-4step.png",
+   "w": 1024,
+   "h": 1024
+  },
+  {
+   "folder": "realistic",
+   "sub": null,
+   "file": "william-realistic-cardinal-aligned-4step.png",
+   "name": "william-realistic-cardinal-aligned-4step",
+   "url": "/sprites/realistic/william-realistic-cardinal-aligned-4step.png",
+   "w": 1024,
+   "h": 1024
+  },
+  {
+   "folder": "realistic",
+   "sub": null,
+   "file": "william-realistic-diagonal-aligned-4step.png",
+   "name": "william-realistic-diagonal-aligned-4step",
+   "url": "/sprites/realistic/william-realistic-diagonal-aligned-4step.png",
+   "w": 1024,
+   "h": 1024
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "asphalt-path.png",
+   "name": "asphalt-path",
+   "url": "/sprites/textures/asphalt-path.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "asphalt-shingles.png",
+   "name": "asphalt-shingles",
+   "url": "/sprites/textures/asphalt-shingles.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "blue-carpet.png",
+   "name": "blue-carpet",
+   "url": "/sprites/textures/blue-carpet.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "blue-rug.png",
+   "name": "blue-rug",
+   "url": "/sprites/textures/blue-rug.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "castle-stone-wall.png",
+   "name": "castle-stone-wall",
+   "url": "/sprites/textures/castle-stone-wall.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "cedar-shingles.png",
+   "name": "cedar-shingles",
+   "url": "/sprites/textures/cedar-shingles.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "cedar-siding.png",
+   "name": "cedar-siding",
+   "url": "/sprites/textures/cedar-siding.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "checker-floor.png",
+   "name": "checker-floor",
+   "url": "/sprites/textures/checker-floor.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "clover-ground.png",
+   "name": "clover-ground",
+   "url": "/sprites/textures/clover-ground.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "concrete-wall.png",
+   "name": "concrete-wall",
+   "url": "/sprites/textures/concrete-wall.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "cream-carpet.png",
+   "name": "cream-carpet",
+   "url": "/sprites/textures/cream-carpet.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "cream-plaster-wall.png",
+   "name": "cream-plaster-wall",
+   "url": "/sprites/textures/cream-plaster-wall.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "dark-soil.png",
+   "name": "dark-soil",
+   "url": "/sprites/textures/dark-soil.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "dark-wood-floor.png",
+   "name": "dark-wood-floor",
+   "url": "/sprites/textures/dark-wood-floor.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "deep-water.png",
+   "name": "deep-water",
+   "url": "/sprites/textures/deep-water.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "dock-planks.png",
+   "name": "dock-planks",
+   "url": "/sprites/textures/dock-planks.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "dry-grass.png",
+   "name": "dry-grass",
+   "url": "/sprites/textures/dry-grass.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "fallen-leaves.png",
+   "name": "fallen-leaves",
+   "url": "/sprites/textures/fallen-leaves.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "fieldstone-wall.png",
+   "name": "fieldstone-wall",
+   "url": "/sprites/textures/fieldstone-wall.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "floral-rug.png",
+   "name": "floral-rug",
+   "url": "/sprites/textures/floral-rug.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "floral-wallpaper.png",
+   "name": "floral-wallpaper",
+   "url": "/sprites/textures/floral-wallpaper.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "flower-patch.png",
+   "name": "flower-patch",
+   "url": "/sprites/textures/flower-patch.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "fountain-water.png",
+   "name": "fountain-water",
+   "url": "/sprites/textures/fountain-water.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "garden-bed.png",
+   "name": "garden-bed",
+   "url": "/sprites/textures/garden-bed.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "garden-soil.png",
+   "name": "garden-soil",
+   "url": "/sprites/textures/garden-soil.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "gravel-ground.png",
+   "name": "gravel-ground",
+   "url": "/sprites/textures/gravel-ground.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "ice-ground.png",
+   "name": "ice-ground",
+   "url": "/sprites/textures/ice-ground.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "kitchen-tile.png",
+   "name": "kitchen-tile",
+   "url": "/sprites/textures/kitchen-tile.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "marble-floor.png",
+   "name": "marble-floor",
+   "url": "/sprites/textures/marble-floor.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "metal-roof.png",
+   "name": "metal-roof",
+   "url": "/sprites/textures/metal-roof.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "mosaic-tile.png",
+   "name": "mosaic-tile",
+   "url": "/sprites/textures/mosaic-tile.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "moss-ground.png",
+   "name": "moss-ground",
+   "url": "/sprites/textures/moss-ground.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "mud-ground.png",
+   "name": "mud-ground",
+   "url": "/sprites/textures/mud-ground.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "oak-floor.png",
+   "name": "oak-floor",
+   "url": "/sprites/textures/oak-floor.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "ocean-water.png",
+   "name": "ocean-water",
+   "url": "/sprites/textures/ocean-water.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "packed-path.png",
+   "name": "packed-path",
+   "url": "/sprites/textures/packed-path.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "painted-brick-wall.png",
+   "name": "painted-brick-wall",
+   "url": "/sprites/textures/painted-brick-wall.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "pale-wood-floor.png",
+   "name": "pale-wood-floor",
+   "url": "/sprites/textures/pale-wood-floor.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "parquet-floor.png",
+   "name": "parquet-floor",
+   "url": "/sprites/textures/parquet-floor.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "pebble-bed.png",
+   "name": "pebble-bed",
+   "url": "/sprites/textures/pebble-bed.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "picnic-blanket.png",
+   "name": "picnic-blanket",
+   "url": "/sprites/textures/picnic-blanket.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "pine-needles.png",
+   "name": "pine-needles",
+   "url": "/sprites/textures/pine-needles.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "pond-water.png",
+   "name": "pond-water",
+   "url": "/sprites/textures/pond-water.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "pool-water.png",
+   "name": "pool-water",
+   "url": "/sprites/textures/pool-water.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "red-brick-path.png",
+   "name": "red-brick-path",
+   "url": "/sprites/textures/red-brick-path.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "red-rug.png",
+   "name": "red-rug",
+   "url": "/sprites/textures/red-rug.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "red-siding.png",
+   "name": "red-siding",
+   "url": "/sprites/textures/red-siding.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "river-water.png",
+   "name": "river-water",
+   "url": "/sprites/textures/river-water.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "rose-carpet.png",
+   "name": "rose-carpet",
+   "url": "/sprites/textures/rose-carpet.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "shallow-water.png",
+   "name": "shallow-water",
+   "url": "/sprites/textures/shallow-water.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "slate-path.png",
+   "name": "slate-path",
+   "url": "/sprites/textures/slate-path.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "slate-roof.png",
+   "name": "slate-roof",
+   "url": "/sprites/textures/slate-roof.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "snow-ground.png",
+   "name": "snow-ground",
+   "url": "/sprites/textures/snow-ground.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": "sources",
+   "file": "static-exteriors.png",
+   "name": "static-exteriors",
+   "url": "/sprites/textures/sources/static-exteriors.png",
+   "w": 1254,
+   "h": 1254
+  },
+  {
+   "folder": "textures",
+   "sub": "sources",
+   "file": "static-interiors.png",
+   "name": "static-interiors",
+   "url": "/sprites/textures/sources/static-interiors.png",
+   "w": 1254,
+   "h": 1254
+  },
+  {
+   "folder": "textures",
+   "sub": "sources",
+   "file": "static-natural-paths.png",
+   "name": "static-natural-paths",
+   "url": "/sprites/textures/sources/static-natural-paths.png",
+   "w": 1254,
+   "h": 1254
+  },
+  {
+   "folder": "textures",
+   "sub": "sources",
+   "file": "static-water-decor.png",
+   "name": "static-water-decor",
+   "url": "/sprites/textures/sources/static-water-decor.png",
+   "w": 1254,
+   "h": 1254
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "speckled-linoleum.png",
+   "name": "speckled-linoleum",
+   "url": "/sprites/textures/speckled-linoleum.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "spring-grass.png",
+   "name": "spring-grass",
+   "url": "/sprites/textures/spring-grass.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "stucco-wall.png",
+   "name": "stucco-wall",
+   "url": "/sprites/textures/stucco-wall.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "subway-tile-wall.png",
+   "name": "subway-tile-wall",
+   "url": "/sprites/textures/subway-tile-wall.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "swamp-water.png",
+   "name": "swamp-water",
+   "url": "/sprites/textures/swamp-water.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "terracotta-roof.png",
+   "name": "terracotta-roof",
+   "url": "/sprites/textures/terracotta-roof.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "thatch-roof.png",
+   "name": "thatch-roof",
+   "url": "/sprites/textures/thatch-roof.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "weathered-deck.png",
+   "name": "weathered-deck",
+   "url": "/sprites/textures/weathered-deck.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "white-siding.png",
+   "name": "white-siding",
+   "url": "/sprites/textures/white-siding.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "wood-panel-wall.png",
+   "name": "wood-panel-wall",
+   "url": "/sprites/textures/wood-panel-wall.png",
+   "w": 768,
+   "h": 768
+  },
+  {
+   "folder": "textures",
+   "sub": null,
+   "file": "workshop-floor.png",
+   "name": "workshop-floor",
+   "url": "/sprites/textures/workshop-floor.png",
+   "w": 768,
+   "h": 768
+  }
+ ]
+}
