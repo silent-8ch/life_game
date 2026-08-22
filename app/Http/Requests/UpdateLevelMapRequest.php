@@ -4,8 +4,8 @@ namespace App\Http\Requests;
 
 use App\Enums\ActorBehaviour;
 use App\Enums\ConditionType;
-use App\Enums\EffectType;
 use App\Enums\DoorSwing;
+use App\Enums\EffectType;
 use App\Enums\ThingKind;
 use App\Enums\ThingRender;
 use App\Enums\ThingUvMode;

@@ -473,6 +473,14 @@ export function newPerson(
         altFlag: null,
         animationFrames: 1,
         animationFps: 8,
+        // Nothing opens until somebody says so, so a thing placed today is the
+        // thing it always was.
+        isDoor: false,
+        swing: 'swing',
+        openAngle: 90,
+        openSeconds: 0.4,
+        isOpen: false,
+        opensFlag: null,
         x: at.x,
         z: at.z,
         elevation: 0,
@@ -510,6 +518,14 @@ export function newProp(level: Level, at: Point): LevelThing {
         altFlag: null,
         animationFrames: 1,
         animationFps: 8,
+        // Nothing opens until somebody says so, so a thing placed today is the
+        // thing it always was.
+        isDoor: false,
+        swing: 'swing',
+        openAngle: 90,
+        openSeconds: 0.4,
+        isOpen: false,
+        opensFlag: null,
         x: at.x,
         z: at.z,
         elevation: 0,

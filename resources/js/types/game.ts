@@ -206,6 +206,15 @@ export type ThingRender = 'box' | 'billboard' | 'cross';
  */
 export type ThingUvMode = 'tile' | 'fit';
 
+/**
+ * How a door gets out of the way.
+ *
+ * Authored rather than guessed from the art, because the art does not say: a
+ * bifold and an interior door are both a rectangle with a picture on it, and
+ * which way they move is the whole difference between them.
+ */
+export type DoorSwing = 'swing' | 'slide' | 'fold';
+
 export type LevelThing = {
     slug: string;
     name: string;
@@ -253,6 +262,32 @@ export type LevelThing = {
     height: number;
     angle: number;
     isSolid: boolean;
+    /** Whether it opens. A door drops its collider while it is open. */
+    isDoor: boolean;
+    swing: DoorSwing;
+    /**
+     * Degrees a swing door turns through. For a slider, the fraction of its own
+     * width it moves, times ninety — so the number means the same kind of thing
+     * whichever way it goes.
+     */
+    openAngle: number;
+    openSeconds: number;
+    /**
+     * Whether it **starts** open — not where it is now.
+     *
+     * Where a door stands while somebody is playing belongs to the engine. You
+     * walk through a door in the same frame it opens, so the collider has to
+     * leave the set immediately, and the interaction round trip returns the
+     * inventory and a message by design. Nothing that involves the server can
+     * keep up with a door.
+     */
+    isOpen: boolean;
+    /**
+     * A flag remembering it was opened, so it is still open next time. Null
+     * forgets. Persistence, not truth: the engine's own state is authoritative
+     * while the level is being walked around.
+     */
+    opensFlag: string | null;
     /** What the player may try on it. */
     verbs: VerbOffer[];
     /**

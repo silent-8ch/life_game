@@ -81,7 +81,10 @@ it('sends every thing as a box with a kind', function (): void {
                     'render', 'planeCount', 'uvMode', 'textureAlt', 'altFlag',
                     'animationFrames', 'animationFps',
                     'x', 'z', 'elevation', 'width', 'depth', 'height',
-                    'angle', 'isSolid', 'verbs',
+                    'angle', 'isSolid',
+                    'isDoor', 'swing', 'openAngle', 'openSeconds',
+                    'isOpen', 'opensFlag',
+                    'verbs',
                 ])
             )
         );
