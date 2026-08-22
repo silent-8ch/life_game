@@ -23,7 +23,7 @@ use Symfony\Component\Process\Process;
  *
  * @return array<string, mixed>
  */
-function portalAnswer(string $body): array
+function portalAnswer(string $body, string $rooms = ''): array
 {
     $script = <<<JS
         const blank = () => ({
@@ -56,7 +56,7 @@ function portalAnswer(string $body): array
             ...extra,
         });
 
-        const room = (slug, points) => ({
+        const room = (slug, points, extra = {}) => ({
             slug,
             name: slug,
             floorHeight: 0,
@@ -67,6 +67,7 @@ function portalAnswer(string $body): array
             isSky: false,
             isWater: false,
             points,
+            ...extra,
         });
 
         const level = {
@@ -90,7 +91,7 @@ function portalAnswer(string $body): array
                     corner(10, 0, { blocks: true, portalLink: 'hop' }),
                     corner(10, 10),
                     corner(0, 10),
-                ]),
+                ], { {$rooms} }),
                 // The room behind that wall. It names nothing and should carry
                 // on as though there were no portal at all.
                 room('behind', [
@@ -350,4 +351,48 @@ it('ignores a link that only names one wall', function (): void {
     // Half a portal would put the player where there is nothing to arrive in, so
     // the wall stays an ordinary wall.
     expect($answer['portals'])->toBe(0);
+});
+
+it('hugs a mouth that is not at floor level', function (): void {
+    $answer = portalAnswer(<<<'JS'
+        const pane = built.portals.find((surface) => surface.home === 'near');
+        const camera = new THREE.PerspectiveCamera(70, 1.8, 0.05, 200);
+
+        const hugsAt = (x, z, eye) => {
+            camera.position.set(x, eye, z);
+            camera.lookAt(new THREE.Vector3(10, eye, z));
+            camera.updateMatrixWorld(true);
+
+            pane.release();
+
+            const resting = pane.mesh.position.clone();
+
+            pane.hug(camera, 0.12);
+
+            return pane.mesh.position.distanceTo(resting) > 1e-6;
+        };
+
+        process.stdout.write(JSON.stringify({
+            // Standing on the floor of the room, so the eye is 4.8 + 1.62.
+            atEyeHeight: hugsAt(9.95, 5, 6.42),
+            // Down at the level of the floor below, well under the opening.
+            underneath: hugsAt(9.95, 5, 1.62),
+            // And above its top edge.
+            overTheTop: hugsAt(9.95, 5, 11),
+        }));
+        JS, 'floorHeight: 4.8, ceilingHeight: 8.6');
+
+    // How far up the eye is has to be measured from the middle of the opening,
+    // not from the floor of the level. Measured from zero, a mouth 4.8 to 8.6
+    // reads the eye at 6.42 as 6.42 against a limit of 2.02 and never hugs at
+    // all — so walking into a portal on an upper floor met the near plane
+    // cutting an un-hugged pane, which is the flash people reported.
+    //
+    // A room at ground level hid it by arithmetic coincidence: 0 to 3 puts the
+    // limit at 1.5 + 0.12 = 1.62, and EYE_HEIGHT is 1.62, so the old test
+    // passed by exactly nothing. Every mouth in the portal demo is such a room,
+    // which is why the demo is seamless and this was never found there.
+    expect($answer['atEyeHeight'])->toBeTrue()
+        ->and($answer['underneath'])->toBeFalse()
+        ->and($answer['overTheTop'])->toBeFalse();
 });

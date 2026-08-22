@@ -41,6 +41,11 @@ const PAPER = '#00ff66';
  */
 const BACKDROP_COLOURS = ['255,0,204', '0,255,102'];
 
+/** Whether a colour read back is the check behind everything, not a wall. */
+export function isBackdrop(css: string): boolean {
+    return BACKDROP_COLOURS.includes(css);
+}
+
 export type ProbeBackdrop = {
     texture: THREE.Texture;
     dispose: () => void;

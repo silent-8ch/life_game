@@ -28,6 +28,7 @@ import {
     armConsoleScan,
     publishScan,
     readNow,
+    readPane,
     scanRowsOf,
     wantsScan,
 } from '@/lib/engine/scan';
@@ -445,6 +446,26 @@ export default function LevelViewport({
                         renderer.domElement.height,
                     ),
                 ),
+                // `?panes` also reads back what each portal is holding, which
+                // is a different picture from the one on the screen whenever a
+                // pane is hugged.
+                ...(new URLSearchParams(window.location.search).has('panes')
+                    ? {
+                          panes: built.portals.flatMap((pane) =>
+                              [0.06, 0.5, 0.84].map((at) => ({
+                                  home: pane.home,
+                                  onto: pane.onto,
+                                  reading: readPane(
+                                      renderer,
+                                      pane,
+                                      legend,
+                                      0,
+                                      at,
+                                  ),
+                              })),
+                          ),
+                      }
+                    : {}),
             });
         };
 

@@ -222,7 +222,31 @@ function buildPortalPane(
         tint: new THREE.Color('#ffffff'),
         exitPoint: far.centre,
         exitNormal: far.normal,
-        facePoint: near.centre.clone(),
+        // The pane's own middle, not the mouth's point on the floor plan.
+        //
+        // `hug()` measures how far the eye is along the opening and how far up
+        // it, and refuses unless both are inside the pane. It measures from
+        // this point — so handing it `near.centre`, whose y is zero because it
+        // is a floor-plan position, made "how far up" mean "how high is the eye
+        // above the floor of the level" rather than "how far is the eye from
+        // the middle of this opening".
+        //
+        // A mouth at ground level survives that by coincidence and nothing
+        // else: a room 0 to 3 puts the limit at 1.5 + PANE_CLEARANCE = 1.62,
+        // and EYE_HEIGHT is 1.62, so the test passes by exactly zero. Every
+        // mouth in the portal demo is such a room, which is why the demo is
+        // seamless and why this was never found there.
+        //
+        // Level 8's stairs portal is 4.8 to 8.6. The eye stands at 6.42, which
+        // is 0.28 from the middle of the mouth and well inside it — but
+        // measured from zero it reads as 6.42 against a limit of 2.02, so the
+        // pane never hugged at all. Walking into that portal you meet the near
+        // plane cutting an un-hugged pane instead, which is the flash.
+        facePoint: new THREE.Vector3(
+            near.centre.x + alongX * shift,
+            middle,
+            near.centre.z + alongZ * shift,
+        ),
         faceNormal: near.normal.clone(),
         textureWidth: MIRROR_TEXTURE_WIDTH,
         textureHeight: MIRROR_TEXTURE_HEIGHT,
