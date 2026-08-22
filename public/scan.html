@@ -168,6 +168,18 @@
                     why: 'The same pair from the other side. Kept because the two mirrors are not the same wall and have caught different faults.',
                 },
                 {
+                    label: 'portals-corner-stare',
+                    level: 'portals',
+                    at: '0.6,0.6,45',
+                    why: 'Sixty centimetres out from the hub’s north-west corner, looking straight into it along the bisector. Every wall is nudged into its own room, which pulls a corner apart and leaves a notch of about a centimetre with nothing behind it — the whole reason buildWall draws each wall past its ends. WallOverhangTest pins the geometry; this is the only thing that looks at the picture, which is where the daylight would be.',
+                },
+                {
+                    label: 'portals-boundary-not-in-the-opening',
+                    level: 'portals',
+                    at: '7.9,4,-90',
+                    why: 'Standing in the hub’s doorway to the alcove, ten centimetres from the plane x = 8 — which is also the plane of the chamber’s loop mouth, four metres away and in another room. This is the exact fault hug() was written for: within PANE_CLEARANCE of a pane’s plane while nowhere near its opening. On distance to the plane alone the pane is slapped across the whole view, showing the far camera’s view of nothing. It is the one spot in these three levels where that case exists at all.',
+                },
+                {
                     label: 'house-spawn',
                     level: 'house',
                     at: null,
@@ -237,6 +249,25 @@
                 return `${GAME}?${search.toString()}`;
             };
 
+            /**
+             * Hands the frame's WebGL context back before the frame goes.
+             *
+             * A browser allows only so many live contexts — around sixteen —
+             * and tearing an iframe out of the page does not always give one
+             * back promptly. Run enough spots, or the same run enough times,
+             * and every level after the ninth or so quietly fails to build,
+             * which reads as "drew nothing to read" and looks like a bug in the
+             * engine rather than in the driver. Asking for the context to be
+             * lost is the one reliable way to give it back at once.
+             */
+            const release = (frame) => {
+                const canvas = frame.contentDocument?.querySelector('canvas');
+                const gl =
+                    canvas?.getContext('webgl2') ?? canvas?.getContext('webgl');
+
+                gl?.getExtension('WEBGL_lose_context')?.loseContext();
+            };
+
             /** Loads one spot and waits for the capture it publishes. */
             const capture = (spot) =>
                 new Promise((settle, fail) => {
@@ -256,6 +287,7 @@
                             const found = frame.contentWindow.scanCapture;
 
                             window.clearTimeout(giveUp);
+                            release(frame);
                             stage.replaceChildren();
 
                             if (found === undefined) {
