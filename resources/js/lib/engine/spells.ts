@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import { moveWithCollisions } from '@/lib/engine/collision';
+import type { Collider } from '@/lib/engine/collision';
 
 /**
  * Mark and Recall.
@@ -29,6 +31,17 @@ const MOTES = 220;
 const MOTE_LIFE = 1.6;
 
 /** The colour of the whole business. */
+/** How fast a fireball flies, in metres a second. */
+const FIRE_SPEED = 9;
+
+/** How long it lives before it burns out on its own. */
+const FIRE_LIFE = 2.2;
+
+/** How big the ball is drawn. */
+const FIRE_SIZE = 0.45;
+
+const FIRE_COLOUR = '#ffb457';
+
 const SPELL_COLOUR = '#8ef0ff';
 const SPELL_GLOW = '#ffffff';
 
@@ -43,7 +56,12 @@ export type Magic = {
     marked: () => Mark | null;
     /** Throws a handful of motes into the air at a spot. */
     burst: (at: Mark, many?: number) => void;
-    update: (seconds: number) => void;
+    /**
+     * Throws a fireball from a spot, along a yaw. It flies until it meets
+     * something or burns out, trailing motes, and bursts where it stops.
+     */
+    cast: (from: Mark, yaw: number) => void;
+    update: (seconds: number, colliders?: Collider[]) => void;
     dispose: () => void;
 };
 
@@ -192,6 +210,31 @@ function moteTexture(): THREE.Texture {
 export function createMagic(): Magic {
     const object = new THREE.Group();
 
+    // The fireball itself: one quad, always facing the camera, lit by nothing.
+    const fireTexture = moteTexture();
+    const fireMaterial = new THREE.SpriteMaterial({
+        map: fireTexture,
+        color: new THREE.Color(FIRE_COLOUR),
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+        fog: false,
+    });
+    const fireball = new THREE.Sprite(fireMaterial);
+    fireball.scale.setScalar(FIRE_SIZE);
+    fireball.visible = false;
+    object.add(fireball);
+
+    /** Where the ball is and where it is going, or null when nothing is cast. */
+    let flying: {
+        x: number;
+        y: number;
+        z: number;
+        dx: number;
+        dz: number;
+        life: number;
+    } | null = null;
+
     // Nothing here is lit, and none of it should hide anything behind it.
     const runes = runeTexture();
     const circleMaterial = new THREE.MeshBasicMaterial({
@@ -316,14 +359,71 @@ export function createMagic(): Magic {
 
         marked: () => at,
 
+        cast: (from, yaw) => {
+            // Forward is (-sin yaw, -cos yaw), the same convention the player
+            // walks by, so a fireball goes where the caster is looking.
+            flying = {
+                x: from.x,
+                y: from.y,
+                z: from.z,
+                dx: -Math.sin(yaw),
+                dz: -Math.cos(yaw),
+                life: FIRE_LIFE,
+            };
+
+            fireball.position.set(from.x, from.y, from.z);
+            fireball.visible = true;
+        },
+
         burst: (spot, many = 70) => {
             for (let index = 0; index < many; index++) {
                 throwOne(spot, 0.5, 2.2);
             }
         },
 
-        update: (seconds) => {
+        update: (seconds, colliders = []) => {
             age += seconds;
+
+            if (flying !== null) {
+                const step = FIRE_SPEED * seconds;
+                const moved = moveWithCollisions(
+                    flying,
+                    flying.dx * step,
+                    flying.dz * step,
+                    colliders,
+                    FIRE_SIZE / 2,
+                );
+
+                // Short of where it was aimed means it met something. The
+                // solver slides along a wall, so distance covered is the test
+                // rather than whether it stopped dead.
+                const covered = Math.hypot(
+                    moved.x - flying.x,
+                    moved.z - flying.z,
+                );
+
+                flying.x = moved.x;
+                flying.z = moved.z;
+                flying.life -= seconds;
+
+                fireball.position.set(flying.x, flying.y, flying.z);
+
+                // A trail, so it reads as thrown rather than as sliding.
+                throwOne({ x: flying.x, y: flying.y, z: flying.z }, 0.12, 0.2);
+
+                if (covered < step * 0.6 || flying.life <= 0) {
+                    for (let index = 0; index < 60; index++) {
+                        throwOne(
+                            { x: flying.x, y: flying.y, z: flying.z },
+                            0.45,
+                            1.8,
+                        );
+                    }
+
+                    fireball.visible = false;
+                    flying = null;
+                }
+            }
 
             if (circle.visible) {
                 circle.rotation.z += (Math.PI * 2 * seconds) / CIRCLE_TURN;
@@ -370,6 +470,8 @@ export function createMagic(): Magic {
         },
 
         dispose: () => {
+            fireMaterial.dispose();
+            fireTexture.dispose();
             circleGeometry.dispose();
             circleMaterial.dispose();
             moteGeometry.dispose();

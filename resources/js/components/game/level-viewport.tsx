@@ -384,7 +384,7 @@ export default function LevelViewport({
             sky?.follow(player.x, player.eye, player.z);
 
             textures.tick(seconds);
-            magic?.update(moving);
+            magic?.update(moving, built.colliders);
         };
 
         /** One frame: move everything on, draw every pane, then draw the view. */
@@ -487,6 +487,23 @@ export default function LevelViewport({
          */
         const takeInHand = (item: HeldItem | null): void => {
             hands.hold(item !== null && hands.holding() === item ? null : item);
+        };
+
+        /**
+         * A fireball, thrown from the eye along the way the player is looking.
+         *
+         * Only the wizard, and only with the wand in hand: the spell is the
+         * staff's, not the person's, and nobody else gets so much as the keys.
+         */
+        const castFireball = (): void => {
+            if (magic === null || hands.holding() !== 'wand') {
+                return;
+            }
+
+            magic.cast(
+                { x: player.x, y: player.eye - 0.15, z: player.z },
+                player.yaw,
+            );
         };
 
         const markHere = (): void => {
@@ -618,6 +635,7 @@ export default function LevelViewport({
             recall: magic === null ? null : recall,
             takeInHand,
             takeSnapshot,
+            fire: castFireball,
             look: (turned) => turnPlayer(player, turned),
             held: () => held.current,
             onLockChange: (locked) => callbacks.current.onLockChange(locked),

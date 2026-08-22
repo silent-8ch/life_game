@@ -79,6 +79,7 @@ function gameInput(string $body): array
             recall: () => done.push('recall'),
             takeInHand: (item) => done.push(`hold:\${item ?? 'nothing'}`),
             takeSnapshot: () => done.push('snapshot'),
+            fire: () => done.push('fire'),
             look: (turned) => turns.push(turned),
             held: () => holding,
             onLockChange: (locked) => done.push(`lock:\${locked}`),

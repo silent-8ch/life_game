@@ -30,6 +30,8 @@ export type InputActions = {
     recall: (() => void) | null;
     takeInHand: (item: HeldItem | null) => void;
     takeSnapshot: () => void;
+    /** A click while already playing: casting, if the player can cast. */
+    fire: () => void;
     /** A turn of the head, applied at once rather than at the next frame. */
     look: (turned: { yaw: number; pitch: number }) => void;
     /** Whether something on top of the level is holding the keys. */
@@ -181,6 +183,10 @@ export function createInput(
 
     const handleClick = (): void => {
         if (isLocked()) {
+            // Already playing, so a click is a click in the game rather than a
+            // click to start it.
+            actions.fire();
+
             return;
         }
 

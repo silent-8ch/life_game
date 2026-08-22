@@ -1,8 +1,10 @@
 import * as THREE from 'three';
 import { moveWithCollisions } from '@/lib/engine/collision';
 import type { Collider, Point } from '@/lib/engine/collision';
-import { PLAYER_RADIUS } from '@/lib/engine/constants';
-import { boundsOf, floorAt, sectorAt } from '@/lib/engine/sectors';
+import { MAX_STEP, MIN_HEADROOM, PLAYER_RADIUS } from '@/lib/engine/constants';
+import { buildNavGraph, somewhereIn } from '@/lib/engine/navigation';
+import type { CanPass, NavGraph, Point as Spot } from '@/lib/engine/navigation';
+import { floorAt, sectorAt } from '@/lib/engine/sectors';
 import { createSpriteActor } from '@/lib/engine/sprite-actor';
 import type { SpriteActor } from '@/lib/engine/sprite-actor';
 import type { Level, LevelThing, Sector } from '@/types';
@@ -36,6 +38,16 @@ type Wanderer = {
     yaw: number;
     walked: number;
     target: Point;
+    /**
+     * The doorways still to walk through to reach where they are going, in
+     * order, and the spot in the last room.
+     *
+     * A person crossing a house aims at the doorway, not at the far corner of
+     * the room beyond it. Aiming straight at the destination is what left them
+     * scraping along walls: a doorway is a metre wide and a straight line from
+     * one room to a point in another almost never passes through one.
+     */
+    route: Spot[];
     waited: number;
     stillFor: number;
 };
@@ -59,27 +71,63 @@ function floorUnder(sectors: Sector[], x: number, z: number): number | null {
     return standingOn === null ? null : floorAt(standingOn, x, z);
 }
 
-/** Somewhere inside the level's sectors, chosen at random. */
-function aimSomewhere(sectors: Sector[]): Point {
-    const bounds = boundsOf(sectors);
+/**
+ * Somewhere worth walking to, and the way there.
+ *
+ * A room picked from the ones actually reachable from where the person is
+ * standing, a spot inside it, and the doorways between here and there. The old
+ * version picked a point anywhere in the level's bounding box and checked only
+ * that some room was under it — so half the time it was somewhere unreachable,
+ * and the walk was a straight line at it regardless.
+ */
+function aimSomewhere(
+    graph: NavGraph,
+    sectors: Sector[],
+    canPass: CanPass,
+    from: Sector | null,
+): Spot[] {
+    if (from === null) {
+        return [];
+    }
+
+    const within = graph.reachableFrom(from.slug, canPass);
 
     for (let attempt = 0; attempt < AIM_ATTEMPTS; attempt++) {
-        const x = bounds.minX + Math.random() * (bounds.maxX - bounds.minX);
-        const z = bounds.minZ + Math.random() * (bounds.maxZ - bounds.minZ);
+        const slug = within[Math.floor(Math.random() * within.length)];
+        const room = sectors.find((sector) => sector.slug === slug);
 
-        if (sectorAt(sectors, x, z) !== null) {
-            return { x, z };
+        if (room === undefined) {
+            continue;
+        }
+
+        const spot = somewhereIn(room, sectors);
+        const route = graph.routeBetween(from.slug, slug, canPass);
+
+        if (spot !== null && route !== null) {
+            return [...route.map((way) => way.at), spot];
         }
     }
 
-    return {
-        x: (bounds.minX + bounds.maxX) / 2,
-        z: (bounds.minZ + bounds.maxZ) / 2,
-    };
+    return [];
 }
 
 export function createActors(level: Level): Actors {
     const sectors = level.sectors;
+
+    // Which rooms lead to which, worked out once. The same question
+    // build/boundaries.ts asks to decide where colliders go.
+    const graph = buildNavGraph(level);
+
+    /**
+     * What a person on foot can get through.
+     *
+     * The limits are handed to the graph rather than built into it, because
+     * `MAX_STEP` is about to stop being a build-time constant and become a
+     * runtime decision — and a graph with it baked in would be wrong the day
+     * that lands.
+     */
+    const canPass: CanPass = (way) =>
+        way.climb <= MAX_STEP && way.headroom >= MIN_HEADROOM;
 
     const wanderers: Wanderer[] = level.things
         .filter((thing) => thing.kind === 'actor' && thing.sprite !== null)
@@ -106,6 +154,7 @@ export function createActors(level: Level): Actors {
                 yaw: -THREE.MathUtils.degToRad(thing.angle),
                 walked: 0,
                 target: { x: thing.x, z: thing.z },
+                route: [],
                 waited: PATIENCE_SECONDS,
                 stillFor: 0,
             };
@@ -129,15 +178,36 @@ export function createActors(level: Level): Actors {
                     wanderer.target.z - wanderer.z,
                 );
 
-                if (
-                    roaming &&
-                    (reach < ARRIVED ||
-                        wanderer.waited > PATIENCE_SECONDS ||
-                        wanderer.stillFor > STUCK_SECONDS)
-                ) {
-                    wanderer.target = aimSomewhere(sectors);
-                    wanderer.waited = 0;
-                    wanderer.stillFor = 0;
+                const givenUp =
+                    wanderer.waited > PATIENCE_SECONDS ||
+                    wanderer.stillFor > STUCK_SECONDS;
+
+                if (roaming && (reach < ARRIVED || givenUp)) {
+                    // Arriving at a doorway is not arriving: take the next one
+                    // and keep going. Only a route that has run out, or one
+                    // that is taking too long, asks for somewhere new.
+                    const next =
+                        reach < ARRIVED && !givenUp
+                            ? wanderer.route.shift()
+                            : undefined;
+
+                    if (next !== undefined) {
+                        wanderer.target = next;
+                        wanderer.stillFor = 0;
+                    } else {
+                        wanderer.route = aimSomewhere(
+                            graph,
+                            sectors,
+                            canPass,
+                            sectorAt(sectors, wanderer.x, wanderer.z),
+                        );
+                        wanderer.target = wanderer.route.shift() ?? {
+                            x: wanderer.x,
+                            z: wanderer.z,
+                        };
+                        wanderer.waited = 0;
+                        wanderer.stillFor = 0;
+                    }
                 }
 
                 if (roaming && reach > ARRIVED) {
