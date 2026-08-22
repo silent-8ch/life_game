@@ -84,18 +84,36 @@ it cannot be judged from still images. **That page is where Paul accepts the spr
 
 ## Naming, because the checker and the manifest both depend on it
 
-Files go in **`public/sprites/people/`** — a new folder. The old `realistic` sheets were a
-different format and were reverted; nothing should land beside them.
+Files go in **a versioned subfolder under `public/sprites/people/`**. The old `realistic`
+sheets were a different format and were reverted; nothing should land beside them.
 
 ```
-{person}-{degrees}-{pose}.png      paul-000-stand.png
-                                   paul-045-stride-a.png
-                                   paul-090-stride-b.png
-{person}-head-{degrees}-{mood}.png paul-head-135-neutral.png
+public/sprites/people/v1/paul-000-stand.png
+                         paul-045-stride-a.png
+                         paul-090-stride-b.png
+                         paul-head-135-neutral.png
 ```
 
 **Degrees zero-padded to three** so they sort. Directions drawn: `000 045 090 135 180`. Poses:
 `stand stride-a stride-b`. Moods: `neutral happy sad angry surprised`.
+
+### Versions, and why they exist
+
+**A new attempt goes in a new folder — `v2`, `v3` — and never overwrites the last.** This is
+not tidiness. The previous set was *reverted in git* (`147a3c5`) because it was worse than what
+it replaced, and a revert is a bad way to say no to art: it rewrites history to undo something
+that was never wrong to have tried. **With versions, a batch that misses simply does not get
+promoted, and it stays on disk to compare against.**
+
+**The checker shows versions side by side**, which is the point — "is v2 better than v1" is a
+question you can only answer with both walking at once.
+
+**Which version the game draws is a config setting**, named explicitly. Not the highest number:
+a half-delivered `v3` would otherwise go live the moment its first file landed. **So delivering
+a version changes nothing until somebody names it**, and reverting is editing one line rather
+than moving files.
+
+**Start at `v1`.** There is no live version yet — the reverted sheets were the old format.
 
 ---
 
