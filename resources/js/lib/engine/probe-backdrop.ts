@@ -293,3 +293,47 @@ export function scanRow(
 
     return runs;
 }
+
+/** A spot to drop the player on, read straight off a snapshot. */
+export type ForcedSpot = {
+    x: number;
+    z: number;
+    /** Degrees, exactly as a snapshot prints them. */
+    yaw: number;
+    pitch: number;
+};
+
+/**
+ * Where `?at=` asks the player to start, if it asks at all.
+ *
+ * A snapshot records `x`, `z`, `yaw` and `pitch`, and until now the only way to
+ * stand on one again was to write its position into the level's spawn. That
+ * loses two things. The spawn's angle is the negative of the player's yaw, so
+ * feeding a snapshot's yaw in unchanged aims the camera somewhere else
+ * entirely and quietly — the view looks plausible, it is simply not the view
+ * that was reported. And the spawn carries no pitch at all, so a fault only
+ * visible looking down could not be reproduced from a snapshot at all.
+ *
+ * `?at=x,z,yaw,pitch` takes the four numbers in the order and the units a
+ * snapshot prints them, so a reported spot can be pasted back without arithmetic.
+ */
+export function spotFromSearch(search: string): ForcedSpot | null {
+    const asked = new URLSearchParams(search).get('at');
+
+    if (asked === null) {
+        return null;
+    }
+
+    const numbers = asked.split(',').map((part) => Number(part.trim()));
+
+    if (numbers.length < 2 || numbers.some((value) => !Number.isFinite(value))) {
+        return null;
+    }
+
+    return {
+        x: numbers[0],
+        z: numbers[1],
+        yaw: numbers[2] ?? 0,
+        pitch: numbers[3] ?? 0,
+    };
+}

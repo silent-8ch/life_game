@@ -34,6 +34,7 @@ import {
     createProbeBackdrop,
     paintWalls,
     scanRow,
+    spotFromSearch,
     wantsProbeBackdrop,
 } from '@/lib/engine/probe-backdrop';
 import { createPortals, crossPortal } from '@/lib/engine/portals';
@@ -394,8 +395,25 @@ export default function LevelViewport({
                 window as unknown as {
                     scanRow?: (row?: number) => unknown;
                 }
-            ).scanRow = (row?: number) =>
-                scanRow(
+            ).scanRow = async (row?: number) => {
+                // The drawing buffer is only guaranteed to hold this frame's
+                // picture immediately after it was drawn. Read it at any other
+                // moment and it can come back as whatever was last composited,
+                // which reads as one flat colour across the whole row and looks
+                // exactly like a wall filling the view. Wait for a fresh frame.
+                // Raced against a timer, because the level stops drawing while
+                // it is paused and waiting on a frame that will never come
+                // would hang whoever asked rather than telling them.
+                await Promise.race([
+                    new Promise((settle) =>
+                        requestAnimationFrame(() =>
+                            requestAnimationFrame(() => settle(null)),
+                        ),
+                    ),
+                    new Promise((settle) => window.setTimeout(settle, 250)),
+                ]);
+
+                return scanRow(
                     renderer.domElement,
                     legend,
                     row ?? Math.floor(renderer.domElement.height / 2),
@@ -410,6 +428,7 @@ export default function LevelViewport({
                                 ? 'unpainted (floor, ceiling, sprite or pane)'
                                 : `${run.wall.sector} #${run.wall.index} -> ${run.wall.beyond ?? 'outside'} (${run.wall.from.x},${run.wall.from.z})-(${run.wall.to.x},${run.wall.to.z})`,
                     }));
+            };
         }
 
         // How far the camera has to be able to see. FAR_PLANE is what an
@@ -507,18 +526,34 @@ export default function LevelViewport({
         renderer.domElement.style.display = 'block';
         container.appendChild(renderer.domElement);
 
+        // A spot named in the address wins over the level's own spawn, so a
+        // reported snapshot can be stood on again exactly.
+        const forced = spotFromSearch(window.location.search);
+
         const spawnSector = sectorAt(
             level.sectors,
             level.spawn.x,
             level.spawn.z,
         );
 
+        const standingOn =
+            forced === null
+                ? spawnSector
+                : sectorAt(level.sectors, forced.x, forced.z);
+
         const player = {
-            x: level.spawn.x,
-            z: level.spawn.z,
-            yaw: -THREE.MathUtils.degToRad(level.spawn.angle),
-            pitch: 0,
-            eye: (spawnSector?.floorHeight ?? 0) + EYE_HEIGHT,
+            x: forced?.x ?? level.spawn.x,
+            z: forced?.z ?? level.spawn.z,
+            // The level's angle runs the other way to the player's yaw, which
+            // is exactly the trap `?at=` exists to avoid: a snapshot's yaw goes
+            // in as it was written.
+            yaw:
+                forced === null
+                    ? -THREE.MathUtils.degToRad(level.spawn.angle)
+                    : THREE.MathUtils.degToRad(forced.yaw),
+            pitch:
+                forced === null ? 0 : THREE.MathUtils.degToRad(forced.pitch),
+            eye: (standingOn?.floorHeight ?? 0) + EYE_HEIGHT,
         };
 
         // The player's own hands, hung off the camera. The camera goes into the
