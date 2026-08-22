@@ -1,7 +1,10 @@
 <?php
 
+use App\Enums\ThingRender;
+use App\Enums\ThingUvMode;
 use App\Models\Level;
 use App\Models\LevelSector;
+use App\Models\LevelThing;
 use Database\Seeders\ImportedLevelsSeeder;
 use Database\Seeders\LevelEightSeeder;
 use Database\Seeders\LifeSeeder;
@@ -191,7 +194,7 @@ it('keeps every thing standing inside a room', function (): void {
 
 it('names only textures that are in the folder', function (): void {
     foreach (playableLevels() as $level) {
-        $named = $level->sectors->flatMap(fn (LevelSector $sector): array => [
+        $surfaces = $level->sectors->flatMap(fn (LevelSector $sector): array => [
             $sector->floor_texture,
             $sector->ceiling_texture,
             $sector->wall_texture,
@@ -199,14 +202,31 @@ it('names only textures that are in the folder', function (): void {
             $level->sectors->flatMap(
                 fn (LevelSector $sector): iterable => $sector->edges->pluck('wall_texture')
             )
-        )->merge($level->load('things')->things->pluck('texture'))
-            ->filter()
-            ->unique();
+        );
 
-        $named->each(function (string $texture) use ($level): void {
-            expect(public_path("sprites/textures/{$texture}.png"))
-                ->toBeFile("{$level->slug}: no texture called {$texture}.");
-        });
+        // Which folder a thing's picture comes from is not a property of the
+        // thing but of how it is drawn, and `build/things.ts` decides it with
+        // exactly this test: a box that tiles is wearing a surface, and
+        // anything else is wearing a prop, which carries a silhouette. Asking
+        // one folder for both was right until the first door, which is the
+        // first thing in any level to fit its picture rather than tile it.
+        $things = $level->load('things')->things
+            ->groupBy(fn (LevelThing $thing): string => $thing->render === ThingRender::Box
+                && $thing->uv_mode === ThingUvMode::Tile ? 'textures' : 'props');
+
+        $folders = [
+            'textures' => $surfaces->merge($things->get('textures', collect())->pluck('texture')),
+            'props' => $things->get('props', collect())->pluck('texture'),
+        ];
+
+        foreach ($folders as $folder => $named) {
+            $named->filter()->unique()->each(
+                function (string $texture) use ($level, $folder): void {
+                    expect(public_path("sprites/{$folder}/{$texture}.png"))
+                        ->toBeFile("{$level->slug}: no {$folder} called {$texture}.");
+                }
+            );
+        }
     }
 });
 

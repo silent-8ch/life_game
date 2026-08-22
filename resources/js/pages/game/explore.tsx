@@ -1,5 +1,5 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { index } from '@/actions/App/Http/Controllers/GameController';
 import { store } from '@/actions/App/Http/Controllers/InteractionController';
 import { store as reportFault } from '@/actions/App/Http/Controllers/SupportTicketController';
@@ -7,6 +7,7 @@ import InventoryTray from '@/components/game/inventory-tray';
 import LevelViewport from '@/components/game/level-viewport';
 import VerbMenu from '@/components/game/verb-menu';
 import type { VerbChoice } from '@/components/game/verb-menu';
+import type { DoorSet } from '@/lib/engine/build/things';
 import type { ExplorePageProps, LevelThing } from '@/types';
 
 export default function Explore({
@@ -29,6 +30,9 @@ export default function Explore({
     }, []);
 
     const close = useCallback(() => setAsking(null), []);
+
+    /** The level's doors, once it is built, so Use can work one at once. */
+    const doors = useRef<DoorSet | null>(null);
 
     /**
      * A verb, sent off to be settled. Only the inventory and the message come
@@ -116,6 +120,7 @@ export default function Explore({
                     <LevelViewport
                         level={level}
                         flags={flags}
+                        doorsRef={doors}
                         onFocus={setFocused}
                         onExamine={examine}
                         onLockChange={lockChanged}

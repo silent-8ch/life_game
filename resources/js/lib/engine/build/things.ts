@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { HIGHLIGHT_COLOR } from '@/lib/engine/build/constants';
 import type { BuildContext } from '@/lib/engine/build/context';
+import type { BoxCollider } from '@/lib/engine/collision';
 import { tileUvs } from '@/lib/engine/textures';
 import type { LevelThing } from '@/types';
 
@@ -48,6 +49,57 @@ export type PropSet = {
      */
     setFlags: (flags: ReadonlySet<string>) => void;
     highlight: (slug: string | null) => void;
+    /** The doors, and how to work them. */
+    doors: DoorSet;
+};
+
+export type DoorSet = {
+    /** Whether there is a door by this name at all. */
+    has: (slug: string) => boolean;
+    /** Whether it is open — its state, not where the animation has got to. */
+    isOpen: (slug: string) => boolean;
+    /**
+     * Opens or shuts one, and hands back what it did.
+     *
+     * The collider goes in or out of the set **on this call**, before the door
+     * has visibly moved at all. Tying it to the animated angle instead means
+     * the player can be caught inside a closing door, which is a far worse
+     * fault than a doorway that is walkable a few frames early. `plan-doors.md`
+     * calls this out and it is the one rule here that is not negotiable.
+     */
+    set: (slug: string, open: boolean) => boolean;
+    /** Every door standing open, for anything that wants to write it down. */
+    opened: () => string[];
+};
+
+/**
+ * How a door is hinged, since nothing in the data says.
+ *
+ * `level_things` carries `swing`, `open_angle`, `open_seconds`, `is_open` and
+ * `opens_flag`, and no hinge column — so this is a decision rather than a
+ * reading, and it is written here rather than argued twice.
+ *
+ * **A door turns about its own left edge, seen from its front.** The front is
+ * the face its `angle` points, which is already how every other thing in the
+ * level is placed and how the prop art is drawn — doors and windows were drawn
+ * as front elevations for exactly this.
+ *
+ * Fixing it to one named edge is what makes the two controls an author does
+ * have add up to all four arrangements: turn the door round with `angle` to put
+ * the hinge on the other side, flip the sign of `openAngle` to swing it the
+ * other way. A hinge column would say the same thing twice and let the two
+ * disagree.
+ */
+type Door = {
+    thing: LevelThing;
+    /** The part that moves. The holder stays put; this turns inside it. */
+    leaf: THREE.Group;
+    /** Null for a door with `isSolid` off, which is a curtain. */
+    collider: BoxCollider | null;
+    /** Where it is going: its state. */
+    open: boolean;
+    /** Where it has got to, 0 shut and 1 open. */
+    at: number;
 };
 
 /** Which picture a thing is showing: its own, or the one its flag turns on. */
@@ -103,6 +155,9 @@ export function buildThings(ctx: BuildContext): PropSet {
     /** Everything whose picture depends on a flag. */
     const flagged: { thing: LevelThing; material: THREE.MeshBasicMaterial }[] =
         [];
+
+    /** Everything that opens, by slug. */
+    const doors = new Map<string, Door>();
 
     let flags: ReadonlySet<string> = new Set<string>();
 
@@ -163,6 +218,22 @@ export function buildThings(ctx: BuildContext): PropSet {
         );
         holder.rotation.y = -THREE.MathUtils.degToRad(thing.angle);
 
+        // A door turns about its edge rather than its middle, or it reads as a
+        // revolving door. The holder stays where the thing is authored and the
+        // leaf hangs inside it, moved out to the hinge and its picture moved
+        // back in by the same half width — so the door is exactly where it was
+        // while it is shut, and turns about the right line when it opens.
+        const leaf = new THREE.Group();
+
+        if (thing.isDoor) {
+            leaf.position.x = -thing.width / 2;
+            holder.add(leaf);
+        }
+
+        // Everything a thing is drawn with goes on the part that moves, which
+        // for anything but a door is the thing itself.
+        const parent = thing.isDoor ? leaf : holder;
+
         const { map, cut } = pictureFor(thing);
 
         if (map === null) {
@@ -183,7 +254,8 @@ export function buildThings(ctx: BuildContext): PropSet {
             );
             mesh.userData.thingSlug = thing.slug;
 
-            holder.add(mesh, new THREE.LineSegments(edges, lineMaterial));
+            mesh.position.x = thing.isDoor ? thing.width / 2 : 0;
+            parent.add(mesh, new THREE.LineSegments(edges, lineMaterial));
             scene.targets.push(mesh);
         } else if (thing.render === 'box') {
             const box = materials.track(
@@ -204,8 +276,9 @@ export function buildThings(ctx: BuildContext): PropSet {
 
             const mesh = new THREE.Mesh(box, material);
             mesh.userData.thingSlug = thing.slug;
+            mesh.position.x = thing.isDoor ? thing.width / 2 : 0;
 
-            holder.add(mesh);
+            parent.add(mesh);
             scene.targets.push(mesh);
         } else {
             const material = cutout(map);
@@ -224,8 +297,9 @@ export function buildThings(ctx: BuildContext): PropSet {
 
                 mesh.rotation.y = turn;
                 mesh.userData.thingSlug = thing.slug;
+                mesh.position.x = thing.isDoor ? thing.width / 2 : 0;
 
-                holder.add(mesh);
+                parent.add(mesh);
                 scene.targets.push(mesh);
             }
 
@@ -254,17 +328,100 @@ export function buildThings(ctx: BuildContext): PropSet {
 
         scene.group.add(holder);
 
-        if (thing.isSolid) {
-            scene.colliders.push({
-                kind: 'box',
-                x: thing.x,
-                z: thing.z,
-                halfWidth: thing.width / 2,
-                halfDepth: thing.depth / 2,
-                angle: THREE.MathUtils.degToRad(thing.angle),
+        const collider: BoxCollider | null = thing.isSolid
+            ? {
+                  kind: 'box',
+                  x: thing.x,
+                  z: thing.z,
+                  halfWidth: thing.width / 2,
+                  halfDepth: thing.depth / 2,
+                  angle: THREE.MathUtils.degToRad(thing.angle),
+                  slug: thing.slug,
+              }
+            : null;
+
+        if (collider !== null) {
+            scene.colliders.push(collider);
+        }
+
+        if (thing.isDoor) {
+            doors.set(thing.slug, {
+                thing,
+                leaf,
+                collider,
+                // Whether it *starts* open, which is the only thing the data
+                // has an opinion about. Where a door stands while somebody is
+                // playing belongs to the engine, for the reason `types/game.ts`
+                // gives: you walk through a door in the same frame it opens,
+                // and nothing that involves the server can keep up with that.
+                open: thing.isOpen,
+                at: thing.isOpen ? 1 : 0,
             });
         }
     }
+
+    /**
+     * Puts a door where its state says it should be, this frame.
+     *
+     * A swing turns the leaf; a slider moves it along its own width. `fold` is
+     * left swinging on purpose: a bifold is two half-width leaves hinged on
+     * each other wanting half the picture each, nothing in any level is one
+     * yet, and a door that swings when it should fold is a smaller wrong than a
+     * door that does not move.
+     */
+    const placeDoor = (door: Door): void => {
+        if (door.thing.swing === 'slide') {
+            // `openAngle` for a slider is the fraction of its own width it
+            // moves, times ninety — so the number means the same kind of thing
+            // whichever way a door gets out of the way.
+            door.leaf.position.x =
+                -door.thing.width / 2 +
+                door.at * (door.thing.openAngle / 90) * door.thing.width;
+
+            return;
+        }
+
+        door.leaf.rotation.y =
+            door.at * THREE.MathUtils.degToRad(door.thing.openAngle);
+    };
+
+    for (const door of doors.values()) {
+        placeDoor(door);
+
+        if (door.collider !== null) {
+            door.collider.enabled = !door.open;
+        }
+    }
+
+    const doorSet: DoorSet = {
+        has: (slug) => doors.has(slug),
+
+        isOpen: (slug) => doors.get(slug)?.open ?? false,
+
+        set: (slug, open) => {
+            const door = doors.get(slug);
+
+            if (door === undefined || door.open === open) {
+                return false;
+            }
+
+            door.open = open;
+
+            // On this call, not when the animation catches up. A collider tied
+            // to the angle closes on somebody standing in the doorway and
+            // leaves them inside the door.
+            if (door.collider !== null) {
+                door.collider.enabled = !open;
+            }
+
+            return true;
+        },
+
+        opened: () =>
+            [...doors.values()]
+                .filter((door) => door.open)
+                .map((door) => door.thing.slug),
+    };
 
     const faceViewer = (x: number, z: number): void => {
         for (const holder of billboards) {
@@ -278,6 +435,25 @@ export function buildThings(ctx: BuildContext): PropSet {
     };
 
     const update = (seconds: number): void => {
+        for (const door of doors.values()) {
+            const want = door.open ? 1 : 0;
+
+            if (door.at === want) {
+                continue;
+            }
+
+            // `openSeconds` is the whole travel whichever way it is going, so a
+            // door caught half open and told to shut takes half of it.
+            const step = seconds / Math.max(door.thing.openSeconds, 0.01);
+
+            door.at =
+                want > door.at
+                    ? Math.min(want, door.at + step)
+                    : Math.max(want, door.at - step);
+
+            placeDoor(door);
+        }
+
         for (const running of animated) {
             const each = 1 / Math.max(running.thing.animationFps, 0.01);
 
@@ -329,5 +505,5 @@ export function buildThings(ctx: BuildContext): PropSet {
         }
     };
 
-    return { faceViewer, update, setFlags, highlight };
+    return { faceViewer, update, setFlags, highlight, doors: doorSet };
 }

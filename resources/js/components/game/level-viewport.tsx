@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import type { ReactNode } from 'react';
+import type { ReactNode, RefObject } from 'react';
 import * as THREE from 'three';
 import { store } from '@/actions/App/Http/Controllers/DebugSnapshotController';
 import { createActors } from '@/lib/engine/actors';
-import type { PropSet } from '@/lib/engine/build/things';
+import type { DoorSet, PropSet } from '@/lib/engine/build/things';
 import { buildLevel } from '@/lib/engine/build-level';
 import { captureShots } from '@/lib/engine/capture';
 import { MAX_FRAME_SECONDS, REACH } from '@/lib/engine/constants';
@@ -73,6 +73,17 @@ type LevelViewportProps = {
     /** Whatever the crosshair is resting on, or null. */
     onFocus: (thing: LevelThing | null) => void;
     onExamine: (thing: LevelThing) => void;
+    /**
+     * Filled in with the doors once the level is built, so that whatever runs
+     * the verb menu can open one the instant it is asked for.
+     *
+     * A door is the one interaction that cannot wait for the server. You walk
+     * through it in the same frame it opens, and the round trip returns an
+     * inventory and a message by design — so the page reaches *in* here rather
+     * than the level reaching out, which is the only direction that is fast
+     * enough.
+     */
+    doorsRef?: RefObject<DoorSet | null>;
     onLockChange: (locked: boolean) => void;
     /** Anything the level wants to tell the player, such as a snapshot saving. */
     onMessage?: (text: string) => void;
@@ -113,6 +124,7 @@ export default function LevelViewport({
     flags = {},
     onFocus,
     onExamine,
+    doorsRef,
     onLockChange,
     onMessage,
     reportTo,
@@ -226,7 +238,33 @@ export default function LevelViewport({
 
         flagsSet.current = set;
         propSet.current?.setFlags(set);
-    }, [flags]);
+
+        // And the doors that remember, put back to what the save says.
+        //
+        // This is the whole of the rollback a refused interaction needs. `Use`
+        // opens a door here and now, because waiting for a round trip makes
+        // every door feel broken; the server then answers, and a door the
+        // server did not open — locked, no key — is one whose flag did not come
+        // back, so it shuts again on its own. Nothing bespoke reconciles
+        // anything.
+        //
+        // A door with no `opensFlag` is not in this: it has no answer on the
+        // server to disagree with, and where it stands is the engine's alone.
+        for (const thing of level.things) {
+            if (thing.isDoor && thing.opensFlag !== null) {
+                // The flag only ever *opens*, which is what it is called and
+                // what it means: a door remembering it was opened, so it is
+                // still open next time. So a door whose flag has not come back
+                // falls to how it was authored rather than to shut — otherwise
+                // a door somebody left standing open would slam the moment the
+                // first interaction of the game answered.
+                propSet.current?.doors.set(
+                    thing.slug,
+                    set.has(thing.opensFlag) || thing.isOpen,
+                );
+            }
+        }
+    }, [flags, level.things]);
 
     // Held in a ref so that re-rendering the frame never restarts the level.
     const callbacks = useRef({ onFocus, onExamine, onLockChange, onMessage });
@@ -290,6 +328,11 @@ export default function LevelViewport({
         // Whatever the save already says, before the first frame is drawn.
         built.props.setFlags(flagsSet.current);
         propSet.current = built.props;
+
+        if (doorsRef !== undefined) {
+            doorsRef.current = built.props.doors;
+        }
+
         scene.add(built.group);
 
         const legend = probe === null ? [] : paintWalls(built.group);
@@ -803,6 +846,11 @@ export default function LevelViewport({
             cancelAnimationFrame(frame);
             observer.disconnect();
             propSet.current = null;
+
+            if (doorsRef !== undefined) {
+                doorsRef.current = null;
+            }
+
             input.dispose();
             actors.dispose();
             playerSprite.dispose();
@@ -819,8 +867,11 @@ export default function LevelViewport({
         // here never restarts the level. `reportTo` is a string built from the
         // game's slug, so it compares equal on every render and does not
         // either — it is listed because the capture closes over it, not
-        // because it is expected to change.
-    }, [level, touch, reportTo]);
+        // because it is expected to change. `doorsRef` is a ref, so its
+        // identity is stable for the life of whoever made it and listing it is
+        // the lint rule being satisfied rather than a dependency being
+        // declared.
+    }, [level, touch, reportTo, doorsRef]);
 
     return (
         <div

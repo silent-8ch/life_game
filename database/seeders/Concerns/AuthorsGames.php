@@ -4,8 +4,11 @@ namespace Database\Seeders\Concerns;
 
 use App\Enums\ActorBehaviour;
 use App\Enums\ConditionType;
+use App\Enums\DoorSwing;
 use App\Enums\EffectType;
 use App\Enums\ThingKind;
+use App\Enums\ThingRender;
+use App\Enums\ThingUvMode;
 use App\Enums\Verb;
 use App\Models\Game;
 use App\Models\Hotspot;
@@ -359,6 +362,64 @@ trait AuthorsGames
             'is_solid' => $solid,
             'sort_order' => $level->things()->count(),
         ]);
+    }
+
+    /**
+     * A door standing in a doorway, hinged on its own left edge as you look at
+     * its front.
+     *
+     * The hinge is not a column and cannot be: `level_things` carries `swing`,
+     * `open_angle`, `open_seconds`, `is_open` and `opens_flag` and no hinge, so
+     * the engine fixes it at the left and an author moves it by turning the
+     * door round with `$angle`. See `build/things.ts`.
+     *
+     * `$opensFlag` is what makes an opening survive a reload, and it only ever
+     * opens: a door authored open stays open whether or not the flag is set.
+     * Null for a door whose state nobody needs to remember.
+     */
+    protected function door(
+        Level $level,
+        string $slug,
+        string $name,
+        string $description,
+        float $x,
+        float $z,
+        float $width,
+        float $height,
+        float $angle = 0,
+        bool $open = false,
+        ?string $opensFlag = null,
+        DoorSwing $swing = DoorSwing::Swing,
+        float $openAngle = 90,
+        ?string $texture = null,
+    ): LevelThing {
+        $door = $this->thing(
+            $level,
+            $slug,
+            $name,
+            $description,
+            $x,
+            $z,
+            $width,
+            0.08,
+            $height,
+            ThingKind::Door,
+            angle: $angle,
+            texture: $texture,
+        );
+
+        $door->update([
+            'render' => ThingRender::Box,
+            'uv_mode' => ThingUvMode::Fit,
+            'is_door' => true,
+            'swing' => $swing,
+            'open_angle' => $openAngle,
+            'open_seconds' => 0.45,
+            'is_open' => $open,
+            'opens_flag' => $opensFlag,
+        ]);
+
+        return $door;
     }
 
     protected function item(Game $game, string $slug, string $name, string $description): Item
