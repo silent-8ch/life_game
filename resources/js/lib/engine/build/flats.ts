@@ -8,6 +8,14 @@ import { tileFlatUvs } from '@/lib/engine/textures';
 import type { Sector } from '@/types';
 
 /**
+ * The least gap between a floor and a ceiling that counts as a room having
+ * height. The same figure `buildWall` refuses a wall at, for the same reason:
+ * below it the two surfaces are one surface and drawing both only makes them
+ * fight.
+ */
+const FLAT_MINIMUM = 1e-3;
+
+/**
  * Turns a flat over so that it faces down.
  *
  * A ceiling is the same polygon as a floor, laid at a different height, and
@@ -246,6 +254,35 @@ export function buildSkyCeiling(ctx: BuildContext, sector: Sector): void {
     scene.skyLids.push({ mesh: holder, room: sector.slug });
 }
 
+/**
+ * Whether a room has any height in it at all.
+ *
+ * A room whose ceiling is nowhere above its floor puts both surfaces in one
+ * plane, and two opaque flats in one plane is a z-fight the size of the room:
+ * which one wins is decided per pixel by the last bit of the depth value, so it
+ * changes as the camera moves and the whole slab flashes between two textures.
+ *
+ * `buildWall` has refused a wall with no height between its ends since slopes
+ * landed. Flats had no such guard, and level 8 has two rooms left over from
+ * carving — `room-11` and `room-12`, floor and ceiling both at 15 — sitting
+ * fifteen metres up over the edge of the yard, where a sky room's walls stop
+ * well below them and there is nothing to hide the fight.
+ *
+ * Both surfaces are planes, so the gap between them is linear across the floor
+ * plan and its largest value is at one of the corners. Checking the corners is
+ * therefore exact rather than a sample, and it stays right under a slope: a room
+ * that pinches to nothing at one end still has height at the other and still
+ * gets its ceiling.
+ */
+function hasHeight(sector: Sector): boolean {
+    return sector.points.some(
+        (point) =>
+            ceilingAt(sector, point.x, point.z) -
+                floorAt(sector, point.x, point.z) >
+            FLAT_MINIMUM,
+    );
+}
+
 /** Every room's floor, and its ceiling or the lid that stands in for one. */
 export function buildSectorFlats(ctx: BuildContext): void {
     for (const sector of ctx.level.sectors) {
@@ -255,6 +292,12 @@ export function buildSectorFlats(ctx: BuildContext): void {
             textureName: sector.floorTexture,
             isWater: sector.isWater,
         });
+
+        // The floor of a room with no height in it is also its ceiling. Draw
+        // both and they fight; draw one and the slab is at least stable.
+        if (!hasHeight(sector)) {
+            continue;
+        }
 
         if (sector.isSky) {
             buildSkyCeiling(ctx, sector);

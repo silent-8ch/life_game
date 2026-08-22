@@ -359,14 +359,67 @@ export function createPortalSurface(
         material.uniforms.paneTexels.value.set(width / 2, height / 2);
     };
 
+    /** Which depth a level of nesting actually reads, once clamped. */
+    const indexOf = (depth: number): number =>
+        Math.min(Math.max(depth, 0), depths - 1);
+
+    /**
+     * Whether each depth has ever had a frame drawn into it.
+     *
+     * A target is made the first time it is asked for and is blank until
+     * something renders into it, so asking for one that has never been drawn
+     * hands the shader an empty texture — which reads as a black pane, not as a
+     * stale one.
+     */
+    const drawn: boolean[] = new Array(depths).fill(false);
+
     const targetAt = (depth: number): THREE.WebGLRenderTarget => {
-        const at = Math.min(Math.max(depth, 0), depths - 1);
+        const at = indexOf(depth);
 
         targets[at] ??= new THREE.WebGLRenderTarget(wanted.x, wanted.y, {
             samples: 0,
         });
 
         return targets[at];
+    };
+
+    /**
+     * The nearest depth to the one asked for that has something in it.
+     *
+     * Every pane in the level is shown one level further in while another pane's
+     * pass is drawn, but only the panes that pass `onto` are recursed into and
+     * so only those have that level drawn. `seenFrom` is one hop — a room plus
+     * whatever an open doorway lets it see — so a mirror two rooms beyond a
+     * portal's far mouth is shown at a depth nothing ever wrote, and a blank
+     * target is black.
+     *
+     * That is level 8's stairs portal exactly: it comes out in `room-48`, and
+     * the nearest mirror is in `room-58`, which is reached through `room-65` —
+     * two hops, so it is never redrawn for that view.
+     *
+     * The rule already written down for the far end of a tunnel of portals is
+     * the right one here too: show the view from a level that was drawn, which
+     * is at worst a frame old. Stale is a decision this engine has taken
+     * deliberately and says so; black is just an unwritten buffer.
+     */
+    const readable = (depth: number): number => {
+        const at = indexOf(depth);
+
+        for (let nearer = at; nearer >= 0; nearer--) {
+            if (drawn[nearer]) {
+                return nearer;
+            }
+        }
+
+        for (let deeper = at + 1; deeper < depths; deeper++) {
+            if (drawn[deeper]) {
+                return deeper;
+            }
+        }
+
+        // Nothing has ever been drawn for this pane. Only reachable on the very
+        // first frame, before any pass has run.
+        return at;
     };
 
     const textureMatrix = new THREE.Matrix4();
@@ -583,7 +636,7 @@ export function createPortalSurface(
         },
 
         show: (depth, shrink = 1) => {
-            material.uniforms.pane.value = targetAt(depth).texture;
+            material.uniforms.pane.value = targetAt(readable(depth)).texture;
             material.uniforms.shrink.value = shrink;
         },
 
@@ -619,6 +672,10 @@ export function createPortalSurface(
             }
 
             renderer.render(scene, beyond);
+
+            // This level has a picture in it now, so `show` may read it back
+            // rather than falling forward to one that has.
+            drawn[indexOf(depth)] = true;
 
             renderer.shadowMap.autoUpdate = wasShadowAutoUpdate;
             renderer.setRenderTarget(wasTarget);
