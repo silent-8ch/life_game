@@ -1,0 +1,546 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Which way is he facing?</title>
+        <style>
+            :root {
+                color-scheme: dark;
+                --ink: #e2e8f0;
+                --dim: #94a3b8;
+                --line: #1e293b;
+                --panel: #0f172a;
+                --pick: #fbbf24;
+            }
+
+            * {
+                box-sizing: border-box;
+            }
+
+            body {
+                margin: 0;
+                padding: 24px;
+                background: #05070a;
+                color: var(--ink);
+                font:
+                    14px/1.5 ui-sans-serif,
+                    system-ui,
+                    -apple-system,
+                    sans-serif;
+            }
+
+            h1 {
+                margin: 0 0 4px;
+                font-size: 18px;
+                font-weight: 600;
+            }
+
+            p.lede {
+                margin: 0 0 20px;
+                max-width: 62ch;
+                color: var(--dim);
+            }
+
+            .bar {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 10px;
+                align-items: center;
+                margin-bottom: 20px;
+            }
+
+            select,
+            button {
+                padding: 6px 10px;
+                border: 1px solid var(--line);
+                border-radius: 6px;
+                background: var(--panel);
+                color: var(--ink);
+                font: inherit;
+            }
+
+            button {
+                cursor: pointer;
+            }
+
+            button:hover {
+                border-color: #475569;
+            }
+
+            .sheet {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+                gap: 14px;
+                margin-bottom: 28px;
+            }
+
+            .tile {
+                border: 1px solid var(--line);
+                border-radius: 10px;
+                background: var(--panel);
+                padding: 10px;
+            }
+
+            .tile.done {
+                border-color: #334155;
+            }
+
+            .tile h2 {
+                margin: 0 0 8px;
+                font-size: 11px;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+                color: var(--dim);
+            }
+
+            canvas {
+                display: block;
+                width: 100%;
+                height: auto;
+                image-rendering: pixelated;
+                background: #16202e;
+                border-radius: 6px;
+            }
+
+            .tile select {
+                width: 100%;
+                margin-top: 10px;
+            }
+
+            .tile select:not([data-empty]) {
+                border-color: var(--pick);
+                color: #fde68a;
+            }
+
+            pre {
+                border: 1px solid var(--line);
+                border-radius: 10px;
+                background: var(--panel);
+                padding: 14px;
+                overflow-x: auto;
+                color: #cbd5e1;
+            }
+
+            .settled {
+                position: sticky;
+                top: 0;
+                z-index: 2;
+                margin-bottom: 18px;
+                padding: 10px 0 14px;
+                background: linear-gradient(#05070a 82%, transparent);
+            }
+
+            .settled h2 {
+                margin: 0 0 8px;
+                font-size: 11px;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+                color: var(--dim);
+            }
+
+            .strip {
+                display: flex;
+                gap: 10px;
+                overflow-x: auto;
+                padding-bottom: 4px;
+            }
+
+            .strip figure {
+                margin: 0;
+                flex: 0 0 auto;
+                width: 92px;
+                text-align: center;
+            }
+
+            .strip canvas {
+                width: 92px;
+                height: 92px;
+            }
+
+            .strip figcaption {
+                margin-top: 4px;
+                font-size: 16px;
+                color: #fde68a;
+            }
+
+            .hint {
+                color: var(--dim);
+                max-width: 62ch;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Which way is he facing?</h1>
+        <p class="lede">
+            Eight drawings, eight directions. For each one, say which way the
+            person is walking, from where you are stood looking at them:
+            <strong>&darr; is towards you</strong>,
+            <strong>&uarr; is away</strong>, and left and right are yours, not
+            theirs. The engine works out the rest.
+        </p>
+
+        <div class="bar">
+            <label
+                >Person
+                <select id="who"></select>
+            </label>
+            <label
+                >Style
+                <select id="style">
+                    <option value="realistic">realistic</option>
+                    <option value="illustrated">illustrated</option>
+                </select>
+            </label>
+            <button id="walk" type="button">Walking: on</button>
+            <button id="clear" type="button">Start again</button>
+        </div>
+
+        <div id="settled" class="settled" hidden>
+            <h2>Already answered</h2>
+            <div class="strip" id="strip"></div>
+        </div>
+
+        <div class="sheet" id="sheet"></div>
+
+        <p class="hint">
+            Once every one is answered, this is the table. Hand it back and it
+            goes straight into the engine.
+        </p>
+        <pre id="out">Nothing chosen yet.</pre>
+
+        <script>
+            const PEOPLE = [
+                'paul',
+                'krystal',
+                'luke',
+                'luna',
+                'wade',
+                'william',
+            ];
+            const COLUMNS = 4;
+            const ROWS = 4;
+
+            /**
+             * How the person is turned, as the viewer sees them, and the angle
+             * round the body that view belongs to. Turning towards the body's
+             * own right is the positive way, which is what the engine measures.
+             */
+            const FACINGS = [
+                { value: 'front', label: '\u2193  towards me', turn: 0 },
+                {
+                    value: 'front-right',
+                    label: '\u2198  towards me, to my right',
+                    turn: 45,
+                },
+                { value: 'right', label: '\u2192  to my right', turn: 90 },
+                {
+                    value: 'back-right',
+                    label: '\u2197  away from me, to my right',
+                    turn: 135,
+                },
+                { value: 'back', label: '\u2191  away from me', turn: 180 },
+                {
+                    value: 'back-left',
+                    label: '\u2196  away from me, to my left',
+                    turn: 225,
+                },
+                { value: 'left', label: '\u2190  to my left', turn: 270 },
+                {
+                    value: 'front-left',
+                    label: '\u2199  towards me, to my left',
+                    turn: 315,
+                },
+            ];
+
+            const CELLS = [];
+
+            for (const sheet of ['cardinal', 'diagonal']) {
+                for (let row = 0; row < ROWS; row++) {
+                    CELLS.push({ sheet, row });
+                }
+            }
+
+            // Answers are kept per person: the sheets do not all run their
+            // rows in the same order, so each one is a separate question.
+            const answers = new Map();
+
+            const chosenFor = (person) => {
+                if (!answers.has(person)) {
+                    answers.set(person, new Map());
+                }
+
+                return answers.get(person);
+            };
+            const images = new Map();
+            let frame = 0;
+            let walking = true;
+
+            const who = document.getElementById('who');
+            const style = document.getElementById('style');
+            const holder = document.getElementById('sheet');
+            const out = document.getElementById('out');
+
+            for (const person of PEOPLE) {
+                who.append(new Option(person, person));
+            }
+
+            const sheetUrl = (sheet) =>
+                `/sprites/${style.value}/${who.value}-${style.value}-${sheet}-aligned-4step.png`;
+
+            function load(sheet) {
+                const url = sheetUrl(sheet);
+
+                if (images.has(url)) {
+                    return images.get(url);
+                }
+
+                const image = new Image();
+                image.src = url;
+                images.set(url, image);
+
+                return image;
+            }
+
+            function build() {
+                holder.replaceChildren();
+
+                for (const cell of CELLS) {
+                    const key = `${cell.sheet}:${cell.row}`;
+
+                    const tile = document.createElement('div');
+                    tile.className = 'tile';
+
+                    const title = document.createElement('h2');
+                    title.textContent = `${cell.sheet} · row ${cell.row}`;
+
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 256;
+                    canvas.height = 256;
+                    canvas.dataset.key = key;
+
+                    const pick = document.createElement('select');
+                    pick.dataset.key = key;
+                    pick.dataset.empty = '';
+                    pick.append(new Option('Which way is he walking?', ''));
+
+                    for (const facing of FACINGS) {
+                        pick.append(new Option(facing.label, facing.value));
+                    }
+
+                    const chosen = chosenFor(who.value);
+                    pick.value = chosen.get(key) ?? '';
+
+                    if (pick.value !== '') {
+                        delete pick.dataset.empty;
+                        tile.classList.add('done');
+                    }
+
+                    pick.addEventListener('change', () => {
+                        const held = chosenFor(who.value);
+
+                        if (pick.value === '') {
+                            held.delete(key);
+                            pick.dataset.empty = '';
+                            tile.classList.remove('done');
+                        } else {
+                            held.set(key, pick.value);
+                            delete pick.dataset.empty;
+                            tile.classList.add('done');
+                        }
+
+                        settle();
+                        draw();
+                        report();
+                    });
+
+                    tile.append(title, canvas, pick);
+                    holder.append(tile);
+                }
+
+                settle();
+            }
+
+            /**
+             * The drawings already spoken for, pinned to the top. Judging a
+             * diagonal is much easier against the side view you have just
+             * called yourself.
+             */
+            function settle() {
+                const chosen = chosenFor(who.value);
+                const strip = document.getElementById('strip');
+                const holder = document.getElementById('settled');
+
+                strip.replaceChildren();
+                holder.hidden = chosen.size === 0;
+
+                for (const facing of FACINGS) {
+                    for (const [key, value] of chosen) {
+                        if (value !== facing.value) {
+                            continue;
+                        }
+
+                        const figure = document.createElement('figure');
+                        const canvas = document.createElement('canvas');
+                        canvas.width = 256;
+                        canvas.height = 256;
+                        canvas.dataset.key = key;
+
+                        const caption = document.createElement('figcaption');
+                        caption.textContent = facing.label.trim().split(' ')[0];
+                        caption.title = facing.label;
+
+                        figure.append(canvas, caption);
+                        strip.append(figure);
+                    }
+                }
+            }
+
+            function draw() {
+                const canvases = [
+                    ...holder.querySelectorAll('canvas'),
+                    ...document.querySelectorAll('#strip canvas'),
+                ];
+
+                for (const canvas of canvases) {
+                    const [sheet, row] = canvas.dataset.key.split(':');
+                    const image = load(sheet);
+
+                    if (!image.complete || image.naturalWidth === 0) {
+                        continue;
+                    }
+
+                    const size = image.naturalWidth / COLUMNS;
+                    const context = canvas.getContext('2d');
+
+                    context.imageSmoothingEnabled = false;
+                    context.clearRect(0, 0, canvas.width, canvas.height);
+                    context.drawImage(
+                        image,
+                        (walking ? frame : 0) * size,
+                        Number(row) * size,
+                        size,
+                        size,
+                        0,
+                        0,
+                        canvas.width,
+                        canvas.height,
+                    );
+                }
+            }
+
+            function report() {
+                const chosen = chosenFor(who.value);
+                const done = [...answers.entries()]
+                    .filter(([, held]) => held.size === CELLS.length)
+                    .map(([person]) => person);
+
+                const tally = done.length
+                    ? `\n\n// Finished: ${done.join(', ')}.`
+                    : '';
+
+                const byTurn = new Map();
+
+                for (const [key, facing] of chosen) {
+                    byTurn.set(
+                        FACINGS.find((one) => one.value === facing).turn,
+                        key,
+                    );
+                }
+
+                const cell = (key) => {
+                    const [sheet, row] = key.split(':');
+
+                    return `${sheet === 'cardinal' ? 'c' : 'd'}${row}`;
+                };
+
+                // Two cells marked the same way means one direction was never
+                // drawn. The view from the other side is flipped to stand in
+                // for it: 45° is the mirror of 315°, 135° of 225°.
+                const steps = FACINGS.map((facing) => {
+                    const own = byTurn.get(facing.turn);
+
+                    if (own !== undefined) {
+                        return cell(own);
+                    }
+
+                    const across = byTurn.get((360 - facing.turn) % 360);
+
+                    return across === undefined ? '??' : `~${cell(across)}`;
+                });
+
+                const clashes = [];
+
+                for (const facing of FACINGS) {
+                    const cells = [...chosen.entries()]
+                        .filter(([, value]) => value === facing.value)
+                        .map(([key]) => key.replace(':', ' row '));
+
+                    if (cells.length > 1) {
+                        clashes.push(
+                            `// ${cells.join(' and ')} are both` +
+                                ` "${facing.label.replace(/\s+/, ' ')}".`,
+                        );
+                    }
+                }
+
+                const missing = FACINGS.filter(
+                    (facing) => !byTurn.has(facing.turn),
+                ).map((facing) => `${facing.turn}°`);
+
+                const note = missing.length
+                    ? `// Nothing drawn for ${missing.join(' and ')}, so it is` +
+                      ` flipped from the other side.\n`
+                    : '';
+
+                if (chosen.size < CELLS.length) {
+                    out.textContent =
+                        `${who.value}: ${chosen.size} of ${CELLS.length} answered.${tally}`;
+
+                    return;
+                }
+
+                out.textContent =
+                    clashes.join('\n') +
+                    (clashes.length ? '\n' : '') +
+                    note +
+                    `//          0°  45°  90° 135° 180° 225° 270° 315°\n` +
+                    `${who.value}: '${steps.join(' ')}',${tally}`;
+            }
+
+            who.addEventListener('change', () => {
+                build();
+                draw();
+                report();
+            });
+            style.addEventListener('change', () => draw());
+
+            document
+                .getElementById('walk')
+                .addEventListener('click', (event) => {
+                    walking = !walking;
+                    event.target.textContent = `Walking: ${walking ? 'on' : 'off'}`;
+                });
+
+            document.getElementById('clear').addEventListener('click', () => {
+                chosenFor(who.value).clear();
+                build();
+                draw();
+                report();
+            });
+
+            build();
+            report();
+
+            setInterval(() => {
+                frame = (frame + 1) % COLUMNS;
+                draw();
+            }, 180);
+
+            // Whenever a sheet finishes loading, put it on screen.
+            setTimeout(draw, 100);
+            setTimeout(draw, 500);
+            setTimeout(draw, 1500);
+        </script>
+    </body>
+</html>

@@ -1,0 +1,262 @@
+<?php
+
+namespace App\Http\Requests;
+
+use App\Enums\ActorBehaviour;
+use App\Enums\ConditionType;
+use App\Enums\EffectType;
+use App\Enums\ThingKind;
+use App\Enums\Verb;
+use App\Models\Item;
+use App\Models\Level;
+use App\Services\LevelAssets;
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
+
+/**
+ * A whole map as the editor drew it: the level's own settings, and every sector
+ * with its corners. What arrives replaces what is stored.
+ */
+class UpdateLevelMapRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function rules(): array
+    {
+        $assets = app(LevelAssets::class);
+        $textures = Rule::in($assets->textures());
+
+        return [
+            'name' => ['required', 'string', 'max:255'],
+            'description' => ['required', 'string'],
+            'playerSprite' => ['required', 'string', Rule::in($assets->sprites())],
+            'spawn' => ['required', 'array'],
+            'spawn.x' => ['required', 'numeric'],
+            'spawn.z' => ['required', 'numeric'],
+            'spawn.angle' => ['required', 'numeric'],
+            'ceilingHeight' => ['required', 'numeric', 'min:0.5', 'max:64'],
+
+            'sky' => ['nullable', 'array'],
+            'sky.image' => ['required_with:sky', 'string', Rule::in($assets->skies())],
+            'sky.variant' => ['required_with:sky', 'integer', 'between:0,3'],
+            'sky.theme' => ['nullable', 'string', Rule::in(array_keys($assets->backdrops()))],
+            'sky.layers' => ['nullable', 'array'],
+            'sky.layers.*' => ['integer', 'between:1,9'],
+
+            'sectors' => ['present', 'array', 'max:200'],
+            'sectors.*.slug' => ['required', 'string', 'max:255'],
+            'sectors.*.name' => ['required', 'string', 'max:255'],
+            'sectors.*.floorHeight' => ['required', 'numeric', 'between:-64,64'],
+            'sectors.*.ceilingHeight' => ['required', 'numeric', 'between:-64,64'],
+            'sectors.*.floorTexture' => ['nullable', 'string', $textures],
+            'sectors.*.ceilingTexture' => ['nullable', 'string', $textures],
+            'sectors.*.wallTexture' => ['nullable', 'string', $textures],
+            'sectors.*.isSky' => ['required', 'boolean'],
+            'sectors.*.isWater' => ['required', 'boolean'],
+            'sectors.*.points' => ['required', 'array', 'min:3', 'max:64'],
+            'sectors.*.points.*.x' => ['required', 'numeric', 'between:-512,512'],
+            'sectors.*.points.*.z' => ['required', 'numeric', 'between:-512,512'],
+            'sectors.*.points.*.wallTexture' => ['nullable', 'string', $textures],
+            'sectors.*.points.*.blocks' => ['required', 'boolean'],
+            'sectors.*.points.*.isMirror' => ['required', 'boolean'],
+            'sectors.*.points.*.isSky' => ['nullable', 'boolean'],
+            'sectors.*.points.*.portalLink' => ['nullable', 'string', 'max:64', 'regex:/^[a-z0-9-]+$/'],
+
+            'things' => ['present', 'array', 'max:200'],
+            'things.*.slug' => ['required', 'string', 'max:255'],
+            'things.*.name' => ['required', 'string', 'max:255'],
+            'things.*.description' => ['required', 'string'],
+            'things.*.kind' => ['required', Rule::enum(ThingKind::class)],
+            'things.*.sprite' => ['nullable', 'string', Rule::in($assets->sprites())],
+            'things.*.behaviour' => ['nullable', Rule::enum(ActorBehaviour::class)],
+            'things.*.speed' => ['required', 'numeric', 'between:0,10'],
+            'things.*.texture' => ['nullable', 'string', $textures],
+            'things.*.x' => ['required', 'numeric', 'between:-512,512'],
+            'things.*.z' => ['required', 'numeric', 'between:-512,512'],
+            'things.*.elevation' => ['required', 'numeric', 'between:-64,64'],
+            'things.*.width' => ['required', 'numeric', 'between:0.05,64'],
+            'things.*.depth' => ['required', 'numeric', 'between:0.05,64'],
+            'things.*.height' => ['required', 'numeric', 'between:0.05,64'],
+            'things.*.angle' => ['required', 'numeric'],
+            'things.*.isSolid' => ['required', 'boolean'],
+
+            // What the player can do to a thing. Absent means the thing has
+            // none, which is most of them; present and empty clears them.
+            'things.*.interactions' => ['nullable', 'array', 'max:32'],
+            'things.*.interactions.*.verb' => ['required', Rule::enum(Verb::class)],
+            'things.*.interactions.*.response' => ['required', 'string', 'max:2000'],
+            'things.*.interactions.*.priority' => ['required', 'integer', 'between:0,255'],
+            'things.*.interactions.*.requiredItem' => ['nullable', 'string', 'max:255'],
+            'things.*.interactions.*.conditions' => ['nullable', 'array', 'max:16'],
+            'things.*.interactions.*.conditions.*.type' => ['required', Rule::enum(ConditionType::class)],
+            'things.*.interactions.*.conditions.*.subject' => ['required', 'string', 'max:255'],
+            'things.*.interactions.*.conditions.*.value' => ['nullable', 'string', 'max:255'],
+            'things.*.interactions.*.effects' => ['nullable', 'array', 'max:16'],
+            'things.*.interactions.*.effects.*.type' => ['required', Rule::enum(EffectType::class)],
+            'things.*.interactions.*.effects.*.subject' => ['required', 'string', 'max:255'],
+            'things.*.interactions.*.effects.*.value' => ['nullable', 'string', 'max:255'],
+        ];
+    }
+
+    /**
+     * A portal is a pair, so a link name has to be used exactly twice. One end
+     * on its own would put the player somewhere there is nothing to arrive at.
+     *
+     * @return array<int, callable>
+     */
+    public function after(): array
+    {
+        return [
+            function (Validator $validator): void {
+                /** @var array<int, array<string, mixed>> $sectors */
+                $sectors = $this->input('sectors', []);
+                $ends = [];
+
+                foreach ($sectors as $sector) {
+                    /** @var array<int, array<string, mixed>> $points */
+                    $points = $sector['points'] ?? [];
+
+                    foreach ($points as $point) {
+                        $link = $point['portalLink'] ?? null;
+
+                        if (is_string($link) && $link !== '') {
+                            $ends[$link] = ($ends[$link] ?? 0) + 1;
+                        }
+                    }
+                }
+
+                /** @var array<int, array<string, mixed>> $things */
+                $things = $this->input('things', []);
+                $slugs = [];
+
+                foreach ($things as $index => $thing) {
+                    $slug = $thing['slug'] ?? null;
+
+                    if (is_string($slug) && isset($slugs[$slug])) {
+                        $validator->errors()->add(
+                            "things.{$index}.slug",
+                            "Two things are both called \"{$slug}\"."
+                        );
+                    }
+
+                    if (is_string($slug)) {
+                        $slugs[$slug] = true;
+                    }
+
+                    // A person is drawn from a sprite sheet, not built as a box.
+                    if (($thing['kind'] ?? null) === ThingKind::Actor->value
+                        && ($thing['sprite'] ?? null) === null) {
+                        $validator->errors()->add(
+                            "things.{$index}.sprite",
+                            'A person needs a sprite to be drawn from.'
+                        );
+                    }
+                }
+
+                $this->checkItemsExist($validator, $things);
+
+                foreach ($ends as $link => $count) {
+                    if ($count !== 2) {
+                        $validator->errors()->add(
+                            'sectors',
+                            "The portal \"{$link}\" needs exactly two walls; it has {$count}."
+                        );
+                    }
+                }
+            },
+        ];
+    }
+
+    /**
+     * Every item slug an interaction names has to be one the game really has,
+     * so that a typo breaks here rather than at the moment a child tries the
+     * door and nothing happens.
+     *
+     * @param  array<int, array<string, mixed>>  $things
+     */
+    private function checkItemsExist(Validator $validator, array $things): void
+    {
+        /** @var Level $level */
+        $level = $this->route('level');
+
+        $known = Item::query()
+            ->where('game_id', $level->game_id)
+            ->pluck('slug')
+            ->flip();
+
+        $wantsAnItem = [
+            EffectType::GiveItem->value,
+            EffectType::RemoveItem->value,
+        ];
+
+        foreach ($things as $thingIndex => $thing) {
+            /** @var array<int, array<string, mixed>> $interactions */
+            $interactions = $thing['interactions'] ?? [];
+
+            foreach ($interactions as $index => $interaction) {
+                $where = "things.{$thingIndex}.interactions.{$index}";
+                $required = $interaction['requiredItem'] ?? null;
+
+                if (is_string($required) && $required !== '' && ! $known->has($required)) {
+                    $validator->errors()->add(
+                        "{$where}.requiredItem",
+                        "There is no item called \"{$required}\" in this game."
+                    );
+                }
+
+                /** @var array<int, array<string, mixed>> $effects */
+                $effects = $interaction['effects'] ?? [];
+
+                foreach ($effects as $at => $effect) {
+                    $subject = $effect['subject'] ?? null;
+
+                    if (! in_array($effect['type'] ?? null, $wantsAnItem, strict: true)) {
+                        continue;
+                    }
+
+                    if (is_string($subject) && ! $known->has($subject)) {
+                        $validator->errors()->add(
+                            "{$where}.effects.{$at}.subject",
+                            "There is no item called \"{$subject}\" in this game."
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'sectors.*.points.min' => 'A room needs at least three corners.',
+        ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        /** @var array<int, array<string, mixed>> $sectors */
+        $sectors = $this->input('sectors', []);
+
+        // A ceiling below its own floor would turn the room inside out.
+        foreach ($sectors as $index => $sector) {
+            $floor = (float) ($sector['floorHeight'] ?? 0);
+            $ceiling = (float) ($sector['ceilingHeight'] ?? 0);
+
+            if ($ceiling < $floor) {
+                $sectors[$index]['ceilingHeight'] = $floor;
+            }
+        }
+
+        $this->merge(['sectors' => $sectors]);
+    }
+}

@@ -1,0 +1,110 @@
+import { useState } from 'react';
+import { cn } from '@/lib/utils';
+
+/**
+ * Picks one of the tiling textures out of the folder. Textures are a visual
+ * thing, so the list is thumbnails rather than names.
+ */
+
+type TexturePickerProps = {
+    label: string;
+    value: string | null;
+    textures: string[];
+    onChange: (texture: string | null) => void;
+};
+
+export default function TexturePicker({
+    label,
+    value,
+    textures,
+    onChange,
+}: TexturePickerProps) {
+    const [open, setOpen] = useState(false);
+    const [search, setSearch] = useState('');
+
+    const shown = textures.filter((texture) =>
+        texture.replaceAll('-', ' ').includes(search.toLowerCase()),
+    );
+
+    return (
+        <div className="relative">
+            <span className="mb-1 block text-[11px] tracking-wider text-slate-400 uppercase">
+                {label}
+            </span>
+
+            <button
+                type="button"
+                onClick={() => setOpen(!open)}
+                className="flex w-full items-center gap-2 rounded border border-slate-700 bg-slate-900 p-1.5 text-left text-sm text-slate-200 hover:border-slate-500"
+            >
+                {value === null ? (
+                    <span className="grid h-8 w-8 shrink-0 place-items-center rounded bg-slate-800 text-[10px] text-slate-500">
+                        none
+                    </span>
+                ) : (
+                    <img
+                        src={`/sprites/textures/${value}.png`}
+                        alt=""
+                        className="h-8 w-8 shrink-0 rounded object-cover"
+                    />
+                )}
+                <span className="truncate">
+                    {value === null ? 'Wireframe' : value.replaceAll('-', ' ')}
+                </span>
+            </button>
+
+            {open && (
+                <div className="absolute right-0 left-0 z-20 mt-1 rounded border border-slate-700 bg-slate-900 p-2 shadow-xl">
+                    <input
+                        value={search}
+                        onChange={(event) => setSearch(event.target.value)}
+                        placeholder="Search"
+                        className="mb-2 w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 text-sm text-slate-200 placeholder:text-slate-600"
+                    />
+
+                    <div className="grid max-h-64 grid-cols-4 gap-1 overflow-y-auto">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                onChange(null);
+                                setOpen(false);
+                            }}
+                            className={cn(
+                                'grid h-14 place-items-center rounded border text-[10px] text-slate-400',
+                                value === null
+                                    ? 'border-amber-400'
+                                    : 'border-slate-700 hover:border-slate-500',
+                            )}
+                        >
+                            none
+                        </button>
+
+                        {shown.map((texture) => (
+                            <button
+                                key={texture}
+                                type="button"
+                                title={texture.replaceAll('-', ' ')}
+                                onClick={() => {
+                                    onChange(texture);
+                                    setOpen(false);
+                                }}
+                                className={cn(
+                                    'h-14 overflow-hidden rounded border',
+                                    texture === value
+                                        ? 'border-amber-400'
+                                        : 'border-slate-700 hover:border-slate-500',
+                                )}
+                            >
+                                <img
+                                    src={`/sprites/textures/${texture}.png`}
+                                    alt={texture}
+                                    className="h-full w-full object-cover"
+                                />
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
