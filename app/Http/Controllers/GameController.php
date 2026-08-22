@@ -97,6 +97,13 @@ class GameController extends Controller
             // that one exists so a partial reload never rebuilds the geometry,
             // and flags are the small half that does change.
             'flags' => $this->flags($state),
+            // Where they got to last time, or null to start at the level's
+            // spawn. Only offered when it is this level they were standing in:
+            // a position is a place in one particular level and means nothing
+            // in another, and ?level= can drop somebody into a different one.
+            'standingAt' => $level->is($state->currentLevel)
+                ? $state->standingAt()
+                : null,
             'message' => $state->last_message,
         ]);
     }

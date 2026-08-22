@@ -19,6 +19,10 @@ use Illuminate\Support\Carbon;
  * @property int $game_id
  * @property int|null $current_scene_id
  * @property int|null $current_level_id
+ * @property float|null $position_x
+ * @property float|null $position_z
+ * @property float|null $facing
+ * @property float|null $pitch
  * @property string|null $last_message
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -29,11 +33,57 @@ use Illuminate\Support\Carbon;
  * @property-read Collection<int, GameFlag> $flags
  * @property-read Collection<int, Hotspot> $hotspotOverrides
  */
-#[Fillable(['game_id', 'current_scene_id', 'current_level_id', 'last_message'])]
+#[Fillable([
+    'game_id',
+    'current_scene_id',
+    'current_level_id',
+    'position_x',
+    'position_z',
+    'facing',
+    'pitch',
+    'last_message',
+])]
 class GameState extends Model
 {
     /** @use HasFactory<GameStateFactory> */
     use HasFactory;
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'position_x' => 'float',
+            'position_z' => 'float',
+            'facing' => 'float',
+            'pitch' => 'float',
+        ];
+    }
+
+    /**
+     * Where the player was standing, or null if they have not been anywhere in
+     * this level yet and the spawn should stand.
+     *
+     * Spelled out as the same four numbers `?at=` takes and a debug snapshot
+     * writes, in the same units and the same sign — the angle is the player's
+     * own yaw, not the level's spawn angle, which is its negative.
+     *
+     * @return array{x: float, z: float, facing: float, pitch: float}|null
+     */
+    public function standingAt(): ?array
+    {
+        if ($this->position_x === null || $this->position_z === null) {
+            return null;
+        }
+
+        return [
+            'x' => $this->position_x,
+            'z' => $this->position_z,
+            'facing' => $this->facing ?? 0.0,
+            'pitch' => $this->pitch ?? 0.0,
+        ];
+    }
 
     /**
      * Retrieve the game's save file, starting a new one where the game opens if needed.
@@ -147,9 +197,20 @@ class GameState extends Model
         $this->hotspotOverrides()->detach();
         $this->flags()->delete();
 
+        // Starting over means standing at the front door again. Leaving the
+        // position behind would put a reset save back exactly where the old one
+        // ended, which is the one thing "start over" is meant not to do.
+        $forgetting = [
+            'position_x' => null,
+            'position_z' => null,
+            'facing' => null,
+            'pitch' => null,
+            'last_message' => null,
+        ];
+
         $this->update($this->game->isFirstPerson()
-            ? ['current_level_id' => $this->game->openingLevel()->id, 'last_message' => null]
-            : ['current_scene_id' => $this->game->openingScene()->id, 'last_message' => null]);
+            ? [...$forgetting, 'current_level_id' => $this->game->openingLevel()->id]
+            : [...$forgetting, 'current_scene_id' => $this->game->openingScene()->id]);
 
         $this->unsetRelations();
     }

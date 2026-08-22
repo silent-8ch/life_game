@@ -330,6 +330,22 @@ export type Level = {
  */
 export type Flags = Record<string, string>;
 
+/**
+ * Where the player was standing when they last put the game down.
+ *
+ * The same four numbers `?at=` takes and a debug snapshot writes, in the same
+ * units and the same sign — `facing` is the player's own yaw in degrees, **not**
+ * a level's `spawn.angle`, which is its negative. Keeping one encoding of "a
+ * place in a level" is the point; two that disagree by a sign is how a saved
+ * game ends up facing a wall.
+ */
+export type StandingAt = {
+    x: number;
+    z: number;
+    facing: number;
+    pitch: number;
+};
+
 export type ExplorePageProps = {
     game: Game;
     level: Level;
@@ -340,6 +356,11 @@ export type ExplorePageProps = {
      * loads. The level itself is deliberately not refreshed with them.
      */
     flags: Flags;
+    /**
+     * Where to put the player, or null to use the level's spawn. Only ever set
+     * when it is this level they were last standing in.
+     */
+    standingAt: StandingAt | null;
     message: string | null;
 };
 

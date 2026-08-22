@@ -23,5 +23,6 @@ Route::post('debug/snapshot', [DebugSnapshotController::class, 'store'])
 Route::prefix('games/{game}')->group(function () {
     Route::get('/', [GameController::class, 'show'])->name('games.show');
     Route::post('interactions', [InteractionController::class, 'store'])->name('games.interactions.store');
+    Route::post('position', [SaveController::class, 'position'])->name('games.position.store');
     Route::delete('save', [SaveController::class, 'destroy'])->name('games.save.destroy');
 });
