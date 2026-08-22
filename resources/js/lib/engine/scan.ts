@@ -254,7 +254,7 @@ export function armConsoleScan(
  * backdrop check decoded as `room-2` and `room-3` before this, which is the
  * fabrication bug over again in the instrument built to investigate it.
  */
-function encoded(channel: number): number {
+export function encoded(channel: number): number {
     const value = channel / 255;
     const shown =
         value <= 0.0031308

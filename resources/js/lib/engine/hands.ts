@@ -20,7 +20,15 @@ const HANDS_PATH = '/sprites/hands';
  * A file per pose rather than cells on a sheet, so another pose is another file
  * and nothing depends on the order they were cut in.
  */
-const POSES = { walk: 'edge-open', run: 'edge' } as const;
+const POSES = {
+    walk: 'edge-open',
+    run: 'edge',
+    // Seen from the back rather than edge on, for when the crosshair is resting
+    // on something you could touch. A hand held edge on reads as swinging past;
+    // the same hand turned to show its back reads as going for the thing.
+    reach: 'back',
+    grip: 'back-fist',
+} as const;
 
 type Pose = keyof typeof POSES;
 
@@ -60,18 +68,45 @@ const RAISE_RATE = 7;
  * Read off the artwork by measuring which side carries the finger outlines; the
  * thumb is the other one. An edge-on hand hides most of its thumb, so treat
  * these as the first thing to suspect if a hand looks inside out.
+ *
+ * ## The back poses disagree with the edge poses, and they do it uniformly
+ *
+ * `reach` and `grip` were read off all twelve new cards one at a time rather
+ * than assumed from the edge rows, and the answer is not the pattern above.
+ * Every person's `back` card has the thumb on the **left**, and every person's
+ * `back-fist` card has it on the **right** — the open hand and the fist face
+ * opposite ways for all six, where on the edge cards only Paul and Wade
+ * disagreed with themselves and William disagreed with everybody.
+ *
+ * So there is no rule here to derive one row from another. There is only the
+ * artwork, which was generated a person and a pose at a time and is consistent
+ * only by accident.
+ *
+ * Worth knowing how these were measured, because the obvious way is wrong.
+ * Silhouette width finds the *fingers*, not the thumb — edge on, the fingers
+ * stick out further than the thumb tucked behind them, and a script that takes
+ * the wider side for the thumb reproduces three of the twelve known answers,
+ * which is chance. Reading which side the outline reaches higher on does better
+ * — fingers are taller than a thumb — but collapses on the fists, where nothing
+ * reaches higher than anything else and the margin falls to a pixel or two.
+ * These twelve were settled by looking at the cards.
  */
 const DRAWN: Record<string, Record<Pose, 1 | -1>> = {
-    paul: { walk: 1, run: -1 },
-    krystal: { walk: 1, run: 1 },
-    luna: { walk: 1, run: 1 },
-    wade: { walk: 1, run: -1 },
-    luke: { walk: 1, run: 1 },
-    william: { walk: -1, run: -1 },
+    paul: { walk: 1, run: -1, reach: -1, grip: 1 },
+    krystal: { walk: 1, run: 1, reach: -1, grip: 1 },
+    luna: { walk: 1, run: 1, reach: -1, grip: 1 },
+    wade: { walk: 1, run: -1, reach: -1, grip: 1 },
+    luke: { walk: 1, run: 1, reach: -1, grip: 1 },
+    william: { walk: -1, run: -1, reach: -1, grip: 1 },
 };
 
 /** What to assume for a person nobody has measured: the commoner of the two. */
-const DRAWN_BY_DEFAULT: Record<Pose, 1 | -1> = { walk: 1, run: 1 };
+const DRAWN_BY_DEFAULT: Record<Pose, 1 | -1> = {
+    walk: 1,
+    run: 1,
+    reach: -1,
+    grip: 1,
+};
 
 export type HeldItem = 'wand' | 'pistol' | 'tablet' | 'phone';
 
@@ -109,8 +144,17 @@ export type Hands = {
     /**
      * @param  walked  Metres walked so far, for the swing.
      * @param  running  Whether the fists should be up.
+     * @param  reaching  Whether the crosshair is resting on something the
+     *                   player could touch, which turns the hands to show
+     *                   their backs. Defaults to false so a caller that has
+     *                   nothing to say about focus keeps the old behaviour.
      */
-    update: (seconds: number, walked: number, running: boolean) => void;
+    update: (
+        seconds: number,
+        walked: number,
+        running: boolean,
+        reaching?: boolean,
+    ) => void;
     dispose: () => void;
 };
 
@@ -130,10 +174,12 @@ function load(url: string): THREE.Texture {
 export function createHands(sprite: string): Hands {
     const object = new THREE.Group();
 
-    const drawing: Record<Pose, THREE.Texture> = {
-        walk: load(`${HANDS_PATH}/${sprite}-${POSES.walk}.png`),
-        run: load(`${HANDS_PATH}/${sprite}-${POSES.run}.png`),
-    };
+    const drawing = Object.fromEntries(
+        Object.entries(POSES).map(([pose, file]) => [
+            pose,
+            load(`${HANDS_PATH}/${sprite}-${file}.png`),
+        ]),
+    ) as Record<Pose, THREE.Texture>;
 
     const geometry = new THREE.PlaneGeometry(HAND_SIZE, HAND_SIZE);
     const drawn = DRAWN[sprite] ?? DRAWN_BY_DEFAULT;
@@ -215,7 +261,7 @@ export function createHands(sprite: string): Hands {
 
         holding: () => held,
 
-        update: (seconds, walked, running) => {
+        update: (seconds, walked, running, reaching = false) => {
             // A hand holding something is shut around it whatever the pace.
             const wanted = running || held !== null ? 1 : 0;
 
@@ -225,7 +271,17 @@ export function createHands(sprite: string): Hands {
                 ((held === null ? 0 : 1) - raised) *
                 Math.min(1, RAISE_RATE * seconds);
 
-            const pose: Pose = clenched > 0.5 ? 'run' : 'walk';
+            // Four drawings from two questions: open or shut, and edge on or
+            // showing the back. Reaching wins over pace, because a hand going
+            // for a doorknob is doing that whether or not you ran to it.
+            const shut = clenched > 0.5;
+            const pose: Pose = reaching
+                ? shut
+                    ? 'grip'
+                    : 'reach'
+                : shut
+                  ? 'run'
+                  : 'walk';
             const shown = drawing[pose];
 
             for (const hand of sides) {
@@ -274,8 +330,10 @@ export function createHands(sprite: string): Hands {
         dispose: () => {
             geometry.dispose();
             itemGeometry.dispose();
-            drawing.walk.dispose();
-            drawing.run.dispose();
+
+            for (const texture of Object.values(drawing)) {
+                texture.dispose();
+            }
 
             for (const hand of sides) {
                 hand.material.dispose();
