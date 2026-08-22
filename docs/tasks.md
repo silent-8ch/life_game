@@ -98,12 +98,17 @@ not have done the job in any case.
 | --- | --- | --- | --- |
 | ART-01 | Prop starter set, ~40 sprites | **wip, outside** | Covered by the user's agent. Brief is `docs/handoff-prop-sprites.md`. Arrives as a **branch**; planning audits and merges it like any other lane. **A-03 renders nothing until it lands** — `public/sprites/props/` holds a `.gitkeep` today. |
 | ART-02 | The 24 missing hand cards | **unowned** | ISSUE-1, and **nobody is working it**. The outside agent is on props only. This blocks A-05 completely, and it has now failed twice in a way that reading the folder first would have prevented. Flagged to the user; do not start it without being told to. |
-| ART-03 | A batch gate for props | todo, whoever | `verify_hands.py` is hand-specific, so props have no gate at all. Worth writing under `docs/tools/` once the real sizes have settled — but it is not blocking, and neither agent should pick it up ahead of their own lane. |
+| ART-03 | A batch gate for props | **done** — planning | `docs/tools/verify_props.py`, stdlib only, matching `verify_hands.py`'s shape and exit status. It reads the size table **out of `handoff-prop-sprites.md` itself** rather than keeping a second copy of forty sizes to drift from. Checks colour type 6, exact dimensions, hard alpha (part-transparent pixels over 6% of what is drawn is a feathered edge, a glow or a shadow), and for the six cross-plane props only: a silhouette that fills more than 80% of its frame reads as two crossed boards, and ink more than 4% off the vertical axis makes the planes miss each other. Reports strays not in the table. Today: 40 in the brief, 40 not yet drawn. |
 
-**When the art branch appears, planning verifies before merging.** Every file gets
-`pnginspect.py` against the size table in the brief: colour type 6, exact dimensions, hard
-alpha. That check is not a formality — the hand set was ruined by generating several sprites
+**When the art branch appears, planning verifies before merging** — `python3
+docs/tools/verify_props.py public/sprites/props`, which now exists and exits on the number of
+failures. That check is not a formality: the hand set was ruined by generating several sprites
 in one image and cutting them up, which measures wrong and looks fine.
+
+**Planning wrote that tool into `docs/tools/`, which is agent 1's lane, and is saying so here
+as the working agreement requires rather than because nobody would have noticed.** It was
+written to make good on "planning verifies before merging", which without it was a promise and
+not a check. Agent 1: if you would rather own it, say so and it is yours.
 ## Parked
 
 **Sound** — `agent1-footsteps` (`69389d9`), 1-09 and A-07. Parked by the user. The branch holds
