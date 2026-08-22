@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\Verb;
 use App\Models\Game;
+use App\Models\GameFlag;
 use App\Models\GameState;
 use App\Models\Hotspot;
 use App\Models\Item;
@@ -61,6 +62,7 @@ class GameController extends Controller
             'currentLevel.sectors.edges.vertex',
             'currentLevel.things.interactions.requiredItem',
             'items',
+            'flags',
         ]);
 
         // ?level=slug drops the player into one particular level, which is how
@@ -86,8 +88,35 @@ class GameController extends Controller
             // the inventory and the message; the level it already has stands.
             'level' => fn (): array => app(LevelPayload::class)->forEngine($level),
             'inventory' => $this->inventory($state),
+            // Every flag that has been set, so the level can show what the
+            // world already knows: a lamp somebody switched on stays on.
+            //
+            // Refreshed with the inventory after an interaction rather than
+            // read once at load, because a switch you flip should light up when
+            // you use it. Deliberately *not* part of the level closure above —
+            // that one exists so a partial reload never rebuilds the geometry,
+            // and flags are the small half that does change.
+            'flags' => $this->flags($state),
             'message' => $state->last_message,
         ]);
+    }
+
+    /**
+     * The flags that have been set, as names against their values.
+     *
+     * Only what has been set. A flag nobody has touched is absent rather than
+     * empty, so "is this set" is a question about the keys and never about
+     * telling an unset flag from one set to nothing.
+     *
+     * @return array<string, string>
+     */
+    private function flags(GameState $state): array
+    {
+        return $state->flags
+            ->mapWithKeys(fn (GameFlag $flag): array => [
+                $flag->key => (string) $flag->value,
+            ])
+            ->all();
     }
 
     /**

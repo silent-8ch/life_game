@@ -64,7 +64,7 @@ export default function Explore({
                     item: choice.item ?? '',
                 },
                 {
-                    only: ['inventory', 'message'],
+                    only: ['inventory', 'flags', 'message'],
                     preserveState: true,
                     preserveScroll: true,
                     onSuccess: (page) => {

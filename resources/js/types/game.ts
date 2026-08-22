@@ -282,10 +282,29 @@ export type Level = {
     things: LevelThing[];
 };
 
+/**
+ * Every flag the save has set, as names against their values.
+ *
+ * Only what has been set: a flag nobody has touched is absent rather than
+ * empty, so asking whether one is set is a question about the keys and never
+ * about telling an unset flag from one set to nothing.
+ *
+ * This is what makes `LevelThing.altFlag` mean anything. The column names a
+ * flag; without this there was no way to find out what that flag read, so the
+ * alternate texture could never be shown.
+ */
+export type Flags = Record<string, string>;
+
 export type ExplorePageProps = {
     game: Game;
     level: Level;
     inventory: Item[];
+    /**
+     * Refreshed after every interaction, alongside the inventory — a switch you
+     * flip should light up when you use it rather than next time the level
+     * loads. The level itself is deliberately not refreshed with them.
+     */
+    flags: Flags;
     message: string | null;
 };
 

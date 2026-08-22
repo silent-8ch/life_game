@@ -215,3 +215,58 @@ it('hands a person their own numbers over their sprite\'s', function (): void {
                 ->and($sent['stats'])->toHaveCount(count(PersonStats::ATTRIBUTES));
         });
 });
+
+it('sends the flags the save has set, so the level can show what the world knows', function (): void {
+    // Without this the alt-texture columns on a thing name a flag that nothing
+    // can read: the column says *which* flag, and until now the browser was
+    // never told what any flag said. A lamp switched on could not be drawn on.
+    $state = GameState::for($this->game);
+
+    $state->flags()->create(['key' => 'lamp_on', 'value' => 'yes']);
+    $state->flags()->create(['key' => 'drawer_open', 'value' => 'no']);
+
+    $this->get(route('games.show', $this->game))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('flags.lamp_on', 'yes')
+            ->where('flags.drawer_open', 'no')
+        );
+});
+
+it('leaves a flag nobody has touched out altogether', function (): void {
+    // Absent rather than empty, so "is this set" is a question about the keys.
+    // An unset flag and one set to nothing are different states and the client
+    // has no way to tell them apart if both arrive as an empty string.
+    GameState::for($this->game);
+
+    $this->get(route('games.show', $this->game))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->has('flags')
+            ->missing('flags.never_touched')
+        );
+});
+
+it('reads the flags fresh on every request rather than once', function (): void {
+    // The whole reason this is not a load-time snapshot. After an interaction
+    // the browser asks for `inventory, flags, message` and deliberately not the
+    // level, so the geometry it is holding is never rebuilt — which only works
+    // if flags are a plain prop re-read each time rather than baked in.
+    //
+    // The partial reload itself is Inertia's business and testing it would test
+    // Inertia. What is worth pinning here is that a flag changed between two
+    // requests comes back changed.
+    $state = GameState::for($this->game);
+
+    $state->flags()->create(['key' => 'lamp_on', 'value' => 'no']);
+
+    $this->get(route('games.show', $this->game))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('flags.lamp_on', 'no')
+        );
+
+    $state->flags()->where('key', 'lamp_on')->update(['value' => 'yes']);
+
+    $this->get(route('games.show', $this->game))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('flags.lamp_on', 'yes')
+        );
+});
