@@ -18,7 +18,7 @@ use Symfony\Component\Process\Process;
 function describeAnswer(string $body): array
 {
     $script = <<<JS
-        const { describeSpot } = await import('@/lib/engine/snapshot.ts');
+        const { describeSpot, readingOf } = await import('@/lib/engine/snapshot.ts');
 
         const corner = (x, z, extra = {}) => ({
             x,
@@ -167,4 +167,57 @@ it('does not count a wall whose line the eye is past the end of', function (): v
     expect($answer['outside'])->not->toContain('south|north')
         ->and($answer['outside'])->not->toContain('north|south')
         ->and($answer['outside'])->toEqualCanonicalizing(['south', 'north']);
+});
+
+it('reads back the room, the spot and the nearest boundary, for showing on screen', function (): void {
+    $answer = describeAnswer(<<<'JS'
+        process.stdout.write(JSON.stringify({
+            inside: readingOf(spot(5, 9.9)),
+            nowhere: readingOf(spot(50, 50)),
+        }));
+        JS);
+
+    // Four lines, always: a person glancing at an overlay for a moment cannot
+    // read a list whose length changes with where they stood.
+    expect($answer['inside'])->toHaveCount(4)
+        ->and($answer['nowhere'])->toHaveCount(4);
+
+    expect($answer['inside'][0])->toBe('south (south)')
+        ->and($answer['inside'][1])->toContain('x 5')
+        ->and($answer['inside'][1])->toContain('z 9.9')
+        // Centimetres rather than metres: the faults being chased sit inside
+        // the first few of them, and 0.1 tells nobody anything.
+        ->and($answer['inside'][3])->toContain('cm from')
+        ->and($answer['inside'][3])->toContain('south')
+        ->and($answer['inside'][3])->toContain('north');
+
+    expect($answer['nowhere'][0])->toBe('Outside any room')
+        ->and($answer['nowhere'][3])->toBe('No boundary within reach');
+});
+
+it('says when the nearest boundary is one nobody can walk through', function (): void {
+    $answer = describeAnswer(<<<'JS'
+        const shut = JSON.parse(JSON.stringify(level));
+        shut.sectors[0].points[2].blocks = true;
+
+        process.stdout.write(JSON.stringify({
+            open: readingOf(spot(5, 9.9)),
+            shut: readingOf(describeSpot({
+                level: shut,
+                x: 5,
+                z: 9.9,
+                eye: 1.62,
+                yaw: 0,
+                pitch: 0,
+                lookingAt: null,
+                holding: null,
+                running: false,
+                screen: { width: 800, height: 400, pixelRatio: 2, touch: false },
+                takenAt: '2026-08-21T13:45:00.000Z',
+            })),
+        }));
+        JS);
+
+    expect($answer['open'][3])->not->toContain('(blocked)')
+        ->and($answer['shut'][3])->toContain('(blocked)');
 });

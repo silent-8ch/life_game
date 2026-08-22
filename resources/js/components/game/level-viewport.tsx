@@ -30,11 +30,17 @@ import {
 import { createHands, HELD_ITEMS } from '@/lib/engine/hands';
 import type { HeldItem } from '@/lib/engine/hands';
 import type { PortalSurface } from '@/lib/engine/portal-surface';
+import {
+    createProbeBackdrop,
+    paintWalls,
+    scanRow,
+    wantsProbeBackdrop,
+} from '@/lib/engine/probe-backdrop';
 import { createPortals, crossPortal } from '@/lib/engine/portals';
 import { boundsOf, sectorAt } from '@/lib/engine/sectors';
 import { createSky } from '@/lib/engine/sky';
 import type { SkyDome } from '@/lib/engine/sky';
-import { describeSpot } from '@/lib/engine/snapshot';
+import { describeSpot, readingOf } from '@/lib/engine/snapshot';
 import { createMagic } from '@/lib/engine/spells';
 import {
     createSpriteActor,
@@ -276,6 +282,9 @@ function prepareReflections(
  * Owns the render loop. React draws the frame around it and is told what the
  * player is looking at; everything inside the canvas is imperative three.js.
  */
+/** How long a snapshot's reading stays on screen, in milliseconds. */
+const SNAPSHOT_SHOWN_FOR = 6000;
+
 export default function LevelViewport({
     level,
     onFocus,
@@ -293,6 +302,21 @@ export default function LevelViewport({
     const [touch] = useState(wantsTouchControls);
     const [playing, setPlaying] = useState(false);
 
+    /**
+     * What the last snapshot recorded, shown over the view for a moment.
+     *
+     * Taking one is otherwise silent, and a snapshot of the wrong spot is worse
+     * than none: it sends somebody to look at a place where nothing is wrong.
+     * Showing the numbers back means the person who pressed the key can see
+     * they caught the thing they meant to.
+     */
+    const [flash, setFlash] = useState<{
+        /** Bumped every time, so the same reading still restarts the fade. */
+        id: number;
+        lines: string[];
+        status: string;
+    } | null>(null);
+
     // Held in a ref so that re-rendering the frame never restarts the level.
     const callbacks = useRef({ onFocus, onExamine, onLockChange, onMessage });
     const held = useRef(paused);
@@ -302,6 +326,17 @@ export default function LevelViewport({
         held.current = paused;
     });
 
+    /** How long the reading stays up, in milliseconds. */
+    useEffect(() => {
+        if (flash === null) {
+            return;
+        }
+
+        const fade = window.setTimeout(() => setFlash(null), SNAPSHOT_SHOWN_FOR);
+
+        return () => window.clearTimeout(fade);
+    }, [flash]);
+
     useEffect(() => {
         const container = containerRef.current;
 
@@ -309,13 +344,73 @@ export default function LevelViewport({
             return;
         }
 
+        // `?debug` swaps the backdrop for a magenta and green check, so that
+        // anything showing through a seam is a colour the art never uses. The
+        // fog goes with it: fog fades a leak towards the wall colour, which is
+        // the one thing that makes a sliver hard to be sure of.
+        const probe = wantsProbeBackdrop(window.location.search)
+            ? createProbeBackdrop()
+            : null;
+
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(BACKGROUND_COLOR);
-        scene.fog = new THREE.Fog(BACKGROUND_COLOR, FOG_NEAR, FOG_FAR);
+
+        if (probe === null) {
+            scene.background = new THREE.Color(BACKGROUND_COLOR);
+            scene.fog = new THREE.Fog(BACKGROUND_COLOR, FOG_NEAR, FOG_FAR);
+        } else {
+            scene.background = probe.texture;
+        }
 
         const textures = createTextureLibrary();
         const built = buildLevel(level, textures);
         scene.add(built.group);
+
+        if (probe !== null) {
+            // The legend goes to the console rather than on screen: it is one
+            // line per wall in the level, which is far too much to read over
+            // the view, and it only has to be looked up once a sliver has been
+            // caught in a picture.
+            const legend = paintWalls(built.group);
+
+            console.log(
+                `[debug] ${legend.length} walls painted. Read a colour off the picture, round each channel to the nearest of 0/51/102/153/204/255, and look it up here.`,
+            );
+            console.table(
+                legend.map((wall) => ({
+                    css: wall.css,
+                    room: wall.sector,
+                    beyond: wall.beyond,
+                    corner: wall.index,
+                    from: `${wall.from.x},${wall.from.z}`,
+                    to: `${wall.to.x},${wall.to.z}`,
+                })),
+            );
+
+            // Hung on the window on purpose. Reading a row back names every
+            // surface across the view and the columns each one holds, which
+            // settles an argument about a two-pixel sliver that no amount of
+            // squinting at a screenshot will.
+            (
+                window as unknown as {
+                    scanRow?: (row?: number) => unknown;
+                }
+            ).scanRow = (row?: number) =>
+                scanRow(
+                    renderer.domElement,
+                    legend,
+                    row ?? Math.floor(renderer.domElement.height / 2),
+                )
+                    .filter((run) => run.to - run.from > 1)
+                    .map((run) => ({
+                        columns: `${run.from}-${run.to}`,
+                        width: run.to - run.from,
+                        css: run.css,
+                        wall:
+                            run.wall === null
+                                ? 'unpainted (floor, ceiling, sprite or pane)'
+                                : `${run.wall.sector} #${run.wall.index} -> ${run.wall.beyond ?? 'outside'} (${run.wall.from.x},${run.wall.from.z})-(${run.wall.to.x},${run.wall.to.z})`,
+                    }));
+        }
 
         // How far the camera has to be able to see. FAR_PLANE is what an
         // ordinary level needs, and it is kept as tight as that on purpose:
@@ -352,7 +447,8 @@ export default function LevelViewport({
         );
         camera.rotation.order = 'YXZ';
 
-        const sky = level.sky === null ? null : createSky(level.sky);
+        const sky =
+            level.sky === null || probe !== null ? null : createSky(level.sky);
 
         if (sky !== null) {
             scene.add(sky.object);
@@ -391,7 +487,11 @@ export default function LevelViewport({
         // climbing in steps. Turning it off is a matter of PIXEL_SCALE, which
         // is what decides how coarse the picture is in the first place.
         const renderer = new THREE.WebGLRenderer({
-            antialias: true,
+            // Antialiasing blends a one-pixel sliver into its neighbours, and a
+            // blended colour matches nothing in the legend. Debug wants the
+            // hard edges, and the buffer kept so a frame can be read back.
+            antialias: probe === null,
+            preserveDrawingBuffer: probe !== null,
             // Depth kept as a logarithm rather than spread evenly. The far
             // plane opens up as far as a level asks — somebody a thousand
             // metres tall wants a thousand metres of it — and spread evenly
@@ -742,9 +842,20 @@ export default function LevelViewport({
             // taking it again, since the thing being caught may not come back.
             console.log('[snapshot]', JSON.stringify(spot));
 
+            const reading = readingOf(spot);
+
+            const show = (status: string): void =>
+                setFlash((was) => ({
+                    id: (was?.id ?? 0) + 1,
+                    lines: reading,
+                    status,
+                }));
+
+            show('Saving…');
             callbacks.current.onMessage?.('Saving a snapshot…');
 
             const failed = (why: string): void => {
+                show(`Not saved — ${why}. It is in the console.`);
                 callbacks.current.onMessage?.(
                     `The snapshot would not save (${why}). It is in the browser console instead.`,
                 );
@@ -788,6 +899,7 @@ export default function LevelViewport({
                             ? String((said as { saved: unknown }).saved)
                             : 'a snapshot';
 
+                    show(`Saved as ${name}`);
                     callbacks.current.onMessage?.(`Snapshot saved as ${name}.`);
                 })
                 .catch(() => failed('the server did not answer'));
@@ -1022,6 +1134,7 @@ export default function LevelViewport({
             actors.dispose();
             playerSprite.dispose();
             sky?.dispose();
+            probe?.dispose();
             magic?.dispose();
             hands.dispose();
             built.dispose();
@@ -1048,6 +1161,21 @@ export default function LevelViewport({
             )}
         >
             {children}
+
+            {flash !== null && (
+                <div
+                    key={flash.id}
+                    className="pointer-events-none absolute top-3 left-3 z-50 max-w-[min(20rem,70vw)] animate-in rounded-md border border-white/15 bg-black/70 px-3 py-2 font-mono text-[11px] leading-tight text-white/85 shadow-lg backdrop-blur-sm fade-in"
+                >
+                    <div className="mb-1 font-sans text-[10px] font-semibold tracking-widest text-emerald-300 uppercase">
+                        Snapshot
+                    </div>
+                    {flash.lines.map((line) => (
+                        <div key={line}>{line}</div>
+                    ))}
+                    <div className="mt-1 text-white/55">{flash.status}</div>
+                </div>
+            )}
         </div>
     );
 }

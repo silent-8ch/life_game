@@ -178,3 +178,27 @@ export function describeSpot(spot: SpotToDescribe): Snapshot {
         note: spot.note ?? '',
     };
 }
+
+/**
+ * The few lines of a snapshot worth showing back to the person who took it.
+ *
+ * Taking one is otherwise silent, and a snapshot of the wrong spot is worse
+ * than none: it sends somebody to look at a place where nothing is wrong. The
+ * nearest boundary is the line that earns its place — almost every fault worth
+ * snapping is a doorway or a portal mouth, and how far off it the reading was
+ * taken is what makes the spot reproducible.
+ */
+export function readingOf(snapshot: Snapshot): string[] {
+    const closest = snapshot.edgesNearby[0];
+
+    return [
+        snapshot.standingIn === null
+            ? 'Outside any room'
+            : `${snapshot.standingIn.name} (${snapshot.standingIn.slug})`,
+        `x ${snapshot.at.x}  z ${snapshot.at.z}  eye ${snapshot.at.eye}`,
+        `yaw ${snapshot.at.yaw}\u00b0  pitch ${snapshot.at.pitch}\u00b0`,
+        closest === undefined
+            ? 'No boundary within reach'
+            : `${(closest.distance * 100).toFixed(1)} cm from ${closest.rooms.join(' | ')}${closest.open ? '' : ' (blocked)'}`,
+    ];
+}
