@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { moveWithCollisions } from '@/lib/engine/collision';
 import type { Collider } from '@/lib/engine/collision';
 import {
-    EYE_HEIGHT,
+    EYE_OF_STATURE,
     MAX_PITCH,
     PLAYER_RADIUS,
     RUN_SPEED,
@@ -14,6 +14,7 @@ import { crossPortal } from '@/lib/engine/portals';
 import type { Portal } from '@/lib/engine/portals';
 import type { ForcedSpot } from '@/lib/engine/probe-backdrop';
 import { floorAt, sectorAt } from '@/lib/engine/sectors';
+import { DEFAULT_PLAYER_HEIGHT, HEIGHTS } from '@/lib/engine/sprite-actor';
 import type { Level, Sector } from '@/types';
 
 /**
@@ -33,6 +34,13 @@ export type Player = {
     pitch: number;
     /** Height of the eye, which catches up with the floor rather than jumping. */
     eye: number;
+    /**
+     * How far this person's eye sits above the floor they are standing on.
+     *
+     * Carried on the player rather than looked up each frame: the level cannot
+     * change who you are while you are walking around in it.
+     */
+    eyeAbove: number;
     walked: number;
 };
 
@@ -62,6 +70,10 @@ export type Push = {
  * negated.
  */
 export function spawnPlayer(level: Level, forced: ForcedSpot | null): Player {
+    // Whoever the level says you are, at your own eye height rather than at one
+    // height for all six of them.
+    const eyeAbove = eyeHeightOf(level.playerSprite);
+
     const standingOn =
         forced === null
             ? sectorAt(level.sectors, level.spawn.x, level.spawn.z)
@@ -82,9 +94,21 @@ export function spawnPlayer(level: Level, forced: ForcedSpot | null): Player {
                       standingOn,
                       forced?.x ?? level.spawn.x,
                       forced?.z ?? level.spawn.z,
-                  )) + EYE_HEIGHT,
+                  )) + eyeAbove,
+        eyeAbove,
         walked: 0,
     };
+}
+
+/**
+ * How far above the floor a person's eye sits: their own height, less the part
+ * of them that is above their eyes.
+ *
+ * Somebody the table has never heard of gets the default stature, which is a
+ * guess about how tall they are rather than a guess about their anatomy.
+ */
+export function eyeHeightOf(sprite: string): number {
+    return (HEIGHTS[sprite] ?? DEFAULT_PLAYER_HEIGHT) * EYE_OF_STATURE;
 }
 
 /** Turns the head, keeping the pitch inside what a neck does. */
@@ -200,7 +224,7 @@ export function settleEye(
     const wading = standingIn?.isWater === true ? WADE_DEPTH : 0;
 
     player.eye +=
-        (floor + EYE_HEIGHT - wading - player.eye) *
+        (floor + player.eyeAbove - wading - player.eye) *
         Math.min(1, STEP_SMOOTHING * seconds);
 }
 
