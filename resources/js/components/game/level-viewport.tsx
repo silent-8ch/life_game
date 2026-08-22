@@ -205,6 +205,7 @@ export default function LevelViewport({
             built.portals,
             playerSprite,
             actors,
+            built.props,
             camera,
             sky,
         );
@@ -301,6 +302,14 @@ export default function LevelViewport({
                     ? 0
                     : floorAt(standingIn, player.x, player.z);
 
+            // People wander towards a spot picked with Math.random(), so a scan
+            // that let them walk would read back a different picture every run
+            // — a column or two of somebody's shoulder, which is exactly the
+            // size of difference the scan exists to catch. They stand where
+            // they were authored instead, and everything else runs as usual on
+            // its fixed timestep.
+            const moving = scanning ? 0 : seconds;
+
             hands.update(seconds, player.walked, push.running);
 
             playerSprite.place(
@@ -310,15 +319,17 @@ export default function LevelViewport({
                 player.yaw,
                 player.walked,
             );
-            actors.update(seconds, built.colliders);
+            actors.update(moving, built.colliders);
             actors.faceViewer(player.x, player.z, player.yaw);
+            built.props.update(seconds);
+            built.props.faceViewer(player.x, player.z);
 
             aimCamera(camera, player);
 
             sky?.follow(player.x, player.eye, player.z);
 
             textures.tick(seconds);
-            magic?.update(seconds);
+            magic?.update(moving);
         };
 
         /** One frame: move everything on, draw every pane, then draw the view. */
@@ -362,8 +373,15 @@ export default function LevelViewport({
          * The frame left on screen at the end is the frame that was read, so a
          * screenshot and the JSON are the same picture.
          */
-        const scan = (): void => {
+        const scan = async (): Promise<void> => {
             resize();
+
+            // Before anything is drawn, not after: a frame read back with half
+            // its textures still in flight is a different frame from the same
+            // spot a second later, and which one you get is decided by the disk
+            // cache. That makes a diff of two captures worth nothing, and it
+            // fails intermittently, which is worse than failing.
+            await textures.settled();
 
             for (let drawn = 0; drawn < SCAN_FRAMES; drawn++) {
                 drawFrame(SCAN_STEP_SECONDS);
@@ -540,7 +558,7 @@ export default function LevelViewport({
         // A scan is a measurement, not a game: it draws its own frames, reads
         // them back and stops. Nothing else runs.
         if (scanning) {
-            scan();
+            void scan();
         } else {
             frame = requestAnimationFrame(tick);
         }

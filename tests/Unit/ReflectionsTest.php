@@ -78,6 +78,13 @@ function reflectionFrame(string $scene, string $body): array
             faceViewer: (x, z) => log.push('actors at ' + x + ',' + z),
         };
 
+        // Billboards are turned per drawing camera, exactly as the sky is, and
+        // for the same reason: a prop left facing the player is edge-on or
+        // backwards in every pane that holds it.
+        const props = {
+            faceViewer: (x, z) => log.push('props at ' + x + ',' + z),
+        };
+
         const sky = {
             object: { visible: true },
             follow: (x, y, z) => log.push('sky at ' + x + ',' + z),
@@ -90,7 +97,15 @@ function reflectionFrame(string $scene, string $body): array
 
         const panes = [...portals, ...mirrors];
 
-        prepareReflections(mirrors, portals, playerSprite, actors, camera, sky)(
+        prepareReflections(
+            mirrors,
+            portals,
+            playerSprite,
+            actors,
+            props,
+            camera,
+            sky,
+        )(
             { name: 'renderer' },
             { name: 'scene' },
         );
@@ -267,5 +282,25 @@ it('takes the panes out of the deepest pass rather than reading what it writes',
         'render far@0 body=true hidden=near+far+glass+elsewhere',
         'render glass@0 body=true hidden=near+far+glass+elsewhere',
         'render elsewhere@0 body=true hidden=near+far+glass+elsewhere',
+    ]);
+});
+
+it('turns a billboard to face whoever is drawing, not the player', function (): void {
+    $answer = reflectionFrame(REFLECTION_SCENE, <<<'JS'
+        process.stdout.write(JSON.stringify({ props: only('props') }));
+        JS);
+
+    // The same list, in the same order, as the sky's — because it is the same
+    // trap. `.ai/rules/game.md` records it for the dome: a pane pass is looked
+    // at from somewhere else entirely, and anything parked facing the player is
+    // wrong in every portal and every mirror. A billboard has no excuse to be
+    // the second thing that learns this.
+    expect($answer['props'])->toBe([
+        'props at 5,-5',
+        'props at 4,-4',
+        'props at 3,-3',
+        'props at 5,-5',
+        'props at 9,-9',
+        'props at 0,0',
     ]);
 });

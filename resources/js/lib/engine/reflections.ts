@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { Actors } from '@/lib/engine/actors';
+import type { PropSet } from '@/lib/engine/build/things';
 import {
     PANE_CLEARANCE,
     PORTAL_BOUNCES,
@@ -30,6 +31,7 @@ export function prepareReflections(
     portals: PortalSurface[],
     playerSprite: SpriteActor,
     actors: Actors,
+    props: PropSet,
     camera: THREE.PerspectiveCamera,
     sky: SkyDome | null,
 ): (renderer: THREE.WebGLRenderer, scene: THREE.Scene) => void {
@@ -52,6 +54,10 @@ export function prepareReflections(
 
         playerSprite.faceViewer(at.x, at.z, at.yaw);
         actors.faceViewer(at.x, at.z, at.yaw);
+        // The same trap as the sky, and for the same reason: this pass is
+        // looked at from somewhere else entirely, and a billboard left facing
+        // the player is edge-on or backwards in every pane that holds it.
+        props.faceViewer(at.x, at.z);
         playerSprite.object.visible = true;
 
         // The sky is drawn around whoever is looking, and this pass is looked
@@ -204,5 +210,6 @@ export function prepareReflections(
             camera.position.z,
             camera.rotation.y,
         );
+        props.faceViewer(camera.position.x, camera.position.z);
     };
 }

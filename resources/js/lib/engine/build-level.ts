@@ -5,6 +5,7 @@ import { buildSectorFlats } from '@/lib/engine/build/flats';
 import { buildPortals } from '@/lib/engine/build/portal-panes';
 import type { SkyLid } from '@/lib/engine/build/scene';
 import { buildThings } from '@/lib/engine/build/things';
+import type { PropSet } from '@/lib/engine/build/things';
 import type { Collider } from '@/lib/engine/collision';
 import type { PortalSurface } from '@/lib/engine/portal-surface';
 import type { TextureLibrary } from '@/lib/engine/textures';
@@ -40,6 +41,11 @@ export type BuiltLevel = {
      * is standing in belong in the picture.
      */
     skyLids: SkyLid[];
+    /**
+     * The props: what turns to face a viewpoint, what animates, and what
+     * changes picture when a flag is set.
+     */
+    props: PropSet;
     highlight: (slug: string | null) => void;
     dispose: () => void;
 };
@@ -54,7 +60,7 @@ export function buildLevel(level: Level, textures: TextureLibrary): BuiltLevel {
     // behind the far one, and it also has to know what every room drew.
     const mouths = buildBoundaries(ctx);
 
-    const highlight = buildThings(ctx);
+    const props = buildThings(ctx);
 
     buildPortals(ctx, mouths);
 
@@ -77,7 +83,8 @@ export function buildLevel(level: Level, textures: TextureLibrary): BuiltLevel {
         mirrors,
         portals,
         skyLids,
-        highlight,
+        props,
+        highlight: props.highlight,
         dispose,
     };
 }
