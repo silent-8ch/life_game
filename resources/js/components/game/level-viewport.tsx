@@ -526,6 +526,9 @@ export default function LevelViewport({
         renderer.domElement.style.display = 'block';
         container.appendChild(renderer.domElement);
 
+        // Now that there is a renderer to ask, turn on anisotropic filtering.
+        textures.useRenderer(renderer);
+
         // A spot named in the address wins over the level's own spawn, so a
         // reported snapshot can be stood on again exactly.
         const forced = spotFromSearch(window.location.search);

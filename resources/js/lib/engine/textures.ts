@@ -18,22 +18,56 @@ export type TextureLibrary = {
     surface: (name: string | null) => THREE.Texture | null;
     /** The animated water sheet, already framed. */
     water: () => THREE.Texture;
+    /**
+     * Turn on anisotropic filtering, to whatever this card manages.
+     *
+     * Separate from building the library because the renderer does not exist
+     * yet when the level is built, and reaching for it there is a use before
+     * its declaration that types do not catch and that shows up as a blank
+     * page.
+     */
+    useRenderer: (renderer: THREE.WebGLRenderer) => void;
     /** Advance anything that animates. */
     tick: (seconds: number) => void;
     dispose: () => void;
 };
 
-function retro(texture: THREE.Texture): THREE.Texture {
+/**
+ * How many samples a texture may be read with when it is seen edge-on.
+ *
+ * Every wall and floor in a first-person view is seen at a glancing angle
+ * somewhere, and a glancing angle is the case ordinary mipmapping cannot do
+ * anything sensible with: one screen pixel covers a long thin footprint in the
+ * texture, and picking a single mip level for it is either far too blurred
+ * along one axis or far too sharp along the other. Too sharp is what crawls —
+ * the level chosen flips from pixel to pixel and again from frame to frame as
+ * the player moves, and the surface shimmers along its length. It reads as a
+ * flicker at the join between two rooms, because a join is where two surfaces
+ * are both at their most glancing.
+ *
+ * Anisotropic filtering is the fix for exactly this, and it was never switched
+ * on: three.js leaves it at 1, which is off. Asked for here and clamped to
+ * whatever the card actually supports.
+ */
+const WANTED_ANISOTROPY = 16;
+
+function retro(texture: THREE.Texture, anisotropy: number): THREE.Texture {
     texture.colorSpace = THREE.SRGBColorSpace;
     texture.magFilter = THREE.NearestFilter;
     texture.minFilter = THREE.LinearMipmapLinearFilter;
     texture.wrapS = THREE.RepeatWrapping;
     texture.wrapT = THREE.RepeatWrapping;
+    texture.anisotropy = anisotropy;
 
     return texture;
 }
 
 export function createTextureLibrary(): TextureLibrary {
+    // Settled once the renderer exists and can be asked what it manages, which
+    // is after the level is built. Anything loaded before then is brought up to
+    // it at that point.
+    let anisotropy = 1;
+
     const loader = new THREE.TextureLoader();
     const loaded = new Map<string, THREE.Texture>();
 
@@ -52,7 +86,7 @@ export function createTextureLibrary(): TextureLibrary {
             return existing;
         }
 
-        const texture = retro(loader.load(`${TEXTURE_PATH}/${name}.png`));
+        const texture = retro(loader.load(`${TEXTURE_PATH}/${name}.png`), anisotropy);
         loaded.set(name, texture);
 
         return texture;
@@ -60,7 +94,10 @@ export function createTextureLibrary(): TextureLibrary {
 
     const water = (): THREE.Texture => {
         if (waterTexture === null) {
-            waterTexture = retro(loader.load('/sprites/bg/water-surface.png'));
+            waterTexture = retro(
+                loader.load('/sprites/bg/water-surface.png'),
+                anisotropy,
+            );
             waterTexture.wrapS = THREE.ClampToEdgeWrapping;
             waterTexture.wrapT = THREE.ClampToEdgeWrapping;
             waterTexture.repeat.set(1 / WATER_FRAMES, 1);
@@ -72,6 +109,20 @@ export function createTextureLibrary(): TextureLibrary {
     return {
         surface,
         water,
+
+        useRenderer: (renderer) => {
+            anisotropy = Math.min(
+                WANTED_ANISOTROPY,
+                renderer.capabilities.getMaxAnisotropy(),
+            );
+
+            for (const texture of [...loaded.values(), waterTexture]) {
+                if (texture !== null && texture.anisotropy !== anisotropy) {
+                    texture.anisotropy = anisotropy;
+                    texture.needsUpdate = true;
+                }
+            }
+        },
 
         tick: (seconds) => {
             if (waterTexture === null) {
