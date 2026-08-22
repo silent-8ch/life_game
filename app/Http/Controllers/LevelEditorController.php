@@ -9,6 +9,7 @@ use App\Services\LevelAssets;
 use App\Services\LevelPayload;
 use App\Services\LevelWriter;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -20,6 +21,8 @@ class LevelEditorController extends Controller
 {
     public function edit(Level $level, LevelPayload $payload, LevelAssets $assets): Response
     {
+        Gate::authorize('update', $level);
+
         return Inertia::render('editor/level', [
             'level' => $payload->forEditor($level),
             'levelId' => $level->id,

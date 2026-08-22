@@ -7,6 +7,7 @@ use App\Models\LevelSector;
 use App\Models\LevelVertex;
 use App\Models\User;
 use Database\Seeders\LifeSeeder;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Testing\AssertableInertia;
 
 beforeEach(function (): void {
@@ -128,6 +129,31 @@ it('keeps the editor behind a login', function (): void {
 
     $this->put(route('levels.editor.update', $this->level), drawnMap())
         ->assertRedirect(route('filament.admin.auth.login'));
+});
+
+it('lets anyone who can sign in redraw a level, for now', function (): void {
+    // There is no owner recorded for a game, so the policy says yes to every
+    // signed-in user. Pinned here so that narrowing it is a deliberate change
+    // with a failing test to change alongside it.
+    expect($this->editor->can('update', $this->level))->toBeTrue();
+});
+
+it('turns away a save the policy will not have', function (): void {
+    Gate::before(fn (): bool => false);
+
+    $this->actingAs($this->editor)
+        ->put(route('levels.editor.update', $this->level), drawnMap())
+        ->assertForbidden();
+
+    expect($this->level->fresh()->sectors)->toHaveCount(3, 'The stored map is untouched.');
+});
+
+it('turns away the editor page itself when the policy says no', function (): void {
+    Gate::before(fn (): bool => false);
+
+    $this->actingAs($this->editor)
+        ->get(route('levels.editor', $this->level))
+        ->assertForbidden();
 });
 
 it('opens a level for editing, with the folder of textures to build from', function (): void {

@@ -22,7 +22,10 @@ class UpdateLevelMapRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        /** @var Level $level */
+        $level = $this->route('level');
+
+        return $this->user()?->can('update', $level) ?? false;
     }
 
     /**
