@@ -1,5 +1,5 @@
 import { Head, router } from '@inertiajs/react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { show } from '@/actions/App/Http/Controllers/GameController';
 import { update } from '@/actions/App/Http/Controllers/LevelEditorController';
 import Inspector from '@/components/editor/inspector';
@@ -8,6 +8,14 @@ import type { Tool } from '@/components/editor/map-view';
 import SideView from '@/components/editor/side-view';
 import LevelViewport from '@/components/game/level-viewport';
 import { carveRooms, weldCorners } from '@/lib/editor/carve';
+import {
+    EMPTY_HISTORY,
+    isContinuousEdit,
+    redo,
+    remember,
+    undo,
+} from '@/lib/editor/history';
+import type { EditKind, HistoryStep, LevelHistory } from '@/lib/editor/history';
 import {
     duplicateRooms,
     moveCorner,
@@ -38,6 +46,12 @@ const GRIDS = [0.25, 0.5, 1, 2];
 /** How long to wait after an edit before rebuilding the preview. */
 const PREVIEW_DELAY = 500;
 
+/**
+ * How long an edit that arrives a bit at a time — a drag, a name being typed —
+ * stays the same step in the history once the changes stop coming.
+ */
+const STEP_PAUSE = 600;
+
 export default function LevelEditor({
     game,
     level,
@@ -58,6 +72,83 @@ export default function LevelEditor({
     const [drawing, setDrawing] = useState<Point[]>([]);
     const [saving, setSaving] = useState(false);
     const [preview, setPreview] = useState<Level>(level);
+    const [history, setHistory] = useState<LevelHistory>(EMPTY_HISTORY);
+
+    // Which kind of edit is still being made, and the wait that ends it. A
+    // corner dragged across the plan arrives as a hundred small changes, and
+    // each one of them in the history would be a hundred presses of ⌘Z.
+    const openEdit = useRef<EditKind | null>(null);
+    const openTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    /**
+     * Makes an edit, filing the draft as it stands first so there is a way
+     * back to it. Edits of a continuous kind carry on the step they opened
+     * until the pointer comes up or the changes stop, so a drag, a burst of
+     * arrow presses and a typed name are each one step, not dozens.
+     */
+    const commit = useCallback(
+        (kind: EditKind, change: (current: Level) => Level): void => {
+            const continuous = isContinuousEdit(kind);
+            const carryingOn = continuous && openEdit.current === kind;
+
+            if (openTimer.current !== null) {
+                clearTimeout(openTimer.current);
+                openTimer.current = null;
+            }
+
+            openEdit.current = continuous ? kind : null;
+
+            if (continuous) {
+                openTimer.current = setTimeout(() => {
+                    openEdit.current = null;
+                }, STEP_PAUSE);
+            }
+
+            if (!carryingOn) {
+                setHistory((current) => remember(current, draft));
+            }
+
+            setDraft(change);
+        },
+        [draft],
+    );
+
+    /**
+     * Puts a remembered draft back in hand. Rooms are held by their position
+     * in the level, so anything picked may have gone or moved: the selection
+     * starts again rather than pointing at a room that is no longer there.
+     */
+    const stepBack = (step: HistoryStep | null): void => {
+        if (step === null) {
+            return;
+        }
+
+        openEdit.current = null;
+        setHistory(step.history);
+        setDraft(step.level);
+        setSelection(null);
+        setRooms([]);
+        setThing(null);
+        setDrawing([]);
+    };
+
+    // A drag is one step however far it goes, so the pointer coming up
+    // anywhere closes whatever step it opened.
+    useEffect(() => {
+        const closeStep = (): void => {
+            openEdit.current = null;
+        };
+
+        window.addEventListener('pointerup', closeStep);
+
+        return () => {
+            window.removeEventListener('pointerup', closeStep);
+
+            if (openTimer.current !== null) {
+                clearTimeout(openTimer.current);
+            }
+        };
+    }, []);
 
     const dirty = useMemo(
         () => JSON.stringify(draft) !== JSON.stringify(saved),
@@ -89,14 +180,14 @@ export default function LevelEditor({
             draft.sectors.length,
         );
 
-        setDraft(carved);
+        commit('carve', () => carved);
         setSelection({ sector: carved.sectors.length - 1, edge: null });
         setRooms([carved.sectors.length - 1]);
         setDrawing([]);
 
         // The tool stays in hand: rooms come in twos and threes, and having to
         // reach for it again between each one is a nuisance. Esc puts it down.
-    }, [drawing, draft]);
+    }, [commit, drawing, draft]);
 
     // Every room an edit works on: the whole picked set, or the one room the
     // selection holds when nothing was gathered up.
@@ -114,11 +205,11 @@ export default function LevelEditor({
         // The copies go on the end, in the order they were picked.
         const first = draft.sectors.length;
 
-        setDraft((current) => duplicateRooms(current, picked));
+        commit('duplicate', (current) => duplicateRooms(current, picked));
         setRooms(picked.map((_, index) => first + index));
         setSelection({ sector: first, edge: null });
         setThing(null);
-    }, [picked, draft.sectors.length]);
+    }, [commit, picked, draft.sectors.length]);
 
     useEffect(() => {
         const handleKey = (event: KeyboardEvent): void => {
@@ -130,6 +221,33 @@ export default function LevelEditor({
                 if (typing) {
                     return;
                 }
+            }
+
+            // With the duplicate and before the tool keys, so a step back is
+            // never also a change of tool: shift makes ⌘Z a redo, as ⌘Y does
+            // on its own.
+            if (
+                (event.metaKey || event.ctrlKey) &&
+                event.key.toLowerCase() === 'z'
+            ) {
+                event.preventDefault();
+                stepBack(
+                    event.shiftKey
+                        ? redo(history, draft)
+                        : undo(history, draft),
+                );
+
+                return;
+            }
+
+            if (
+                (event.metaKey || event.ctrlKey) &&
+                event.key.toLowerCase() === 'y'
+            ) {
+                event.preventDefault();
+                stepBack(redo(history, draft));
+
+                return;
             }
 
             // Before the tool keys, or duplicating would also put the draw
@@ -149,7 +267,7 @@ export default function LevelEditor({
                 }
 
                 event.preventDefault();
-                setDraft((current) =>
+                commit('nudge', (current) =>
                     nudgeHeights(
                         current,
                         picked,
@@ -252,7 +370,7 @@ export default function LevelEditor({
                         </a>
                         <button
                             type="button"
-                            onClick={() => setDraft(saved)}
+                            onClick={() => commit('revert', () => saved)}
                             disabled={!dirty}
                             className="rounded border border-slate-700 px-3 py-1.5 text-sm text-slate-300 disabled:opacity-40"
                         >
@@ -372,6 +490,7 @@ export default function LevelEditor({
                                 tool={tool}
                                 grid={grid}
                                 selection={selection}
+                                canUndo={history.past.length > 0}
                                 drawing={drawing}
                                 rooms={rooms}
                                 thing={thing}
@@ -408,7 +527,7 @@ export default function LevelEditor({
                                     }
                                 }}
                                 onPlaceThing={(at) => {
-                                    setDraft((current) => {
+                                    commit('place', (current) => {
                                         const made =
                                             tool === 'person'
                                                 ? newPerson(
@@ -429,16 +548,18 @@ export default function LevelEditor({
                                     setSelection(null);
                                 }}
                                 onMoveThing={(index, to) =>
-                                    setDraft((current) =>
+                                    commit('thing', (current) =>
                                         updateThing(current, index, to),
                                     )
                                 }
                                 onMoveCorner={(from, to) =>
-                                    setDraft((current) =>
+                                    commit('corner', (current) =>
                                         moveCorner(current, from, to),
                                     )
                                 }
                                 onDropCorner={() => {
+                                    // The tail of the drag the history already
+                                    // has, so it files nothing of its own.
                                     setDraft((current) => weldCorners(current));
                                     // Welding can renumber a room's walls.
                                     setSelection((current) =>
@@ -451,13 +572,13 @@ export default function LevelEditor({
                                     setDrawing((current) => [...current, at])
                                 }
                                 onSplitEdge={(from, to, at) =>
-                                    setDraft((current) =>
+                                    commit('split', (current) =>
                                         splitEdge(current, from, to, at),
                                     )
                                 }
                                 onCloseShape={closeShape}
                                 onMoveSpawn={(at) =>
-                                    setDraft((current) => ({
+                                    commit('spawn', (current) => ({
                                         ...current,
                                         spawn: { ...current.spawn, ...at },
                                     }))
@@ -471,7 +592,7 @@ export default function LevelEditor({
                                 selected={selection?.sector ?? null}
                                 onChangeHeights={(floorHeight, ceilingHeight) =>
                                     picked.length > 0 &&
-                                    setDraft((current) =>
+                                    commit('heights', (current) =>
                                         // A dragged handle takes every picked
                                         // room with it, not only the one the
                                         // section happens to be drawing.
@@ -498,7 +619,7 @@ export default function LevelEditor({
                                 rooms={rooms}
                                 thing={thing}
                                 onChangeRooms={(change) =>
-                                    setDraft((current) =>
+                                    commit('field', (current) =>
                                         rooms.reduce(
                                             (level, index) =>
                                                 updateSector(
@@ -511,7 +632,7 @@ export default function LevelEditor({
                                     )
                                 }
                                 onChangeRoomWalls={(texture) =>
-                                    setDraft((current) => ({
+                                    commit('field', (current) => ({
                                         ...current,
                                         sectors: current.sectors.map(
                                             (sector, index) =>
@@ -531,7 +652,7 @@ export default function LevelEditor({
                                     }))
                                 }
                                 onDeleteRooms={() => {
-                                    setDraft((current) => ({
+                                    commit('delete', (current) => ({
                                         ...current,
                                         sectors: current.sectors.filter(
                                             (_, index) =>
@@ -543,7 +664,7 @@ export default function LevelEditor({
                                 }}
                                 onChangeThing={(change) =>
                                     thing !== null &&
-                                    setDraft((current) =>
+                                    commit('field', (current) =>
                                         updateThing(current, thing, change),
                                     )
                                 }
@@ -552,7 +673,7 @@ export default function LevelEditor({
                                         return;
                                     }
 
-                                    setDraft((current) => ({
+                                    commit('delete', (current) => ({
                                         ...current,
                                         things: current.things.filter(
                                             (_, index) => index !== thing,
@@ -561,14 +682,14 @@ export default function LevelEditor({
                                     setThing(null);
                                 }}
                                 onChangeLevel={(change) =>
-                                    setDraft((current) => ({
+                                    commit('field', (current) => ({
                                         ...current,
                                         ...change,
                                     }))
                                 }
                                 onChangeSector={(change) =>
                                     selection !== null &&
-                                    setDraft((current) =>
+                                    commit('field', (current) =>
                                         updateSector(
                                             current,
                                             selection.sector,
@@ -579,7 +700,7 @@ export default function LevelEditor({
                                 onChangeEdge={(change) =>
                                     selection?.edge !== null &&
                                     selection !== null &&
-                                    setDraft((current) =>
+                                    commit('field', (current) =>
                                         updateEdge(
                                             current,
                                             selection.sector,
@@ -593,7 +714,7 @@ export default function LevelEditor({
                                         return;
                                     }
 
-                                    setDraft((current) => ({
+                                    commit('delete', (current) => ({
                                         ...current,
                                         sectors: current.sectors.filter(
                                             (_, index) =>
