@@ -342,6 +342,17 @@ export function buildLevel(level: Level, textures: TextureLibrary): BuiltLevel {
         holder.position.set(centreX, bottom + height / 2, centreZ);
         holder.rotation.y = Math.atan2(normal.x, normal.z);
 
+        // Which boundary this face belongs to, so debug painting can name a
+        // stray sliver rather than leaving somebody to guess at it. Costs a
+        // small object per wall and nothing at all to draw.
+        holder.userData.wall = {
+            sector: edge.sector.slug,
+            index: edge.index,
+            from: { x: edge.from.x, z: edge.from.z },
+            to: { x: edge.to.x, z: edge.to.z },
+            beyond: edge.beyond?.slug ?? null,
+        };
+
         if (edge.from.isMirror) {
             buildMirrorPane(
                 edge,
@@ -470,6 +481,12 @@ export function buildLevel(level: Level, textures: TextureLibrary): BuiltLevel {
             holder.add(mesh);
             targets.push(mesh);
         }
+
+        // Tagged for the same reason walls are: an unpainted surface in a debug
+        // picture can happen to land on a colour the legend already uses, and a
+        // reading tool that occasionally names the wrong wall is worse than no
+        // tool at all.
+        holder.userData.flat = { sector: sector.slug, height };
 
         group.add(holder);
         remember(sector.slug, holder);
@@ -661,6 +678,78 @@ export function buildLevel(level: Level, textures: TextureLibrary): BuiltLevel {
         mirrors.push(surface);
     };
 
+    /**
+     * Every edge by the room and corner it starts at, for finding the walls
+     * that meet the ends of a portal mouth.
+     */
+    const edgeAt = new Map<string, Edge>();
+
+    for (const edge of edgesOf(level.sectors)) {
+        edgeAt.set(`${edge.sector.slug}#${edge.index}`, edge);
+    }
+
+    /**
+     * How far to pull a portal pane back from each end of its mouth.
+     *
+     * Every wall is nudged WALL_INSET into its own room, so a wall standing at
+     * the end of a mouth has its face a centimetre inside the opening. The pane
+     * has to stop where that face is, or it hangs past it and its outer rim
+     * reads the far view outside the opening.
+     *
+     * But that is only true where a wall actually stands there. A mouth whose
+     * end runs into an open doorway has nothing to meet, and trimming it there
+     * leaves a slot a centimetre wide that looks straight past the pane into
+     * the room behind the mouth — which is what the flicker at the edge of a
+     * portal turned out to be. The two ends are asked separately for that
+     * reason: they are very often not alike.
+     *
+     * The dot product handles walls that meet the mouth at something other than
+     * a right angle, where only part of the nudge is along the opening.
+     */
+    const trimOf = (mouth: Edge): { back: number; front: number } => {
+        const corners = mouth.sector.points.length;
+
+        const spanX = mouth.to.x - mouth.from.x;
+        const spanZ = mouth.to.z - mouth.from.z;
+        const length = Math.hypot(spanX, spanZ) || 1;
+        const along = { x: spanX / length, z: spanZ / length };
+
+        /**
+         * @param  index  Which corner of the room the neighbouring wall starts
+         *                at.
+         * @param  into   Which way along the mouth its own room lies.
+         */
+        const trim = (index: number, into: number): number => {
+            const beside = edgeAt.get(`${mouth.sector.slug}#${index}`);
+
+            if (beside === undefined) {
+                return 0;
+            }
+
+            // An open boundary draws no face over the height of the mouth, so
+            // there is nothing there for the pane to stop against.
+            const solid =
+                beside.beyond === null ||
+                beside.from.blocks ||
+                (beside.beyondFrom?.blocks ?? false);
+
+            if (!solid) {
+                return 0;
+            }
+
+            const normal = inwardNormal(beside.sector, beside.from, beside.to);
+            const reach =
+                (normal.x * along.x + normal.z * along.z) * into * WALL_INSET;
+
+            return Math.max(0, reach);
+        };
+
+        return {
+            back: trim((mouth.index - 1 + corners) % corners, 1),
+            front: trim((mouth.index + 1) % corners, -1),
+        };
+    };
+
     /** The pane for one mouth, showing what stands beyond the other. */
     const buildPortalPane = (entry: Edge, exit: Edge): PortalSurface => {
         const place = (edge: Edge) => {
@@ -700,14 +789,22 @@ export function buildLevel(level: Level, textures: TextureLibrary): BuiltLevel {
 
         const height = entry.sector.ceilingHeight - entry.sector.floorHeight;
 
-        // Narrower than the mouth by exactly what the walls either side of it
-        // were nudged into the room, so the pane ends where their faces do.
-        // Left full width it hangs a centimetre past them, and that sliver
-        // reads the far view outside the opening — a bright line at the edge of
-        // the portal that comes and goes as the player walks past it.
+        // Pulled back at each end to meet the face of whatever wall stands
+        // there, which is very often only one of the two.
+        const trim = trimOf(entry);
+
         const geometry = track(
-            new THREE.PlaneGeometry(near.length - WALL_INSET * 2, height),
+            new THREE.PlaneGeometry(
+                near.length - trim.back - trim.front,
+                height,
+            ),
         );
+
+        // Trimming one end and not the other moves the middle of the pane off
+        // the middle of the mouth.
+        const shift = (trim.back - trim.front) / 2;
+        const alongX = (entry.to.x - entry.from.x) / (near.length || 1);
+        const alongZ = (entry.to.z - entry.from.z) / (near.length || 1);
 
         const carried = new THREE.Vector3();
 
@@ -753,9 +850,9 @@ export function buildLevel(level: Level, textures: TextureLibrary): BuiltLevel {
         // opening, where the tilted near plane has left nothing but sky — a
         // one-pixel bright line all the way round the portal.
         surface.mesh.position.set(
-            near.centre.x - near.normal.x * PORTAL_RECESS,
+            near.centre.x - near.normal.x * PORTAL_RECESS + alongX * shift,
             entry.sector.floorHeight + height / 2,
-            near.centre.z - near.normal.z * PORTAL_RECESS,
+            near.centre.z - near.normal.z * PORTAL_RECESS + alongZ * shift,
         );
         surface.mesh.rotation.y = Math.atan2(near.normal.x, near.normal.z);
         surface.mesh.updateMatrixWorld(true);
@@ -982,9 +1079,39 @@ export function buildLevel(level: Level, textures: TextureLibrary): BuiltLevel {
      * the opening, and those stay in.
      */
     const standingIn = (mouth: Edge): THREE.Object3D[] => {
-        const room = mouth.beyond;
+        // The room straight through the mouth is the obvious one, but not the
+        // only one that can reach the opening. A room that merely shares a
+        // corner with the mouth has a wall running away from that corner, and
+        // that wall is nudged a centimetre into its own room — which, for the
+        // wall standing at the end of a mouth, means a centimetre into the
+        // opening. It then draws down the edge of the pane as a hard stripe of
+        // a wall from somewhere else entirely, which is the fault that was
+        // being chased as a flicker at portal borders.
+        const touching = new Set<string>(
+            mouth.beyond === null ? [] : [mouth.beyond.slug],
+        );
 
-        if (room === null) {
+        const sameSpot = (
+            a: { x: number; z: number },
+            b: { x: number; z: number },
+        ): boolean => Math.hypot(a.x - b.x, a.z - b.z) < 1e-3;
+
+        for (const sector of level.sectors) {
+            if (sector.slug === mouth.sector.slug) {
+                continue;
+            }
+
+            const meets = sector.points.some(
+                (point) =>
+                    sameSpot(point, mouth.from) || sameSpot(point, mouth.to),
+            );
+
+            if (meets) {
+                touching.add(sector.slug);
+            }
+        }
+
+        if (touching.size === 0) {
             return [];
         }
 
@@ -1001,7 +1128,11 @@ export function buildLevel(level: Level, textures: TextureLibrary): BuiltLevel {
         const box = new THREE.Box3();
         const corner = new THREE.Vector3();
 
-        return (drawnByRoom.get(room.slug) ?? []).filter((what) => {
+        const behind = [...touching].flatMap(
+            (slug) => drawnByRoom.get(slug) ?? [],
+        );
+
+        return behind.filter((what) => {
             box.setFromObject(what);
 
             // The furthest any of it reaches towards the room being looked at.

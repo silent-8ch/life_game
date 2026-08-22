@@ -117,18 +117,30 @@ const CLIP_BIAS = 0.005;
 
 /**
  * How close the camera may come to the plane it is clipped against before the
- * tilt is dropped. Tilting the near plane onto something the camera is already
- * touching squeezes the whole depth range into nothing, and everything far off
- * falls out of the picture — walking up to a portal, the far end of the room
- * beyond it goes black.
+ * tilt is dropped, in metres.
  *
- * Do not try to keep the tilt through this by pushing the plane forward: it was
- * tried, and it wedges the card hard enough that the page stops painting while
- * its scripts carry on. The leak it leaves — the view reaching out past the
- * opening for the last few centimetres — has to be closed in the geometry
- * instead, by not leaving gaps beside a mouth for it to reach through.
+ * There has to be some threshold. The oblique construction scales the clip
+ * plane by the reciprocal of the camera's distance to it, so as that distance
+ * goes to zero the whole depth range collapses and the far room falls out of
+ * the picture. But every millimetre of the threshold is a millimetre where the
+ * pane draws whatever stands between its camera and the mouth — the wall beside
+ * the opening, the room over the way — and the pane is hugged across the whole
+ * screen at exactly that range, so it is all anyone can see.
+ *
+ * 0.15 was a guess, and it was wide enough to walk through and notice: the
+ * snapshots of the fault were all taken between 1 and 2 cm out. The right value
+ * is much smaller than the usual advice, because that advice assumes a normal
+ * depth buffer and this renderer uses a logarithmic one, which does not lose
+ * precision the same way when the near plane tilts hard. Measured on screen at
+ * the recorded fault spots: 0.002 renders the far room correctly right up
+ * against the mouth. Lower it further only with the same check, on a machine
+ * with a different GPU as well.
+ *
+ * Do not close it entirely by pushing the plane forward instead of dropping the
+ * tilt: that was tried, and it wedges the card hard enough that the page stops
+ * painting while its scripts carry on.
  */
-const CLIP_MINIMUM = 0.15;
+const CLIP_MINIMUM = 0.002;
 
 /**
  * Tilts a camera's near plane onto a plane in front of it, so everything behind
