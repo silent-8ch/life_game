@@ -186,11 +186,12 @@ export const MAX_SHOT_PIXELS = 2000;
 /**
  * How big to draw the pictures, given the buffer the game is drawing into.
  *
- * The game renders at `1 / PIXEL_SCALE` and upscales, so its buffer is already
- * small and is the honest size to report a fault at — a picture of what the
- * player saw should have the pixels the player saw. Only a very large window
- * needs bringing down, and then by whole steps, so the pixel grid the whole
- * look depends on survives.
+ * The game renders at the size it is shown at, so its buffer is the honest
+ * size to report a fault at — a picture of what the player saw should have the
+ * pixels the player saw. It used to be a third of that and small enough to send
+ * whatever the window; now a large window does need bringing down, and by whole
+ * steps rather than by an arbitrary factor, so what survives is a clean
+ * fraction of what was on screen.
  */
 export function shotSize(
     width: number,

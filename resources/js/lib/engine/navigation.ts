@@ -128,14 +128,22 @@ export function buildNavGraph(level: Level): NavGraph {
         // are at its two ends. The same reasoning the step gate uses.
         // Aimed a stride into the room being entered rather than at the gap
         // itself, so arriving means through rather than in the doorway.
-        const into = inwardNormal(beyond, edge.from, edge.to);
+        //
+        // Measured from *this* room's normal and reversed, not from the far
+        // room's. `edgesOf` hands the corners back in this sector's winding
+        // order, and the neighbour walks the same wall the other way round —
+        // so asking the far room for a normal along these corners answers for
+        // the wrong side of the wall, and where the two rooms happen to be
+        // wound alike it answers with the near side exactly, aiming the
+        // waypoint a stride back into the room being left.
+        const into = inwardNormal(sector, edge.from, edge.to);
         const gap = middleOf(edge.from, edge.to);
 
         link(sector.slug, {
             to: beyond.slug,
             at: {
-                x: gap.x + into.x * BEYOND,
-                z: gap.z + into.z * BEYOND,
+                x: gap.x - into.x * BEYOND,
+                z: gap.z - into.z * BEYOND,
             },
             climb: Math.max(
                 Math.abs(over.floorFrom - here.floorFrom),
