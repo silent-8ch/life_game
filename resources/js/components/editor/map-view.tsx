@@ -42,6 +42,8 @@ type MapViewProps = {
     rooms: number[];
     /** Which thing is picked, if it is a thing rather than a room. */
     thing: number | null;
+    /** Whether there is an edit to step back from, for the readout to say so. */
+    canUndo: boolean;
     drawing: Point[];
     onSelect: (selection: Selection) => void;
     /** Picks a set of rooms outright, or adds one to what is already picked. */
@@ -91,6 +93,7 @@ export default function MapView({
     selection,
     rooms,
     thing,
+    canUndo,
     drawing,
     onSelect,
     onSelectRooms,
@@ -842,6 +845,7 @@ export default function MapView({
                     : `${level.sectors.length} rooms`}
                 {level.sectors.length > 0 &&
                     ` · ${(extent.maxX - extent.minX).toFixed(1)} × ${(extent.maxZ - extent.minZ).toFixed(1)} m`}
+                {canUndo && ' · ⌘Z undoes'}
             </p>
             <p className="pointer-events-none absolute right-3 bottom-2 text-[11px] text-slate-500">
                 {pointer === null

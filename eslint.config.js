@@ -110,9 +110,9 @@ export default [
             'vendor',
             'node_modules',
             'public',
-            // Agent worktrees are whole checkouts of this repo living inside
-            // it. Without this, linting the project lints every one of them as
-            // well, node_modules and all.
+            // Agent worktrees: a gigabyte of whole copies of this project.
+            // Git skips them through the global ignore file, which eslint and
+            // prettier do not read, so they have to be named here as well.
             '.claude/**',
             'bootstrap/ssr',
             'tailwind.config.js',

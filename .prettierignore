@@ -1,4 +1,6 @@
 resources/js/components/ui/*
 resources/views/mail/*
 
+# Agent worktrees: whole copies of this project, gigabytes of them. Git skips
+# them through the global ignore file, which prettier does not read.
 .claude/**
