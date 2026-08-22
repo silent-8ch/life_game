@@ -5,6 +5,7 @@ import { store } from '@/actions/App/Http/Controllers/DebugSnapshotController';
 import { createActors } from '@/lib/engine/actors';
 import type { PropSet } from '@/lib/engine/build/things';
 import { buildLevel } from '@/lib/engine/build-level';
+import { captureShots } from '@/lib/engine/capture';
 import { MAX_FRAME_SECONDS, REACH } from '@/lib/engine/constants';
 import { createHands } from '@/lib/engine/hands';
 import type { HeldItem } from '@/lib/engine/hands';
@@ -42,6 +43,8 @@ import {
     HEIGHTS,
 } from '@/lib/engine/sprite-actor';
 import { createTextureLibrary } from '@/lib/engine/textures';
+import type { TicketFields } from '@/lib/engine/ticket';
+import { postTicket, ticketFromSpot } from '@/lib/engine/ticket';
 import { wantsTouchControls } from '@/lib/engine/touch';
 import { createView } from '@/lib/engine/view';
 import { cn } from '@/lib/utils';
@@ -71,6 +74,11 @@ type LevelViewportProps = {
     onLockChange: (locked: boolean) => void;
     /** Anything the level wants to tell the player, such as a snapshot saving. */
     onMessage?: (text: string) => void;
+    /**
+     * Where to post "something here is wrong", or absent for no report control
+     * at all — the map editor's preview has no game behind it to report about.
+     */
+    reportTo?: string;
     /**
      * Stops the level taking keys and turning the view, without letting go of
      * the pointer — for while something on top of it, such as the verb menu, is
@@ -105,6 +113,7 @@ export default function LevelViewport({
     onExamine,
     onLockChange,
     onMessage,
+    reportTo,
     paused = false,
     children,
 }: LevelViewportProps) {
@@ -130,6 +139,71 @@ export default function LevelViewport({
         lines: string[];
         status: string;
     } | null>(null);
+
+    /**
+     * A report waiting on the one thing the game cannot capture: what upset
+     * them.
+     *
+     * The pictures and the spot are taken the instant the key goes down, so
+     * they are of the fault rather than of wherever the player drifted to while
+     * finding the words. The sentence arrives afterwards.
+     */
+    const [report, setReport] = useState<{
+        fields: TicketFields;
+        shots: Record<string, Blob>;
+    } | null>(null);
+    const [note, setNote] = useState('');
+    const [sending, setSending] = useState(false);
+
+    // The level must stop taking keys while somebody is typing into the box,
+    // or WASD walks them away from the thing they are describing. A ref
+    // because the input layer reads it every frame.
+    const reporting = useRef(false);
+
+    useEffect(() => {
+        reporting.current = report !== null;
+    }, [report]);
+
+    /**
+     * The engine's own capture, reachable from the button.
+     *
+     * It lives inside the render-loop effect because it needs the renderer, the
+     * scene and the player, none of which React has. A ref is how the two
+     * halves meet without rebuilding the level every time a piece of state
+     * changes.
+     */
+    const askForReport = useRef<(() => void) | null>(null);
+
+    const reportNow = (): void => askForReport.current?.();
+
+    const cancelReport = (): void => {
+        setReport(null);
+        setNote('');
+    };
+
+    const sendReport = (): void => {
+        if (report === null || reportTo === undefined || sending) {
+            return;
+        }
+
+        setSending(true);
+
+        void postTicket(
+            { ...report.fields, note: note.trim() },
+            report.shots,
+            reportTo,
+        ).then((what) => {
+            setSending(false);
+            setReport(null);
+            setNote('');
+
+            callbacks.current.onMessage?.(
+                'failed' in what
+                    ? `That did not send — ${what.failed}. Please tell somebody.`
+                    : what.sent,
+            );
+        });
+    };
 
     /**
      * The props, once the level is built, and the flags they are showing.
@@ -615,6 +689,67 @@ export default function LevelViewport({
             });
         };
 
+        /**
+         * "Something here is wrong."
+         *
+         * Takes the pictures and the spot **now**, at the moment the player
+         * decided something was wrong, and asks for the words afterwards. The
+         * other way round — box first, capture on submit — photographs
+         * wherever they drifted to while typing, which is not the thing they
+         * were looking at.
+         *
+         * Letting go of the mouse is part of the action rather than something
+         * the box does when it appears: the player has to be able to type, and
+         * a pointer lock that outlives the decision to report swallows the
+         * first few letters.
+         */
+        const reportFault = (): void => {
+            if (reportTo === undefined || reporting.current) {
+                return;
+            }
+
+            const spot = describeSpot({
+                level,
+                x: player.x,
+                z: player.z,
+                eye: player.eye,
+                yaw: player.yaw,
+                pitch: player.pitch,
+                lookingAt: focusedSlug,
+                holding: hands.holding(),
+                running: input.running(),
+                screen: {
+                    width: container.clientWidth,
+                    height: container.clientHeight,
+                    pixelRatio: window.devicePixelRatio,
+                    touch,
+                },
+                takenAt: new Date().toISOString(),
+            });
+
+            document.exitPointerLock();
+
+            void captureShots(renderer, scene, camera, built.group)
+                .then(({ shots, legend }) => {
+                    setReport({
+                        fields: ticketFromSpot(spot, '', legend),
+                        shots,
+                    });
+                })
+                .catch(() => {
+                    // A report with no pictures still carries the spot, the
+                    // room and its textures, which is most of what diagnoses
+                    // one. Losing the whole report because a readback failed
+                    // would be the worse outcome by far.
+                    setReport({
+                        fields: ticketFromSpot(spot, '', null),
+                        shots: {},
+                    });
+                });
+        };
+
+        askForReport.current = reportFault;
+
         const examine = (): void => {
             const thing =
                 focusedSlug === null
@@ -635,9 +770,10 @@ export default function LevelViewport({
             recall: magic === null ? null : recall,
             takeInHand,
             takeSnapshot,
+            reportFault,
             fire: castFireball,
             look: (turned) => turnPlayer(player, turned),
-            held: () => held.current,
+            held: () => held.current || reporting.current,
             onLockChange: (locked) => callbacks.current.onLockChange(locked),
             onPlaying: setPlaying,
             onFullscreen: setFullscreen,
@@ -673,8 +809,11 @@ export default function LevelViewport({
             renderer.domElement.remove();
         };
         // touch is settled once, when the component first mounts, so listing it
-        // here never restarts the level.
-    }, [level, touch]);
+        // here never restarts the level. `reportTo` is a string built from the
+        // game's slug, so it compares equal on every render and does not
+        // either — it is listed because the capture closes over it, not
+        // because it is expected to change.
+    }, [level, touch, reportTo]);
 
     return (
         <div
@@ -704,6 +843,76 @@ export default function LevelViewport({
                         <div key={line}>{line}</div>
                     ))}
                     <div className="mt-1 text-white/55">{flash.status}</div>
+                </div>
+            )}
+
+            {/*
+             * A button, not only a key.
+             *
+             * The children played for over an hour with F bound to the
+             * snapshot and pressed it exactly nought times. A key you have to
+             * be told about has already been tested here and scored zero, so
+             * the report control is a thing on the screen that says what it
+             * does. R still works for anybody who wants it.
+             */}
+            {reportTo !== undefined && playing && report === null && (
+                <button
+                    type="button"
+                    onClick={reportNow}
+                    title="Tell somebody something here is wrong (R)"
+                    className="absolute right-3 bottom-3 z-50 rounded-full border border-amber-300/40 bg-black/60 px-4 py-2 text-xs font-semibold text-amber-100 shadow-lg backdrop-blur-sm hover:border-amber-300 hover:bg-black/80"
+                >
+                    Something&rsquo;s wrong
+                </button>
+            )}
+
+            {report !== null && (
+                <div className="absolute inset-0 z-50 flex items-end justify-center bg-black/50 p-4 sm:items-center">
+                    <div className="w-full max-w-md rounded-lg border border-white/15 bg-[#0b0f16] p-4 shadow-2xl">
+                        <h2 className="text-sm font-semibold text-amber-100">
+                            What&rsquo;s wrong here?
+                        </h2>
+                        {/*
+                         * Plain words, and the box says so. The people this is
+                         * for are children who can see the fault and cannot
+                         * name the room — and the room, the spot and the
+                         * textures have already been captured, so nothing here
+                         * needs them to describe *where* they are.
+                         */}
+                        <p className="mt-1 text-xs text-white/50">
+                            Say it however you like. We already know where you
+                            were standing.
+                        </p>
+
+                        <textarea
+                            autoFocus
+                            value={note}
+                            onChange={(event) => setNote(event.target.value)}
+                            rows={3}
+                            maxLength={2000}
+                            placeholder="The floor has a hole in it…"
+                            className="mt-3 w-full rounded border border-white/15 bg-black/40 px-3 py-2 text-sm text-white/90 outline-none focus:border-amber-300/60"
+                        />
+
+                        <div className="mt-3 flex items-center justify-end gap-2">
+                            <button
+                                type="button"
+                                onClick={cancelReport}
+                                disabled={sending}
+                                className="rounded border border-white/15 px-3 py-1.5 text-xs text-white/70 hover:border-white/35 disabled:opacity-40"
+                            >
+                                Never mind
+                            </button>
+                            <button
+                                type="button"
+                                onClick={sendReport}
+                                disabled={sending || note.trim() === ''}
+                                className="rounded border border-amber-300/50 bg-amber-300/10 px-3 py-1.5 text-xs font-semibold text-amber-100 hover:border-amber-300 disabled:opacity-40"
+                            >
+                                {sending ? 'Sending…' : 'Send'}
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>
