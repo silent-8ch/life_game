@@ -202,3 +202,63 @@ export function readingOf(snapshot: Snapshot): string[] {
             : `${(closest.distance * 100).toFixed(1)} cm from ${closest.rooms.join(' | ')}${closest.open ? '' : ' (blocked)'}`,
     ];
 }
+
+/** What became of a snapshot that was sent somewhere. */
+export type SnapshotSaved = { saved: string } | { failed: string };
+
+/**
+ * Sends a snapshot to the server and says what happened.
+ *
+ * It never throws: a snapshot that could not be saved is still in the console,
+ * and the caller's job is to say so rather than to handle an exception. The
+ * thing being caught may not come back, so losing the reading to a server that
+ * is not listening would be the worst of the outcomes.
+ *
+ * Laravel wants the forgery token, and this page carries none in its markup —
+ * only the cookie it sets on every response. Read it back out and hand it over
+ * the way Laravel expects.
+ */
+export async function postSnapshot(
+    spot: Snapshot,
+    url: string,
+): Promise<SnapshotSaved> {
+    const guard = document.cookie
+        .split('; ')
+        .find((crumb) => crumb.startsWith('XSRF-TOKEN='));
+
+    let answer: Response;
+
+    try {
+        answer = await fetch(url, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+                ...(guard === undefined
+                    ? {}
+                    : {
+                          'X-XSRF-TOKEN': decodeURIComponent(
+                              guard.slice('XSRF-TOKEN='.length),
+                          ),
+                      }),
+            },
+            body: JSON.stringify(spot),
+        });
+    } catch {
+        return { failed: 'the server did not answer' };
+    }
+
+    if (!answer.ok) {
+        return { failed: `the server said ${answer.status}` };
+    }
+
+    const said: unknown = await answer.json().catch(() => null);
+
+    return {
+        saved:
+            said !== null && typeof said === 'object' && 'saved' in said
+                ? String((said as { saved: unknown }).saved)
+                : 'a snapshot',
+    };
+}

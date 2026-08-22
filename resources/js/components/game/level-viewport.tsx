@@ -4,14 +4,10 @@ import * as THREE from 'three';
 import { store } from '@/actions/App/Http/Controllers/DebugSnapshotController';
 import { createActors } from '@/lib/engine/actors';
 import { buildLevel } from '@/lib/engine/build-level';
-import {
-    MAX_FRAME_SECONDS,
-    MAX_PITCH,
-    MOUSE_SENSITIVITY,
-    REACH,
-} from '@/lib/engine/constants';
-import { createHands, HELD_ITEMS } from '@/lib/engine/hands';
+import { MAX_FRAME_SECONDS, REACH } from '@/lib/engine/constants';
+import { createHands } from '@/lib/engine/hands';
 import type { HeldItem } from '@/lib/engine/hands';
+import { createInput } from '@/lib/engine/input';
 import {
     aimCamera,
     settleEye,
@@ -23,13 +19,12 @@ import { createPortals } from '@/lib/engine/portals';
 import {
     createProbeBackdrop,
     paintWalls,
-    scanRow,
     spotFromSearch,
     wantsProbeBackdrop,
 } from '@/lib/engine/probe-backdrop';
 import { prepareReflections } from '@/lib/engine/reflections';
 import {
-    afterAFreshFrame,
+    armConsoleScan,
     publishScan,
     readNow,
     scanRowsOf,
@@ -37,7 +32,7 @@ import {
 } from '@/lib/engine/scan';
 import { sectorAt } from '@/lib/engine/sectors';
 import { createSky } from '@/lib/engine/sky';
-import { describeSpot, readingOf } from '@/lib/engine/snapshot';
+import { describeSpot, postSnapshot, readingOf } from '@/lib/engine/snapshot';
 import { createMagic } from '@/lib/engine/spells';
 import {
     createSpriteActor,
@@ -45,7 +40,7 @@ import {
     HEIGHTS,
 } from '@/lib/engine/sprite-actor';
 import { createTextureLibrary } from '@/lib/engine/textures';
-import { createTouchControls, wantsTouchControls } from '@/lib/engine/touch';
+import { wantsTouchControls } from '@/lib/engine/touch';
 import { createView } from '@/lib/engine/view';
 import { cn } from '@/lib/utils';
 import type { Level, LevelThing } from '@/types';
@@ -69,11 +64,6 @@ type LevelViewportProps = {
 
 /** The one of them who can do magic. */
 const WIZARD = 'william';
-
-const FORWARD_KEYS = ['KeyW', 'ArrowUp'];
-const BACKWARD_KEYS = ['KeyS', 'ArrowDown'];
-const LEFT_KEYS = ['KeyA', 'ArrowLeft'];
-const RIGHT_KEYS = ['KeyD', 'ArrowRight'];
 
 /**
  * Owns the render loop. React draws the frame around it and is told what the
@@ -185,59 +175,7 @@ export default function LevelViewport({
         const legend = probe === null ? [] : paintWalls(built.group);
 
         if (probe !== null) {
-            // The legend goes to the console rather than on screen: it is one
-            // line per wall in the level, which is far too much to read over
-            // the view, and it only has to be looked up once a sliver has been
-            // caught in a picture.
-            console.log(
-                `[debug] ${legend.length} walls painted. Read a colour off the picture, round each channel to the nearest of 0/51/102/153/204/255, and look it up here.`,
-            );
-            console.table(
-                legend.map((wall) => ({
-                    css: wall.css,
-                    room: wall.sector,
-                    beyond: wall.beyond,
-                    corner: wall.index,
-                    from: `${wall.from.x},${wall.from.z}`,
-                    to: `${wall.to.x},${wall.to.z}`,
-                })),
-            );
-
-            // Hung on the window on purpose. Reading a row back names every
-            // surface across the view and the columns each one holds, which
-            // settles an argument about a two-pixel sliver that no amount of
-            // squinting at a screenshot will.
-            (
-                window as unknown as {
-                    scanRow?: (row?: number) => unknown;
-                }
-            ).scanRow = async (row?: number) => {
-                // The drawing buffer is only guaranteed to hold this frame's
-                // picture immediately after it was drawn. Read it at any other
-                // moment and it can come back as whatever was last composited,
-                // which reads as one flat colour across the whole row and looks
-                // exactly like a wall filling the view. Wait for a fresh frame.
-                // Raced against a timer, because the level stops drawing while
-                // it is paused and waiting on a frame that will never come
-                // would hang whoever asked rather than telling them.
-                await afterAFreshFrame();
-
-                return scanRow(
-                    renderer.domElement,
-                    legend,
-                    row ?? Math.floor(renderer.domElement.height / 2),
-                )
-                    .filter((run) => run.to - run.from > 1)
-                    .map((run) => ({
-                        columns: `${run.from}-${run.to}`,
-                        width: run.to - run.from,
-                        css: run.css,
-                        wall:
-                            run.wall === null
-                                ? 'unpainted (floor, ceiling, sprite or pane)'
-                                : `${run.wall.sector} #${run.wall.index} -> ${run.wall.beyond ?? 'outside'} (${run.wall.from.x},${run.wall.from.z})-(${run.wall.to.x},${run.wall.to.z})`,
-                    }));
-            };
+            armConsoleScan(renderer.domElement, legend);
         }
 
         const sky =
@@ -303,7 +241,6 @@ export default function LevelViewport({
             scene.add(magic.object);
         }
 
-        const pressed = new Set<string>();
         const raycaster = new THREE.Raycaster();
         raycaster.far = REACH;
         const screenCenter = new THREE.Vector2(0, 0);
@@ -311,16 +248,6 @@ export default function LevelViewport({
         let focusedSlug: string | null = null;
         let frame = 0;
         let lastTime = performance.now();
-
-        // On a phone there is no pointer to lock, so playing is just a flag,
-        // set by the tap that starts the level and cleared by the Stop button.
-        let started = false;
-
-        /** Whether the controls are currently stood down for something on top. */
-        let waiting = false;
-
-        const isLocked = (): boolean =>
-            touch ? started : document.pointerLockElement === container;
 
         const setFocus = (slug: string | null): void => {
             if (slug === focusedSlug) {
@@ -349,56 +276,13 @@ export default function LevelViewport({
         };
 
         const step = (seconds: number): void => {
-            // Whatever is on top of the level has the keys while it is open.
-            // Let go of anything still held down and throw away any drag, so
-            // that the player does not walk off while they are reading. The
-            // level itself carries on: people keep walking, spells keep burning.
-            const holding = held.current;
-
-            if (holding !== waiting) {
-                waiting = holding;
-
-                // The stick and the buttons sit over the level, so they would
-                // swallow the taps meant for whatever is asking.
-                controls.show(started && !holding);
-            }
-
-            if (holding) {
-                pressed.clear();
-                controls.takeLook();
-            }
-
-            const pushed = holding
-                ? { forward: 0, strafe: 0 }
-                : controls.walk();
-            const turned = holding ? { yaw: 0, pitch: 0 } : controls.takeLook();
+            const { push, turned } = input.read();
 
             turnPlayer(player, turned);
 
-            const running =
-                pressed.has('ShiftLeft') ||
-                pressed.has('ShiftRight') ||
-                controls.running();
-
-            // A stick reads anywhere between nothing and all the way over; a key
-            // is only ever one or the other. Whichever is pushed harder wins.
-            const pick = (keyed: number, pushed: number): number =>
-                Math.abs(pushed) > Math.abs(keyed) ? pushed : keyed;
-
-            const forward = pick(
-                (FORWARD_KEYS.some((key) => pressed.has(key)) ? 1 : 0) -
-                    (BACKWARD_KEYS.some((key) => pressed.has(key)) ? 1 : 0),
-                pushed.forward,
-            );
-            const strafe = pick(
-                (RIGHT_KEYS.some((key) => pressed.has(key)) ? 1 : 0) -
-                    (LEFT_KEYS.some((key) => pressed.has(key)) ? 1 : 0),
-                pushed.strafe,
-            );
-
             walkPlayer(
                 player,
-                { forward, strafe, running },
+                push,
                 { sectors: level.sectors, colliders: built.colliders, portals },
                 seconds,
             );
@@ -414,7 +298,7 @@ export default function LevelViewport({
 
             const floor = standingIn?.floorHeight ?? 0;
 
-            hands.update(seconds, player.walked, running);
+            hands.update(seconds, player.walked, push.running);
 
             playerSprite.place(
                 player.x,
@@ -564,10 +448,7 @@ export default function LevelViewport({
                 pitch: player.pitch,
                 lookingAt: focusedSlug,
                 holding: hands.holding(),
-                running:
-                    pressed.has('ShiftLeft') ||
-                    pressed.has('ShiftRight') ||
-                    controls.running(),
+                running: input.running(),
                 screen: {
                     width: container.clientWidth,
                     height: container.clientHeight,
@@ -601,48 +482,18 @@ export default function LevelViewport({
                 );
             };
 
-            // Laravel wants the forgery token, and this page carries none in
-            // its markup — only the cookie it sets on every response. Read it
-            // back out and hand it over the way Laravel expects.
-            const guard = document.cookie
-                .split('; ')
-                .find((crumb) => crumb.startsWith('XSRF-TOKEN='));
+            void postSnapshot(spot, store().url).then((what) => {
+                if ('failed' in what) {
+                    failed(what.failed);
 
-            void fetch(store().url, {
-                method: 'POST',
-                credentials: 'same-origin',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Accept: 'application/json',
-                    ...(guard === undefined
-                        ? {}
-                        : {
-                              'X-XSRF-TOKEN': decodeURIComponent(
-                                  guard.slice('XSRF-TOKEN='.length),
-                              ),
-                          }),
-                },
-                body: JSON.stringify(spot),
-            })
-                .then(async (answer) => {
-                    if (!answer.ok) {
-                        failed(`the server said ${answer.status}`);
+                    return;
+                }
 
-                        return;
-                    }
-
-                    const said: unknown = await answer.json().catch(() => null);
-                    const name =
-                        said !== null &&
-                        typeof said === 'object' &&
-                        'saved' in said
-                            ? String((said as { saved: unknown }).saved)
-                            : 'a snapshot';
-
-                    show(`Saved as ${name}`);
-                    callbacks.current.onMessage?.(`Snapshot saved as ${name}.`);
-                })
-                .catch(() => failed('the server did not answer'));
+                show(`Saved as ${what.saved}`);
+                callbacks.current.onMessage?.(
+                    `Snapshot saved as ${what.saved}.`,
+                );
+            });
         };
 
         const examine = (): void => {
@@ -656,191 +507,21 @@ export default function LevelViewport({
             }
         };
 
-        const handleKeyDown = (event: KeyboardEvent): void => {
-            if (!isLocked() || held.current) {
-                return;
-            }
-
-            pressed.add(event.code);
-
-            if (event.code.startsWith('Arrow') || event.code === 'Space') {
-                event.preventDefault();
-            }
-
-            if (event.code === 'Digit0' && !event.repeat) {
-                takeInHand(null);
-            }
-
-            HELD_ITEMS.forEach((item, index) => {
-                if (event.code === `Digit${index + 1}` && !event.repeat) {
-                    takeInHand(item);
-                }
-            });
-
-            if (event.code === 'KeyM' && !event.repeat) {
-                markHere();
-            }
-
-            if (event.code === 'KeyR' && !event.repeat) {
-                recall();
-            }
-
-            if (event.code === 'KeyE' && !event.repeat) {
-                examine();
-            }
-
-            if (event.code === 'KeyF' && !event.repeat) {
-                takeSnapshot();
-            }
-        };
-
-        const handleKeyUp = (event: KeyboardEvent): void => {
-            pressed.delete(event.code);
-        };
-
-        const handleMouseMove = (event: MouseEvent): void => {
-            if (!isLocked() || held.current) {
-                return;
-            }
-
-            player.yaw -= event.movementX * MOUSE_SENSITIVITY;
-            player.pitch = THREE.MathUtils.clamp(
-                player.pitch - event.movementY * MOUSE_SENSITIVITY,
-                -MAX_PITCH,
-                MAX_PITCH,
-            );
-        };
-
-        const handleBlur = (): void => {
-            pressed.clear();
-        };
-
-        const isFullscreen = (): boolean =>
-            document.fullscreenElement === container;
-
-        /** Play and full screen are the same state, so they come and go together. */
-        const handleLockChange = (): void => {
-            const locked = isLocked();
-
-            if (!locked) {
-                pressed.clear();
-
-                if (isFullscreen()) {
-                    void document.exitFullscreen().catch(() => undefined);
-                }
-            }
-
-            callbacks.current.onLockChange(locked);
-        };
-
-        const handleFullscreenChange = (): void => {
-            const full = isFullscreen();
-
-            setFullscreen(full);
-
-            // Escape leaves full screen first; let go of the mouse as well.
-            if (!full && isLocked()) {
-                document.exitPointerLock();
-            }
-        };
-
-        /** Puts the phone down: back to the page, controls off. */
-        const stop = (): void => {
-            started = false;
-            controls.show(false);
-            setPlaying(false);
-            pressed.clear();
-            callbacks.current.onLockChange(false);
-
-            if (isFullscreen()) {
-                void document.exitFullscreen().catch(() => undefined);
-            }
-        };
-
-        const handleClick = (): void => {
-            if (isLocked()) {
-                return;
-            }
-
-            if (touch) {
-                // No pointer to lock and, on a phone, often no full screen to
-                // ask for either. The frame fills the screen itself instead.
-                started = true;
-                controls.show(true);
-                setPlaying(true);
-                callbacks.current.onLockChange(true);
-            } else {
-                try {
-                    const request: unknown = container.requestPointerLock();
-
-                    if (request instanceof Promise) {
-                        // A refused lock is the browser's business, not an app
-                        // error.
-                        request.catch(() => undefined);
-                    }
-                } catch {
-                    // Older browsers throw here instead of rejecting.
-                }
-            }
-
-            if (!isFullscreen() && container.requestFullscreen !== undefined) {
-                // Refused full screen is no reason to stop the player playing.
-                void container.requestFullscreen().catch(() => undefined);
-            }
-        };
-
-        /**
-         * The keys, as buttons. Only built on a touch screen; on anything else
-         * createTouchControls hands back a set that draws nothing.
-         */
-        const controls = createTouchControls({
-            container,
-            buttons: [
-                {
-                    label: 'Look',
-                    title: 'Examine what you are looking at',
-                    press: examine,
-                },
-                ...(magic === null
-                    ? []
-                    : [
-                          {
-                              label: 'Mark',
-                              title: 'Leave a mark here',
-                              press: markHere,
-                          },
-                          {
-                              label: 'Recall',
-                              title: 'Go back to the mark',
-                              press: recall,
-                          },
-                      ]),
-                ...HELD_ITEMS.map((item) => ({
-                    label: item,
-                    title: `Take the ${item}`,
-                    press: () => takeInHand(item),
-                })),
-                {
-                    label: 'Empty',
-                    title: 'Empty your hands',
-                    press: () => takeInHand(null),
-                },
-                {
-                    label: 'Snap',
-                    title: 'Save a snapshot of this spot',
-                    press: takeSnapshot,
-                },
-                { label: 'Stop', title: 'Stop playing', press: stop },
-            ],
+        // Keys, mouse, pointer lock, full screen, and the buttons a phone gets
+        // instead of all of it. The level tells it what those mean; it does not
+        // know itself.
+        const input = createInput(container, touch, {
+            examine,
+            markHere: magic === null ? null : markHere,
+            recall: magic === null ? null : recall,
+            takeInHand,
+            takeSnapshot,
+            look: (turned) => turnPlayer(player, turned),
+            held: () => held.current,
+            onLockChange: (locked) => callbacks.current.onLockChange(locked),
+            onPlaying: setPlaying,
+            onFullscreen: setFullscreen,
         });
-
-        container.addEventListener('click', handleClick);
-        window.addEventListener('keydown', handleKeyDown);
-        window.addEventListener('keyup', handleKeyUp);
-        window.addEventListener('blur', handleBlur);
-        document.addEventListener('mousemove', handleMouseMove);
-        document.addEventListener('pointerlockchange', handleLockChange);
-        document.addEventListener('fullscreenchange', handleFullscreenChange);
 
         const observer = new ResizeObserver(resize);
         observer.observe(container);
@@ -858,26 +539,7 @@ export default function LevelViewport({
         return () => {
             cancelAnimationFrame(frame);
             observer.disconnect();
-            container.removeEventListener('click', handleClick);
-            window.removeEventListener('keydown', handleKeyDown);
-            window.removeEventListener('keyup', handleKeyUp);
-            window.removeEventListener('blur', handleBlur);
-            document.removeEventListener('mousemove', handleMouseMove);
-            document.removeEventListener('pointerlockchange', handleLockChange);
-            document.removeEventListener(
-                'fullscreenchange',
-                handleFullscreenChange,
-            );
-
-            if (isLocked()) {
-                document.exitPointerLock();
-            }
-
-            if (document.fullscreenElement === container) {
-                void document.exitFullscreen().catch(() => undefined);
-            }
-
-            controls.dispose();
+            input.dispose();
             actors.dispose();
             playerSprite.dispose();
             sky?.dispose();

@@ -135,6 +135,55 @@ export function readNow(
 }
 
 /**
+ * Prints the legend and hangs a reader on the window, for a person at a
+ * console rather than a driver collecting captures.
+ *
+ * The legend goes to the console rather than on screen: it is one line per wall
+ * in the level, far too much to read over the view, and it only has to be
+ * looked up once a sliver has been caught in a picture. `scanRow(row)` names
+ * every surface across that row and the columns each one holds, which settles
+ * an argument about a two-pixel sliver that no amount of squinting at a
+ * screenshot will.
+ */
+export function armConsoleScan(
+    canvas: HTMLCanvasElement,
+    legend: WallPaint[],
+): void {
+    console.log(
+        `[debug] ${legend.length} walls painted. Read a colour off the picture, round each channel to the nearest of 0/51/102/153/204/255, and look it up here.`,
+    );
+    console.table(
+        legend.map((wall) => ({
+            css: wall.css,
+            room: wall.sector,
+            beyond: wall.beyond,
+            corner: wall.index,
+            from: `${wall.from.x},${wall.from.z}`,
+            to: `${wall.to.x},${wall.to.z}`,
+        })),
+    );
+
+    (window as unknown as { scanRow?: (row?: number) => unknown }).scanRow =
+        async (row?: number) => {
+            // A person at a console has not just drawn the frame, so this one does
+            // wait for a fresh one.
+            await afterAFreshFrame();
+
+            return scanRow(canvas, legend, row ?? Math.floor(canvas.height / 2))
+                .filter((run) => run.to - run.from > 1)
+                .map((run) => ({
+                    columns: `${run.from}-${run.to}`,
+                    width: run.to - run.from,
+                    css: run.css,
+                    wall:
+                        run.wall === null
+                            ? 'unpainted (floor, ceiling, sprite or pane)'
+                            : `${run.wall.sector} #${run.wall.index} -> ${run.wall.beyond ?? 'outside'} (${run.wall.from.x},${run.wall.from.z})-(${run.wall.to.x},${run.wall.to.z})`,
+                }));
+        };
+}
+
+/**
  * The one line a driver reads, and the object a person pokes at in the console.
  *
  * Written to `window.scanCapture` and printed with a marker on the front, so a
