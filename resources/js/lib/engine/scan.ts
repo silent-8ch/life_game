@@ -20,6 +20,26 @@ import type { ScanRun, WallPaint } from '@/lib/engine/probe-backdrop';
  *
  * It is a tool for the project, not scaffolding for one refactor. The obvious
  * next use is pinning the portal and mirror rules that nothing pins today.
+ *
+ * ## What it cannot see, which matters as much as what it can
+ *
+ * Reading the frame back needs `preserveDrawingBuffer`, and that is only on in
+ * debug mode — where the probe backdrop replaces the background and every wall
+ * is painted a flat legend colour. So a scan is **structurally blind** to
+ * everything debug mode takes away:
+ *
+ * - **Textures**, and therefore texture crawl and aliasing of every kind. In
+ *   the only mode it can read, there are no textures to shimmer.
+ * - **The sky, the fog and the backdrop.** `createView` builds no sky dome at
+ *   all when the probe is on, so "no sky in the readback" says nothing about
+ *   whether sky appears in the real picture.
+ * - **Anything that is motion rather than geometry.** It reads still frames on
+ *   a fixed timestep, with the people deliberately frozen, so a flicker between
+ *   two frames is invisible to it unless somebody asks it for two frames.
+ *
+ * A green diff here is evidence about geometry and nothing else. Read as
+ * absence of a fault it would be worse than no tool, because it would be
+ * believed.
  */
 
 /** Where down the frame to read, as fractions of its height. */
@@ -77,7 +97,15 @@ export function scanRowsOf(search: string, height: number): number[] {
 }
 
 /**
- * Waits for a frame that is certainly this frame's.
+ * Waits for a frame that is certainly this frame's, and says whether it got one.
+ *
+ * Raced against a timer, because a level that has stopped drawing would
+ * otherwise wait for ever — and **the caller is told which won**. A cleared
+ * buffer decodes as one flat colour across the whole row and reads as a single
+ * wall filling the view, which is the most convincing lie available: a wall
+ * filling the view is exactly what somebody chasing a portal fault expects to
+ * be arguing about. Paused behind the verb menu, or in a background tab that
+ * gets no animation frames at all, the honest answer is that nothing was read.
  *
  * The drawing buffer only holds the picture immediately after it was drawn.
  * Read it at any other moment and it can come back as whatever was last
@@ -85,12 +113,16 @@ export function scanRowsOf(search: string, height: number): number[] {
  * exactly like a wall filling the view. Raced against a timer, because a level
  * that has stopped drawing would otherwise hang whoever asked.
  */
-export function afterAFreshFrame(): Promise<void> {
+export function afterAFreshFrame(): Promise<boolean> {
     return Promise.race([
-        new Promise<void>((settle) =>
-            requestAnimationFrame(() => requestAnimationFrame(() => settle())),
+        new Promise<boolean>((settle) =>
+            requestAnimationFrame(() =>
+                requestAnimationFrame(() => settle(true)),
+            ),
         ),
-        new Promise<void>((settle) => window.setTimeout(settle, 250)),
+        new Promise<boolean>((settle) =>
+            window.setTimeout(() => settle(false), 250),
+        ),
     ]);
 }
 
@@ -165,9 +197,13 @@ export function armConsoleScan(
 
     (window as unknown as { scanRow?: (row?: number) => unknown }).scanRow =
         async (row?: number) => {
-            // A person at a console has not just drawn the frame, so this one does
-            // wait for a fresh one.
-            await afterAFreshFrame();
+            // A person at a console has not just drawn the frame, so this one
+            // does wait for one — and says so plainly when none arrives, rather
+            // than reading the buffer anyway and describing the cleared frame
+            // as a single wall filling the view.
+            if (!(await afterAFreshFrame())) {
+                return 'The level is not drawing, so nothing was read. Unpause it, or bring the tab to the front, and ask again.';
+            }
 
             return scanRow(canvas, legend, row ?? Math.floor(canvas.height / 2))
                 .filter((run) => run.to - run.from > 1)

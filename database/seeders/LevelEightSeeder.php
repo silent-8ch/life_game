@@ -86,10 +86,6 @@ class LevelEightSeeder extends Seeder
     /**
      * One room and its walls.
      *
-     * `sector()` covers everything except a wall that shows the sky, which is a
-     * per-edge flag it does not take. Those are set afterwards rather than by
-     * widening a helper the hand-written seeders all share.
-     *
      * @param  array<string, mixed>  $room
      */
     private function room(Level $level, array $room): LevelSector
@@ -126,7 +122,7 @@ class LevelEightSeeder extends Seeder
             }
         }
 
-        $sector = $this->sector(
+        return $this->sector(
             $level,
             slug: $room['slug'],
             name: $room['name'],
@@ -142,15 +138,8 @@ class LevelEightSeeder extends Seeder
             mirrors: $mirrors,
             solidEdges: $solid,
             portals: $portals,
+            skyEdges: $skyWalls,
         );
-
-        if ($skyWalls !== []) {
-            $sector->edges()
-                ->whereIn('sort_order', $skyWalls)
-                ->update(['is_sky' => true]);
-        }
-
-        return $sector;
     }
 
     /**
