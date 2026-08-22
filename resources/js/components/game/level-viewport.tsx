@@ -12,6 +12,7 @@ import { createInput } from '@/lib/engine/input';
 import {
     aimCamera,
     fallPlayer,
+    jumpPlayer,
     settleEye,
     spawnPlayer,
     turnPlayer,
@@ -338,6 +339,10 @@ export default function LevelViewport({
             // A lid belongs to the room it covers and to nobody else.
             for (const lid of built.skyLids) {
                 lid.mesh.visible = lid.room === standingIn?.slug;
+            }
+
+            if (push.jumping) {
+                jumpPlayer(player);
             }
 
             fallPlayer(player, standingIn, seconds);

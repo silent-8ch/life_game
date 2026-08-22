@@ -4,6 +4,7 @@ import type { Collider } from '@/lib/engine/collision';
 import {
     EYE_OF_STATURE,
     GRAVITY,
+    JUMP_SPEED,
     MAX_PITCH,
     MAX_STEP,
     PLAYER_RADIUS,
@@ -16,7 +17,7 @@ import {
 import { crossPortal } from '@/lib/engine/portals';
 import type { Portal } from '@/lib/engine/portals';
 import type { ForcedSpot } from '@/lib/engine/probe-backdrop';
-import { floorAt, sectorAt } from '@/lib/engine/sectors';
+import { ceilingAt, floorAt, sectorAt } from '@/lib/engine/sectors';
 import { DEFAULT_PLAYER_HEIGHT, HEIGHTS } from '@/lib/engine/sprite-actor';
 import type { Level, Sector } from '@/types';
 
@@ -60,6 +61,16 @@ export type Player = {
      * change who you are while you are walking around in it.
      */
     eyeAbove: number;
+    /**
+     * How tall this person is, to the top of the head.
+     *
+     * The eye is not the top of somebody, and a ceiling is hit by the part of
+     * them that is highest. Kept beside `eyeAbove` rather than derived back out
+     * of it, because dividing an eye height by `EYE_OF_STATURE` to recover a
+     * stature reads as arithmetic when what it really is, is the same fact
+     * written down twice.
+     */
+    stature: number;
     walked: number;
 };
 
@@ -77,6 +88,16 @@ export type Push = {
     /** -1 to 1, right positive. */
     strafe: number;
     running: boolean;
+    /**
+     * Whether the player asked to jump *since the last frame was read*, rather
+     * than whether the key is down.
+     *
+     * Every other field here is a state — how hard something is being pushed
+     * right now — and this one alone is an event, because holding the key down
+     * has to be one jump and not a bounce for as long as the finger is there.
+     * `read()` hands it over once and forgets it.
+     */
+    jumping: boolean;
 };
 
 /**
@@ -91,7 +112,8 @@ export type Push = {
 export function spawnPlayer(level: Level, forced: ForcedSpot | null): Player {
     // Whoever the level says you are, at your own eye height rather than at one
     // height for all six of them.
-    const eyeAbove = eyeHeightOf(level.playerSprite);
+    const stature = statureOf(level.playerSprite);
+    const eyeAbove = stature * EYE_OF_STATURE;
 
     const standingOn =
         forced === null
@@ -118,6 +140,7 @@ export function spawnPlayer(level: Level, forced: ForcedSpot | null): Player {
         footing: true,
         eye: y + eyeAbove,
         eyeAbove,
+        stature,
         walked: 0,
     };
 }
@@ -125,12 +148,19 @@ export function spawnPlayer(level: Level, forced: ForcedSpot | null): Player {
 /**
  * How far above the floor a person's eye sits: their own height, less the part
  * of them that is above their eyes.
+ */
+export function eyeHeightOf(sprite: string): number {
+    return statureOf(sprite) * EYE_OF_STATURE;
+}
+
+/**
+ * How tall a person stands.
  *
  * Somebody the table has never heard of gets the default stature, which is a
  * guess about how tall they are rather than a guess about their anatomy.
  */
-export function eyeHeightOf(sprite: string): number {
-    return (HEIGHTS[sprite] ?? DEFAULT_PLAYER_HEIGHT) * EYE_OF_STATURE;
+export function statureOf(sprite: string): number {
+    return HEIGHTS[sprite] ?? DEFAULT_PLAYER_HEIGHT;
 }
 
 /** Turns the head, keeping the pitch inside what a neck does. */
@@ -242,6 +272,44 @@ function groundUnder(player: Player, standingIn: Sector | null): number {
 }
 
 /**
+ * The highest the feet can go before the head is in the ceiling.
+ *
+ * A sky room counts, and deliberately. It has no ceiling drawn, but it has a
+ * lid at `ceilingHeight` that writes depth and occludes, and `build/boundaries`
+ * has always measured headroom against that number whether or not anything was
+ * painted on it. A ceiling you can walk under but not jump through is what the
+ * rest of the engine already believes is there; this is the first thing to ask
+ * it out loud.
+ *
+ * Outside the floor plan there is no ceiling either, which matters because it
+ * is the only case where a jump has nothing over it at all.
+ */
+function headroomUnder(player: Player, standingIn: Sector | null): number {
+    return standingIn === null
+        ? Infinity
+        : ceilingAt(standingIn, player.x, player.z) - player.stature;
+}
+
+/**
+ * Leaves the ground, if there is any ground to leave.
+ *
+ * Refused in mid-air rather than counted and spent later. A jump queued while
+ * falling and released on landing is a real design — it is how a lot of games
+ * make stairs feel forgiving — but it is a feel decision, and the task this
+ * belongs to was scoped to *a* jump. Adding a buffer nobody asked for would be
+ * the thing this board keeps calling a decision made while building something
+ * else.
+ */
+export function jumpPlayer(player: Player): void {
+    if (!player.footing) {
+        return;
+    }
+
+    player.fall = JUMP_SPEED;
+    player.footing = false;
+}
+
+/**
  * Gravity, one frame of it: where the feet are, and how fast they are moving.
  *
  * ## Why this needs no sub-stepping, and horizontal movement does
@@ -256,13 +324,13 @@ function groundUnder(player: Player, standingIn: Sector | null): number {
  * segment**, so a step long enough to land on the far side of one passes
  * through it without ever being inside it — which is why `RUN_SPEED *
  * MAX_FRAME_SECONDS` has to stay under `2 * PLAYER_RADIUS`. A floor is not
- * thin: it is a **plane under the whole room**, so there is no far side of it
- * to arrive on. The test below is written against the interval the feet travel
- * through — `y + step <= ground` — and that interval cannot straddle the floor
- * without ending below it. Exact at any speed, evaluated where the feet are
- * going rather than where they were, and it costs one comparison.
+ * thin: it is a **plane under the whole room**, and so is a ceiling. There is
+ * no far side of either to arrive on. Both tests below are written against the
+ * interval the feet travel through, and an interval cannot straddle a plane
+ * without ending past it. Exact at any speed, evaluated where the feet are
+ * going rather than where they were, and it costs one comparison each.
  *
- * So the danger a fast fall brings is not this line. It is that a falling
+ * So the danger a fast fall brings is not these lines. It is that a falling
  * player also moves sideways, and the sideways half is still the unswept test
  * it always was.
  *
@@ -274,6 +342,11 @@ function groundUnder(player: Player, standingIn: Sector | null): number {
  * eye catching up after it, and the whole staircase would stutter. So a drop no
  * longer than a step, taken by somebody already on their feet, puts the feet
  * down rather than starting a fall. Anything further is a fall.
+ *
+ * The gate on that is `footing` rather than "not moving vertically", and the
+ * difference is a head bump: stopping dead under a ceiling leaves the speed at
+ * zero half a metre up, and a player whose feet are off the ground has not
+ * arrived anywhere just because they have stopped rising.
  */
 export function fallPlayer(
     player: Player,
@@ -282,16 +355,56 @@ export function fallPlayer(
 ): void {
     const ground = groundUnder(player, standingIn);
 
-    if (player.fall === 0 && player.y - ground <= MAX_STEP) {
+    if (player.footing && player.y - ground <= MAX_STEP) {
         player.y = ground;
-        player.footing = true;
+        player.fall = 0;
 
         return;
     }
 
-    player.fall = Math.max(-TERMINAL_FALL, player.fall - GRAVITY * seconds);
+    const was = player.fall;
 
-    const step = player.fall * seconds;
+    player.fall = Math.max(-TERMINAL_FALL, was - GRAVITY * seconds);
+
+    // The distance covered is the *average* of the speed at both ends of the
+    // frame, not the speed at the end of it.
+    //
+    // `y += v * seconds` after updating `v` is the obvious form and it is
+    // wrong by half a frame of acceleration, every frame. That is not a
+    // rounding error: at a twentieth of a second it takes a 0.899 m jump down
+    // to 0.797 m, which is under the 0.8 m ledge the height was chosen to
+    // clear — and it takes it somewhere *else* at a different frame rate, so
+    // how high somebody can jump would depend on how fast their machine is.
+    //
+    // Averaging the two ends is exact rather than merely closer, because
+    // gravity is constant over the frame and the area under a straight line is
+    // its mean times its width. It costs one addition.
+    const step = ((was + player.fall) / 2) * seconds;
+
+    if (step > 0) {
+        const highest = headroomUnder(player, standingIn);
+
+        if (player.y + step >= highest) {
+            // Stopped dead, not bounced. A head hitting a ceiling loses the
+            // speed it had; what happens next is gravity's, the same as the top
+            // of any jump.
+            //
+            // The floor wins a room too short to stand up in. Otherwise a
+            // ceiling below the top of somebody's head would push their feet
+            // through the floor to make room, which is a worse answer to bad
+            // authoring than leaving them standing in it.
+            player.y = Math.max(ground, highest);
+            player.fall = 0;
+            player.footing = highest <= ground;
+
+            return;
+        }
+
+        player.y += step;
+        player.footing = false;
+
+        return;
+    }
 
     if (player.y + step <= ground) {
         player.y = ground;
