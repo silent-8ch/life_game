@@ -85,11 +85,44 @@ function inherit(source: Sector, from: Point, to: Point): SectorPoint {
     };
 }
 
+/**
+ * The old room's corners standing partway along a stretch of the cut result.
+ *
+ * The clipping library drops a corner that lies straight on the line, so a
+ * stretch that survived can span a corner where two runs of wall met — the way
+ * a level splits a wall to texture part of it, and the way `weldCorners` leaves
+ * one behind. Put back, each run can be inherited on its own.
+ */
+function corners(source: Sector, from: Point, to: Point): Point[] {
+    return source.points
+        .filter(
+            (point) =>
+                !samePoint(point, from) &&
+                !samePoint(point, to) &&
+                onEdge(from, to, point),
+        )
+        .filter(
+            (point, at, all) =>
+                all.findIndex((other) => samePoint(other, point)) === at,
+        )
+        .sort(
+            (a, b) =>
+                Math.hypot(a.x - from.x, a.z - from.z) -
+                Math.hypot(b.x - from.x, b.z - from.z),
+        )
+        .map(({ x, z }) => ({ x, z }));
+}
+
 /** A ring of bare corners dressed back up as a room's walls. */
 function dress(source: Sector, points: Point[]): SectorPoint[] {
-    return points.map((point, index) =>
-        inherit(source, point, points[(index + 1) % points.length]),
-    );
+    return points.flatMap((point, index) => {
+        const next = points[(index + 1) % points.length];
+        const stretch = [point, ...corners(source, point, next), next];
+
+        return stretch
+            .slice(0, -1)
+            .map((start, at) => inherit(source, start, stretch[at + 1]));
+    });
 }
 
 /**

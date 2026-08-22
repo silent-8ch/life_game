@@ -543,11 +543,4 @@ it('keeps a wall that survives a cut across a corner in the middle of it', funct
         ->and($answer['brick']['blocks'])->toBeTrue()
         ->and($answer['plaster']['wallTexture'])->toBe('plaster')
         ->and($answer['plaster']['blocks'])->toBeTrue();
-})->skip(
-    'Known bug in carve.ts, left as the failing case rather than fixed: the '.
-    'clipping library drops the corner at (5, 0) because it lies straight on '.
-    'the line, so the remainder has one south wall running 2 -> 10. inherit() '.
-    'looks for a single old wall holding both ends of it, finds none, and the '.
-    'stretch comes back untextured and open — a solid brick wall turned into a '.
-    'doorway by a cut three metres away from it.'
-);
+});
