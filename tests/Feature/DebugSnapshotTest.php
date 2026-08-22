@@ -11,7 +11,12 @@ use Illuminate\Support\Facades\File;
  * when the fault it was chasing is gone.
  */
 beforeEach(function (): void {
-    $this->where = storage_path('app/debug');
+    // Never the real folder. These examples clear it before and after, and the
+    // real one holds notes somebody took while playing that no test may throw
+    // away — that happened, repeatedly, before this was pointed somewhere safe.
+    $this->where = storage_path('framework/testing/debug-snapshots');
+
+    config(['debug-snapshots.path' => $this->where]);
 
     File::deleteDirectory($this->where);
 

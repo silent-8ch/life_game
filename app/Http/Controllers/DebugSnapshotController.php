@@ -21,7 +21,7 @@ class DebugSnapshotController extends Controller
     {
         $snapshot = $request->validated();
 
-        $where = storage_path('app/debug');
+        $where = config('debug-snapshots.path') ?? storage_path('app/debug');
         File::ensureDirectoryExists($where);
 
         $name = sprintf(
