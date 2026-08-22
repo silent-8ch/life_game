@@ -4,6 +4,7 @@ import type { Collider, Point } from '@/lib/engine/collision';
 import { MAX_STEP, MIN_HEADROOM, PLAYER_RADIUS } from '@/lib/engine/constants';
 import { buildNavGraph, somewhereIn } from '@/lib/engine/navigation';
 import type { CanPass, NavGraph, Point as Spot } from '@/lib/engine/navigation';
+import { crossPortal, createPortals } from '@/lib/engine/portals';
 import { floorAt, sectorAt } from '@/lib/engine/sectors';
 import { createSpriteActor } from '@/lib/engine/sprite-actor';
 import type { SpriteActor } from '@/lib/engine/sprite-actor';
@@ -113,6 +114,13 @@ function aimSomewhere(
 
 export function createActors(level: Level): Actors {
     const sectors = level.sectors;
+
+    // The same mouths the player walks through. Built here rather than handed
+    // in because they are a pure reading of the sectors — the same reading
+    // `buildNavGraph` makes two lines down — and threading them through the
+    // update signature would put a second thing in the frame loop's hands that
+    // it has no opinion about.
+    const portals = createPortals(sectors);
 
     // Which rooms lead to which, worked out once. The same question
     // build/boundaries.ts asks to decide where colliders go.
@@ -233,11 +241,67 @@ export function createActors(level: Level): Actors {
                         moved.z - wanderer.z,
                     );
 
+                    // The portal is asked about before the floor plan, exactly
+                    // as it is for the player and for exactly the same reason:
+                    // the step that crosses a mouth lands outside every sector
+                    // until something carries it through, so a floor plan asked
+                    // first refuses the crossing as walking into nothing.
+                    //
+                    // Nothing but `player.ts` used to call this, so a wanderer
+                    // whose route said "through the stairs portal" walked to
+                    // the mouth and stopped — and a mouth carries no collider,
+                    // so it did not even stop against anything. It pressed at a
+                    // waypoint a stride past the plane, made no progress, and
+                    // gave up after STILL_FOR to pick somewhere else: the
+                    // pre-pathfinding behaviour, reproduced by the feature that
+                    // was supposed to end it. Paul: *"characters are not going
+                    // through portals for me."*
+                    const through = crossPortal(
+                        portals,
+                        wanderer.x,
+                        wanderer.z,
+                        moved.x,
+                        moved.z,
+                        wanderer.yaw,
+                    );
+
+                    const landed =
+                        through !== null &&
+                        floorUnder(sectors, through.x, through.z) !== null
+                            ? through
+                            : moved;
+
                     // Refuse to walk off the floor plan entirely.
-                    if (floorUnder(sectors, moved.x, moved.z) !== null) {
-                        wanderer.x = moved.x;
-                        wanderer.z = moved.z;
+                    if (floorUnder(sectors, landed.x, landed.z) !== null) {
+                        wanderer.x = landed.x;
+                        wanderer.z = landed.z;
                         wanderer.walked += travelled;
+                    }
+
+                    if (landed === through) {
+                        // Three things go through together, and leaving any one
+                        // of them behind is its own bug.
+                        //
+                        // The turn, or a person walks out of a portal facing
+                        // the way they were before it and spins on the spot to
+                        // recover. `turnBetween` is the only place that angle
+                        // is worked out and this is the same call the player
+                        // makes.
+                        wanderer.yaw = through.yaw;
+
+                        // And the waypoint, which is the one that would look
+                        // like the crossing had not worked. A mouth's waypoint
+                        // is aimed a stride *past* the plane, so it is a place
+                        // with no floor under it and arriving is not something
+                        // that can happen by distance — the crossing is what
+                        // ends that leg. Left in place it sits in the room just
+                        // left, and the walk turns straight round and comes
+                        // back through.
+                        wanderer.target = wanderer.route.shift() ?? {
+                            x: wanderer.x,
+                            z: wanderer.z,
+                        };
+                        wanderer.stillFor = 0;
                     }
 
                     wanderer.stillFor =
