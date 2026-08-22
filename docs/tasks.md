@@ -17,7 +17,7 @@ not the agent's, and it is the cost of the new arrangement that nobody had price
 
 | Was recorded as | Actually |
 | --- | --- |
-| Agent A's pathfinding lost with its session | **On `main`.** `navigation.ts` exists. Rescued at `21897aa` / `47f9549`, "three files that only existed in one working tree" |
+| Agent A's pathfinding lost with its session | **Never lost, and not rescued either.** Committed at `b9a7153` by the session that wrote it, which did not end. `21897aa`/`47f9549` rescued only `data.md`, `plan-doors.md` and the `index.md` row. **Planning's error was a reasoning one worth naming: it found `life_game2`'s working tree clean and read that as "the work is gone", when clean meant "the work is committed."** An empty `git status` is the same shape whether nothing was written or everything was saved. |
 | 66 uncommitted textures in `life_game_art` | **Landed** as `7e85e1c`, "new textures" |
 | `data.md` and `plan-doors.md` untracked in `life_game` | **Rescued** in the same two commits |
 | A-21 queued | **Landed** as `834c169` |
@@ -77,6 +77,22 @@ sitting in the working directory** where he can see them, `git add` them and com
 **What "done" means now:** the work is complete, **the gate has been run**, the files are left
 modified, **the agent has stopped**, and Paul has been told what changed and whether the gate
 passed. **Stop — do not start the next task.** He commits, then restarts you.
+
+**How you stop, exactly.** Paul is watching four terminals and needs to see at a glance which
+one is waiting on him. **Your last message ends with this block and nothing after it:**
+
+```
+COMMIT NOW
+  <n> files changed in <checkout>
+  <path>
+  <path>
+  gate: passed | FAILED — <one line why>
+```
+
+**`COMMIT NOW` on its own line, in capitals, as the last thing on the screen.** Not a sentence
+containing the words. Nothing below it — no next steps, no offers, no questions — because
+anything under it reads as more work and he will scroll past the one line he needed. If you
+have a question, ask it *above* the block, and still stop.
 
 **Run `composer ci:check` before stopping and say the result plainly, including when it
 failed.** This matters more than it used to. A red branch used to harm nobody; a red *working
@@ -233,7 +249,9 @@ under Vitest, Pest **476 of 476, 3149 assertions**, 63 component, ten levels see
 
 | ID | Task | Status | Depends on | Notes |
 | --- | --- | --- | --- | --- |
-| A-11a | Vertical physics — y as state, gravity, ground contact | **go — start here** | — | Scoped and approved through jump only. **The swept y test is the core of this, not a detail.** `RUN_SPEED × MAX_FRAME_SECONDS` is 0.27 m against a 0.68 m limit — comfortable at a walk, and a fall reaches 0.68 m/frame at 13.6 m/s, which arrives after 1.39 s and 9.42 m. Level 8 has 15 m ceilings and a staircase, so **the first thing to move faster than a walk falls through the floor, and it looks like an authoring fault.** Arithmetic verified by planning. x/z stays exactly as it is — nothing horizontal has been near the limit. Replaces `settleEye` with an integrator. **Rulings:** portals carry vertical speed through unchanged, since `through` is a rigid yaw turn with no y term — pin it as a test, not a comment; water keeps wading exactly as it is, revisit only if it looks wrong when played. |
+| A-11a | Vertical physics — y as state, gravity, ground contact | **WRITTEN, GREEN, UNCOMMITTED — Paul's to keep or discard** | — | Written before the stop instruction arrived and left as modified files, gate passed, **485 tests**. `player.y` and `player.fall` are state, `fallPlayer` integrates them, `GRAVITY = 9.81` and `TERMINAL_FALL = 55`. Real gravity rather than the 2–3× most shooters use, because that choice belongs to whichever task adds a jump — there is nothing to tune against until then. The eye is **exact in the air and smoothed on the ground**, since smoothing a fall leaves the camera trailing the body all the way down and the landing is felt before it is seen. The body now stands at `player.y` rather than at the floor under it — mirrors are the only place both are on screen, and a body left standing while the camera fell past it would have shown there. Portals carrying vertical speed unchanged is pinned, reusing the ordering test's two-room fixture so the fall is the only thing varying. **One ruling made under stop conditions and needing Paul's confirmation: a drop of `MAX_STEP` or less, taken by somebody already on their feet, is a step down and not a fall** — `build/boundaries.ts` has already called that distance walkable, so falling it would be correct and feel wrong, turning a flight of stairs into a run of little drops with the eye catching up after each. Pinned by two tests a centimetre apart; one comparison to change. |
+| — | **⚠ Planning's swept-test framing was wrong, and the agent said so rather than satisfying it** | correction | — | The task said gravity breaks the no-swept-test assumption, and planning **verified the arithmetic and endorsed the conclusion** — which was checking the wrong thing. `RUN_SPEED × MAX_FRAME_SECONDS < 2 × PLAYER_RADIUS` exists because **a wall is an infinitely thin segment**: a long enough step lands on the far side without ever being inside it. **A floor is a plane under the whole room. There is no far side to arrive on**, so a one-line interval test — `y + step <= ground` — is exact at any speed, and no fall can tunnel through it. **The real exposure a fall creates is that a falling player is also moving sideways, and the sideways half is still the unswept test it always was.** That deserves a task and is not this one. Numbers can be right while the reasoning they are attached to is wrong; verifying the first is not verifying the second. |
+| 1-18 | Rewrite `CollisionLimitsTest`'s frame-distance assertion | **not needed — the board's prediction was wrong** | ~~A-11a~~ | Predicted to pass while guarding nothing, an ISSUE-46 green check. In fact **it still passes and now guards the sideways half only, which is real** — its premise is intact for the reason above. Nothing to rewrite. | Scoped and approved through jump only. **The swept y test is the core of this, not a detail.** `RUN_SPEED × MAX_FRAME_SECONDS` is 0.27 m against a 0.68 m limit — comfortable at a walk, and a fall reaches 0.68 m/frame at 13.6 m/s, which arrives after 1.39 s and 9.42 m. Level 8 has 15 m ceilings and a staircase, so **the first thing to move faster than a walk falls through the floor, and it looks like an authoring fault.** Arithmetic verified by planning. x/z stays exactly as it is — nothing horizontal has been near the limit. Replaces `settleEye` with an integrator. **Rulings:** portals carry vertical speed through unchanged, since `through` is a rigid yaw turn with no y term — pin it as a test, not a comment; water keeps wading exactly as it is, revisit only if it looks wrong when played. |
 | A-11b | Vertical physics — jump and the first head bump | **next** | A-11a | `ceilingAt` exists since A-04, so this is the first time the engine cares about a ceiling for collision. **Jump changes what "walkable" means** — a 0.8 m ledge becomes reachable — so `LevelGeometryTest`, `TheHouseTest:114` and `:132`, and `TechDemoLevelTest:92,106` stop asking a question that has that answer. Those tests are not wrong. Bring the list to planning when it lands and it goes to agent 1 as one piece of work rather than four surprises. |
 | A-11c | Vertical physics — runtime step-up | **unassigned — out of scope** | A-11b | Ruled in advance so it is not re-derived: **keep the collider for headroom, drop it for climb.** A gap you cannot fit under is a wall whatever the player can do; a step you cannot take is a runtime question. That splits `build/boundaries.ts:154` along the line that actually distinguishes them. Changes what `MAX_STEP` means, so it touches `tests/Pest.php` and agent 1's `walkableLinks` — cross-lane, and not to be started without planning. |
 | A-11d | Vertical physics — crouch | **unassigned — out of scope** | A-11c | A second eye height and body height, which changes what `MIN_HEADROOM` is for. Deliberately not pre-empted by a decision made while building something else. |
