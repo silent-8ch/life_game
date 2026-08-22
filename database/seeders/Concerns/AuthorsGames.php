@@ -93,6 +93,7 @@ trait AuthorsGames
      * @param  list<int>  $mirrors  Edges that reflect the room, by the corner they start at.
      * @param  list<int>  $solidEdges  Shared edges that stay walls, by the corner they start at.
      * @param  array<int, string>  $portals  Portal link per edge, keyed by the corner it starts at. Two edges anywhere in the level naming the same link are the two ends of one portal.
+     * @param  list<int>  $skyEdges  Edges that show the sky rather than a wall, by the corner they start at.
      */
     protected function sector(
         Level $level,
@@ -110,6 +111,7 @@ trait AuthorsGames
         array $mirrors = [],
         array $solidEdges = [],
         array $portals = [],
+        array $skyEdges = [],
     ): LevelSector {
         $sector = $level->sectors()->create([
             'slug' => $slug,
@@ -131,6 +133,7 @@ trait AuthorsGames
                 'wall_texture' => $edgeTextures[$index] ?? null,
                 'blocks' => in_array($index, $solidEdges, strict: true),
                 'is_mirror' => in_array($index, $mirrors, strict: true),
+                'is_sky' => in_array($index, $skyEdges, strict: true),
                 'portal_link' => $portals[$index] ?? null,
             ]);
         }
