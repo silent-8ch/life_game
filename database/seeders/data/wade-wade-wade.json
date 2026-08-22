@@ -1,0 +1,145 @@
+{
+    "level": {
+        "slug": "wade-wade-wade",
+        "name": "Wade wade WADE",
+        "description": "A level waiting to be drawn.",
+        "spawnX": 0,
+        "spawnZ": 0,
+        "spawnAngle": 0,
+        "ceilingHeight": 3,
+        "sky": "sky-sunset",
+        "skyVariant": 0,
+        "backdrop": null,
+        "backdropLayers": [],
+        "wallColor": "#7fe0c9",
+        "floorColor": "#2f6f5e",
+        "accentColor": "#fbbf24",
+        "playerSprite": "wade"
+    },
+    "sectors": [
+        {
+            "slug": "room",
+            "name": "Room",
+            "floorHeight": 0,
+            "ceilingHeight": 0,
+            "floor": "oak-floor",
+            "ceiling": null,
+            "walls": "cream-plaster-wall",
+            "sky": 0,
+            "water": 0,
+            "sortOrder": 0,
+            "edges": [
+                {
+                    "x": -4,
+                    "z": -5.5,
+                    "wallTexture": null,
+                    "blocks": 1,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": 6.75,
+                    "z": -5.5,
+                    "wallTexture": null,
+                    "blocks": 1,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": 6.75,
+                    "z": 4,
+                    "wallTexture": null,
+                    "blocks": 1,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": -4,
+                    "z": 4,
+                    "wallTexture": null,
+                    "blocks": 1,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                }
+            ]
+        }
+    ],
+    "things": [
+        {
+            "slug": "luke",
+            "name": "Luke",
+            "description": "Luke is wandering about.",
+            "kind": "actor",
+            "x": 7,
+            "z": -1.5,
+            "elevation": 0,
+            "width": 0.9,
+            "depth": 0.9,
+            "height": 1,
+            "angle": 0,
+            "isSolid": 0,
+            "sprite": "luke",
+            "behaviour": "wander",
+            "speed": 1.1,
+            "texture": null
+        },
+        {
+            "slug": "luke-2",
+            "name": "Luke",
+            "description": "Luke is wandering about.",
+            "kind": "actor",
+            "x": 7.5,
+            "z": -1.5,
+            "elevation": 0,
+            "width": 0.9,
+            "depth": 0.9,
+            "height": 1,
+            "angle": 0,
+            "isSolid": 0,
+            "sprite": "luke",
+            "behaviour": "wander",
+            "speed": 1.1,
+            "texture": null
+        },
+        {
+            "slug": "luke-3",
+            "name": "Luke",
+            "description": "Luke is wandering about.",
+            "kind": "actor",
+            "x": 7,
+            "z": -1,
+            "elevation": 0,
+            "width": 0.9,
+            "depth": 0.9,
+            "height": 1,
+            "angle": 0,
+            "isSolid": 0,
+            "sprite": "luke",
+            "behaviour": "wander",
+            "speed": 1.1,
+            "texture": null
+        },
+        {
+            "slug": "luke-4",
+            "name": "Luke",
+            "description": "Luke is wandering about.",
+            "kind": "actor",
+            "x": 7.5,
+            "z": -1,
+            "elevation": 0,
+            "width": 0.9,
+            "depth": 0.9,
+            "height": 1,
+            "angle": 0,
+            "isSolid": 0,
+            "sprite": "luke",
+            "behaviour": "wander",
+            "speed": 1.1,
+            "texture": null
+        }
+    ]
+}

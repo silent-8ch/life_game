@@ -1,0 +1,1370 @@
+{
+    "level": {
+        "slug": "new-level",
+        "name": "New Level",
+        "description": "A level waiting to be drawn.",
+        "spawnX": -2,
+        "spawnZ": -17,
+        "spawnAngle": 0,
+        "ceilingHeight": 3,
+        "sky": "sky-night",
+        "skyVariant": 0,
+        "backdrop": "skyline",
+        "backdropLayers": [
+            1,
+            2,
+            3
+        ],
+        "wallColor": "#7fe0c9",
+        "floorColor": "#2f6f5e",
+        "accentColor": "#fbbf24",
+        "playerSprite": "paul"
+    },
+    "sectors": [
+        {
+            "slug": "room",
+            "name": "Room",
+            "floorHeight": 0,
+            "ceilingHeight": 3,
+            "floor": "oak-floor",
+            "ceiling": "cream-plaster-wall",
+            "walls": "cream-plaster-wall",
+            "sky": 0,
+            "water": 0,
+            "sortOrder": 0,
+            "edges": [
+                {
+                    "x": -4,
+                    "z": -4,
+                    "wallTexture": null,
+                    "blocks": 1,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": -3.5,
+                    "z": -4,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": -1.5,
+                    "z": -4,
+                    "wallTexture": null,
+                    "blocks": 1,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": 4,
+                    "z": -4,
+                    "wallTexture": null,
+                    "blocks": 1,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": 4,
+                    "z": -2,
+                    "wallTexture": null,
+                    "blocks": 1,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": 3.5,
+                    "z": -2,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": 1.5,
+                    "z": -2,
+                    "wallTexture": null,
+                    "blocks": 1,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": -4,
+                    "z": -2,
+                    "wallTexture": null,
+                    "blocks": 1,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                }
+            ]
+        },
+        {
+            "slug": "room-2",
+            "name": "Room 2",
+            "floorHeight": 0,
+            "ceilingHeight": 3,
+            "floor": null,
+            "ceiling": null,
+            "walls": null,
+            "sky": 0,
+            "water": 0,
+            "sortOrder": 1,
+            "edges": [
+                {
+                    "x": -4,
+                    "z": -4.5,
+                    "wallTexture": null,
+                    "blocks": 1,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": -3.5,
+                    "z": -4.5,
+                    "wallTexture": null,
+                    "blocks": 1,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": -3.5,
+                    "z": -4,
+                    "wallTexture": null,
+                    "blocks": 1,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": -4,
+                    "z": -4,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                }
+            ]
+        },
+        {
+            "slug": "room-3",
+            "name": "Room 3",
+            "floorHeight": 0,
+            "ceilingHeight": 3,
+            "floor": null,
+            "ceiling": null,
+            "walls": null,
+            "sky": 0,
+            "water": 0,
+            "sortOrder": 2,
+            "edges": [
+                {
+                    "x": -4,
+                    "z": -4.5,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 1,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": -4,
+                    "z": -8.5,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": 4.5,
+                    "z": -8.5,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 1,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": 4,
+                    "z": -4.5,
+                    "wallTexture": null,
+                    "blocks": 1,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": -1.5,
+                    "z": -4.5,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": -3.5,
+                    "z": -4.5,
+                    "wallTexture": null,
+                    "blocks": 1,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                }
+            ]
+        },
+        {
+            "slug": "room-5",
+            "name": "Room 2 2",
+            "floorHeight": 0,
+            "ceilingHeight": 3,
+            "floor": null,
+            "ceiling": null,
+            "walls": null,
+            "sky": 0,
+            "water": 0,
+            "sortOrder": 3,
+            "edges": [
+                {
+                    "x": -1.5,
+                    "z": -4.5,
+                    "wallTexture": null,
+                    "blocks": 1,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": 4,
+                    "z": -4.5,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": 4,
+                    "z": -4,
+                    "wallTexture": null,
+                    "blocks": 1,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": -1.5,
+                    "z": -4,
+                    "wallTexture": null,
+                    "blocks": 1,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                }
+            ]
+        },
+        {
+            "slug": "room-4",
+            "name": "Room 4",
+            "floorHeight": 0,
+            "ceilingHeight": 3,
+            "floor": null,
+            "ceiling": null,
+            "walls": null,
+            "sky": 0,
+            "water": 0,
+            "sortOrder": 4,
+            "edges": [
+                {
+                    "x": -3.5,
+                    "z": -4.5,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": -1.5,
+                    "z": -4.5,
+                    "wallTexture": null,
+                    "blocks": 1,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": -1.5,
+                    "z": -4,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": -3.5,
+                    "z": -4,
+                    "wallTexture": null,
+                    "blocks": 1,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                }
+            ]
+        },
+        {
+            "slug": "room-7",
+            "name": "Room 2",
+            "floorHeight": 0,
+            "ceilingHeight": 3,
+            "floor": "oak-floor",
+            "ceiling": "cream-plaster-wall",
+            "walls": "cream-plaster-wall",
+            "sky": 0,
+            "water": 0,
+            "sortOrder": 5,
+            "edges": [
+                {
+                    "x": -4,
+                    "z": -1.5,
+                    "wallTexture": null,
+                    "blocks": 1,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": 1.5,
+                    "z": -1.5,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": 3.5,
+                    "z": -1.5,
+                    "wallTexture": null,
+                    "blocks": 1,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": 4,
+                    "z": -1.5,
+                    "wallTexture": null,
+                    "blocks": 1,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": "one"
+                },
+                {
+                    "x": 4,
+                    "z": 4,
+                    "wallTexture": null,
+                    "blocks": 1,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": -4,
+                    "z": 4,
+                    "wallTexture": null,
+                    "blocks": 1,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": "one"
+                }
+            ]
+        },
+        {
+            "slug": "room-6",
+            "name": "Room 6",
+            "floorHeight": 0,
+            "ceilingHeight": 3,
+            "floor": null,
+            "ceiling": null,
+            "walls": null,
+            "sky": 0,
+            "water": 0,
+            "sortOrder": 6,
+            "edges": [
+                {
+                    "x": -4,
+                    "z": -2,
+                    "wallTexture": null,
+                    "blocks": 1,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": 1.5,
+                    "z": -2,
+                    "wallTexture": null,
+                    "blocks": 1,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": 1.5,
+                    "z": -1.5,
+                    "wallTexture": null,
+                    "blocks": 1,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": -4,
+                    "z": -1.5,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                }
+            ]
+        },
+        {
+            "slug": "room-9",
+            "name": "Room 6 2",
+            "floorHeight": 0,
+            "ceilingHeight": 3,
+            "floor": null,
+            "ceiling": null,
+            "walls": null,
+            "sky": 0,
+            "water": 0,
+            "sortOrder": 7,
+            "edges": [
+                {
+                    "x": 3.5,
+                    "z": -2,
+                    "wallTexture": null,
+                    "blocks": 1,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": 4,
+                    "z": -2,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": 4,
+                    "z": -1.5,
+                    "wallTexture": null,
+                    "blocks": 1,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": 3.5,
+                    "z": -1.5,
+                    "wallTexture": null,
+                    "blocks": 1,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                }
+            ]
+        },
+        {
+            "slug": "room-8",
+            "name": "Room 8",
+            "floorHeight": 0,
+            "ceilingHeight": 3,
+            "floor": null,
+            "ceiling": null,
+            "walls": null,
+            "sky": 0,
+            "water": 0,
+            "sortOrder": 8,
+            "edges": [
+                {
+                    "x": 3.5,
+                    "z": -1.5,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": 1.5,
+                    "z": -1.5,
+                    "wallTexture": null,
+                    "blocks": 1,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": 1.5,
+                    "z": -2,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": 3.5,
+                    "z": -2,
+                    "wallTexture": null,
+                    "blocks": 1,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                }
+            ]
+        },
+        {
+            "slug": "room-10",
+            "name": "Room 10",
+            "floorHeight": 0,
+            "ceilingHeight": 10,
+            "floor": "moss-ground",
+            "ceiling": null,
+            "walls": "metal-roof",
+            "sky": 1,
+            "water": 0,
+            "sortOrder": 9,
+            "edges": [
+                {
+                    "x": -8.6923076923077,
+                    "z": -41,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": -6,
+                    "z": -42,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": 19.5,
+                    "z": -41,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                }
+            ]
+        },
+        {
+            "slug": "room-12",
+            "name": "Room 10 2",
+            "floorHeight": 0,
+            "ceilingHeight": 10,
+            "floor": "moss-ground",
+            "ceiling": null,
+            "walls": "metal-roof",
+            "sky": 1,
+            "water": 0,
+            "sortOrder": 10,
+            "edges": [
+                {
+                    "x": -22.153846153846,
+                    "z": -36,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": -8.6923076923077,
+                    "z": -41,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": 19.5,
+                    "z": -41,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": 20.055555555556,
+                    "z": -36,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": 16,
+                    "z": -36,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": -2,
+                    "z": -36,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                }
+            ]
+        },
+        {
+            "slug": "room-13",
+            "name": "Room 10 3",
+            "floorHeight": 0,
+            "ceilingHeight": 10,
+            "floor": "moss-ground",
+            "ceiling": null,
+            "walls": "metal-roof",
+            "sky": 1,
+            "water": 0,
+            "sortOrder": 11,
+            "edges": [
+                {
+                    "x": -23.5,
+                    "z": -35.5,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": -22.153846153846,
+                    "z": -36,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": -2,
+                    "z": -36,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": -2,
+                    "z": -35.5,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                }
+            ]
+        },
+        {
+            "slug": "room-14",
+            "name": "Room 10 4",
+            "floorHeight": 0,
+            "ceilingHeight": 10,
+            "floor": "moss-ground",
+            "ceiling": null,
+            "walls": "metal-roof",
+            "sky": 1,
+            "water": 0,
+            "sortOrder": 12,
+            "edges": [
+                {
+                    "x": 16,
+                    "z": -36,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": 20.055555555556,
+                    "z": -36,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": 20.111111111111,
+                    "z": -35.5,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": 16,
+                    "z": -35.5,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                }
+            ]
+        },
+        {
+            "slug": "room-15",
+            "name": "Room 10 5",
+            "floorHeight": 0,
+            "ceilingHeight": 10,
+            "floor": "moss-ground",
+            "ceiling": null,
+            "walls": "metal-roof",
+            "sky": 1,
+            "water": 0,
+            "sortOrder": 13,
+            "edges": [
+                {
+                    "x": -23.666666666667,
+                    "z": -32,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": -23.5,
+                    "z": -35.5,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": -2,
+                    "z": -35.5,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": -2,
+                    "z": -32,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                }
+            ]
+        },
+        {
+            "slug": "room-16",
+            "name": "Room 10 6",
+            "floorHeight": 0,
+            "ceilingHeight": 10,
+            "floor": "moss-ground",
+            "ceiling": null,
+            "walls": "metal-roof",
+            "sky": 1,
+            "water": 0,
+            "sortOrder": 14,
+            "edges": [
+                {
+                    "x": 16,
+                    "z": -35.5,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": 20.111111111111,
+                    "z": -35.5,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": 20.5,
+                    "z": -32,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": 16,
+                    "z": -32,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                }
+            ]
+        },
+        {
+            "slug": "room-17",
+            "name": "Room 10 7",
+            "floorHeight": 0,
+            "ceilingHeight": 10,
+            "floor": "moss-ground",
+            "ceiling": null,
+            "walls": "metal-roof",
+            "sky": 1,
+            "water": 0,
+            "sortOrder": 15,
+            "edges": [
+                {
+                    "x": -23.952380952381,
+                    "z": -26,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": -23.666666666667,
+                    "z": -32,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": -2,
+                    "z": -32,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": -2,
+                    "z": -26,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                }
+            ]
+        },
+        {
+            "slug": "room-18",
+            "name": "Room 10 8",
+            "floorHeight": 0,
+            "ceilingHeight": 10,
+            "floor": "moss-ground",
+            "ceiling": null,
+            "walls": "metal-roof",
+            "sky": 1,
+            "water": 0,
+            "sortOrder": 16,
+            "edges": [
+                {
+                    "x": 16,
+                    "z": -32,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": 20.5,
+                    "z": -32,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": 19.914634146341,
+                    "z": -26,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": 16,
+                    "z": -26,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                }
+            ]
+        },
+        {
+            "slug": "room-19",
+            "name": "Room 10 9",
+            "floorHeight": 0,
+            "ceilingHeight": 10,
+            "floor": "moss-ground",
+            "ceiling": null,
+            "walls": "metal-roof",
+            "sky": 1,
+            "water": 0,
+            "sortOrder": 17,
+            "edges": [
+                {
+                    "x": -24,
+                    "z": -25,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": -23.952380952381,
+                    "z": -26,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": -2,
+                    "z": -26,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": 16,
+                    "z": -26,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": 19.914634146341,
+                    "z": -26,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": 19.817073170732,
+                    "z": -25,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                }
+            ]
+        },
+        {
+            "slug": "room-20",
+            "name": "Room 10 10",
+            "floorHeight": 0,
+            "ceilingHeight": 10,
+            "floor": "moss-ground",
+            "ceiling": null,
+            "walls": "metal-roof",
+            "sky": 1,
+            "water": 0,
+            "sortOrder": 18,
+            "edges": [
+                {
+                    "x": -24,
+                    "z": -25,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": 19.817073170732,
+                    "z": -25,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": 18.5,
+                    "z": -11.5,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": -7.6363636363636,
+                    "z": -11.5,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                }
+            ]
+        },
+        {
+            "slug": "room-21",
+            "name": "Room 10 11",
+            "floorHeight": 0,
+            "ceilingHeight": 10,
+            "floor": "moss-ground",
+            "ceiling": null,
+            "walls": "metal-roof",
+            "sky": 1,
+            "water": 0,
+            "sortOrder": 19,
+            "edges": [
+                {
+                    "x": -7.6363636363636,
+                    "z": -11.5,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": 18.5,
+                    "z": -11.5,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": 8,
+                    "z": -9,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": -4.6060606060606,
+                    "z": -9,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                }
+            ]
+        },
+        {
+            "slug": "room-22",
+            "name": "Room 10 12",
+            "floorHeight": 0,
+            "ceilingHeight": 10,
+            "floor": "moss-ground",
+            "ceiling": null,
+            "walls": "metal-roof",
+            "sky": 1,
+            "water": 0,
+            "sortOrder": 20,
+            "edges": [
+                {
+                    "x": -4.6060606060606,
+                    "z": -9,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": 8,
+                    "z": -9,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": 4.5,
+                    "z": -8.5,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": -4,
+                    "z": -8.5,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                }
+            ]
+        },
+        {
+            "slug": "room-11",
+            "name": "Room 11",
+            "floorHeight": 10,
+            "ceilingHeight": 10,
+            "floor": null,
+            "ceiling": null,
+            "walls": null,
+            "sky": 0,
+            "water": 0,
+            "sortOrder": 21,
+            "edges": [
+                {
+                    "x": -2,
+                    "z": -36,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": 16,
+                    "z": -36,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": 16,
+                    "z": -35.5,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": 16,
+                    "z": -32,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": 16,
+                    "z": -26,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": -2,
+                    "z": -26,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": -2,
+                    "z": -32,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                },
+                {
+                    "x": -2,
+                    "z": -35.5,
+                    "wallTexture": null,
+                    "blocks": 0,
+                    "isMirror": 0,
+                    "isSky": 0,
+                    "portalLink": null
+                }
+            ]
+        }
+    ],
+    "things": [
+        {
+            "slug": "wade",
+            "name": "Wade",
+            "description": "Wade is wandering about.",
+            "kind": "actor",
+            "x": -7,
+            "z": -21,
+            "elevation": 0,
+            "width": 0.9,
+            "depth": 0.9,
+            "height": 1.8,
+            "angle": 0,
+            "isSolid": 0,
+            "sprite": "wade",
+            "behaviour": "still",
+            "speed": 1.1,
+            "texture": null
+        },
+        {
+            "slug": "wade-2",
+            "name": "Krystal",
+            "description": "Wade is wandering about.",
+            "kind": "actor",
+            "x": -2,
+            "z": -21,
+            "elevation": 0,
+            "width": 0.9,
+            "depth": 0.9,
+            "height": 1.8,
+            "angle": 0,
+            "isSolid": 0,
+            "sprite": "krystal",
+            "behaviour": "still",
+            "speed": 1.1,
+            "texture": null
+        },
+        {
+            "slug": "wade-3",
+            "name": "Wade",
+            "description": "Wade is wandering about.",
+            "kind": "actor",
+            "x": 2.5,
+            "z": -21,
+            "elevation": 0,
+            "width": 0.9,
+            "depth": 0.9,
+            "height": 1.8,
+            "angle": 0,
+            "isSolid": 0,
+            "sprite": "luna",
+            "behaviour": "still",
+            "speed": 1.1,
+            "texture": null
+        },
+        {
+            "slug": "wade-4",
+            "name": "Wade",
+            "description": "Wade is wandering about.",
+            "kind": "actor",
+            "x": 7.5,
+            "z": -21.5,
+            "elevation": 0,
+            "width": 0.9,
+            "depth": 0.9,
+            "height": 1.8,
+            "angle": 0,
+            "isSolid": 0,
+            "sprite": "william",
+            "behaviour": "still",
+            "speed": 1.1,
+            "texture": null
+        },
+        {
+            "slug": "wade-5",
+            "name": "Wade",
+            "description": "Wade is wandering about.",
+            "kind": "actor",
+            "x": -12,
+            "z": -21,
+            "elevation": 0,
+            "width": 0.9,
+            "depth": 0.9,
+            "height": 1.8,
+            "angle": 0,
+            "isSolid": 0,
+            "sprite": "luke",
+            "behaviour": "still",
+            "speed": 1.1,
+            "texture": null
+        },
+        {
+            "slug": "wade-6",
+            "name": "Wade",
+            "description": "Wade is wandering about.",
+            "kind": "actor",
+            "x": -0.5,
+            "z": 2,
+            "elevation": 0,
+            "width": 0.9,
+            "depth": 0.9,
+            "height": 1.8,
+            "angle": 0,
+            "isSolid": 0,
+            "sprite": "krystal",
+            "behaviour": "still",
+            "speed": 1.1,
+            "texture": null
+        }
+    ]
+}
