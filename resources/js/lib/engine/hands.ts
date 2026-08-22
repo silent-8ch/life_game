@@ -60,10 +60,9 @@ const RAISE_RATE = 7;
  * with the thumb away from you and the little finger nearest — so it reads the
  * other way to a palm held up, which is what made the first guess backwards.
  *
- * There is an entry per pose because the art does not agree with itself. The
- * files were generated a person and a pose at a time, and Paul's and Wade's
- * fists came back facing the opposite way to their own open hands. Get it wrong
- * and both hands are wrong at once, since they are mirror images.
+ * There is an entry per pose because each card's handedness must match the side
+ * that receives its unmirrored drawing. The edge cards were regenerated as
+ * left hands for every person; the back poses retain their measured mapping.
  *
  * Read off the artwork by measuring which side carries the finger outlines; the
  * thumb is the other one. An edge-on hand hides most of its thumb, so treat
@@ -92,11 +91,11 @@ const RAISE_RATE = 7;
  * These twelve were settled by looking at the cards.
  */
 const DRAWN: Record<string, Record<Pose, 1 | -1>> = {
-    paul: { walk: 1, run: -1, reach: -1, grip: 1 },
-    krystal: { walk: 1, run: 1, reach: -1, grip: 1 },
-    luna: { walk: 1, run: 1, reach: -1, grip: 1 },
-    wade: { walk: 1, run: -1, reach: -1, grip: 1 },
-    luke: { walk: 1, run: 1, reach: -1, grip: 1 },
+    paul: { walk: -1, run: -1, reach: -1, grip: 1 },
+    krystal: { walk: -1, run: -1, reach: -1, grip: 1 },
+    luna: { walk: -1, run: -1, reach: -1, grip: 1 },
+    wade: { walk: -1, run: -1, reach: -1, grip: 1 },
+    luke: { walk: -1, run: -1, reach: -1, grip: 1 },
     william: { walk: -1, run: -1, reach: -1, grip: 1 },
 };
 

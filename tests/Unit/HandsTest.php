@@ -9,9 +9,8 @@ use Symfony\Component\Process\Process;
  * it round to make the other hand. Which side it belongs on matters: put it on
  * the wrong one and both hands are wrong at once, since they are mirror images.
  *
- * The art does not agree with itself — it was generated a person and a pose at a
- * time, and Paul's and Wade's fists face the opposite way to their own open
- * hands — so there is a table per pose, and this pins it.
+ * The edge cards are consistently drawn as left hands. There is still a table
+ * per pose because the back-of-hand cards have their own measured mapping.
  */
 
 /**
@@ -91,16 +90,14 @@ it('turns each drawing round for whichever side it was not made for', function (
         process.stdout.write(JSON.stringify({ turned }));
         JS);
 
-    // Measured off the artwork by which side carries the finger outlines; the
-    // thumb is the other one, and it goes on the outside. Edge on you are
-    // seeing the back of the hand, so it reads the other way to a palm held up
-    // — which is what made the first attempt at this table backwards.
+    // Every regenerated edge card is a left hand, so its unmirrored drawing
+    // belongs on the left side of the view in both poses.
     expect($answer['turned'])->toBe([
-        'paul' => [1, -1],
-        'krystal' => [1, 1],
-        'luna' => [1, 1],
-        'wade' => [1, -1],
-        'luke' => [1, 1],
+        'paul' => [-1, -1],
+        'krystal' => [-1, -1],
+        'luna' => [-1, -1],
+        'wade' => [-1, -1],
+        'luke' => [-1, -1],
         'william' => [-1, -1],
     ]);
 });
@@ -178,11 +175,11 @@ it('leaves the hands edge on until the crosshair is on something', function (): 
         }));
         JS);
 
-    // Paul's walking card and his reaching card face opposite ways, so the
-    // turn is visible in `scale.x` — and it goes back when the crosshair does.
-    expect($answer['idle'])->toBe(1)
+    // Paul's walking and reaching cards are both left hands, so changing the
+    // pose does not require mirroring the card.
+    expect($answer['idle'])->toBe(-1)
         ->and($answer['reaching'])->toBe(-1)
-        ->and($answer['after'])->toBe(1);
+        ->and($answer['after'])->toBe(-1);
 });
 
 it('still works for a caller that says nothing about reaching', function (): void {
@@ -199,7 +196,7 @@ it('still works for a caller that says nothing about reaching', function (): voi
         process.stdout.write(JSON.stringify({ walk: right.scale.x }));
         JS);
 
-    expect($answer['walk'])->toBe(1);
+    expect($answer['walk'])->toBe(-1);
 });
 
 it('always ends up with a right hand on the right of the screen', function (): void {
