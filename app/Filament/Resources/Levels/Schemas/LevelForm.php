@@ -38,6 +38,18 @@ class LevelForm
                             ->relationship('game', 'title')
                             ->default($game)
                             ->required(),
+
+                        // Nullable on purpose. A level with nobody against it
+                        // is an orphan, which is a real state — everything
+                        // drawn before there were accounts is one, and an
+                        // orphan stays editable by anybody rather than being
+                        // locked away from everybody.
+                        Select::make('owner_id')
+                            ->label('Drawn by')
+                            ->relationship('owner', 'name')
+                            ->placeholder('Nobody')
+                            ->searchable()
+                            ->preload(),
                         TextInput::make('name')
                             ->required()
                             ->default($fresh['name'])

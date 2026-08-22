@@ -9,12 +9,27 @@ export default function Index({ games }: GameIndexProps) {
 
             <div className="min-h-screen bg-[#0a0a0a] px-4 py-16 text-amber-50">
                 <div className="mx-auto flex w-full max-w-3xl flex-col gap-10">
-                    <header>
-                        <h1 className="text-3xl font-medium">Adventures</h1>
-                        <p className="mt-1 text-sm text-amber-100/50">
-                            Pick something to play. Your progress is kept for
-                            each one.
-                        </p>
+                    <header className="flex flex-wrap items-end justify-between gap-4">
+                        <div>
+                            <h1 className="text-3xl font-medium">Adventures</h1>
+                            <p className="mt-1 text-sm text-amber-100/50">
+                                Pick something to play. Your progress is kept
+                                for each one.
+                            </p>
+                        </div>
+
+                        {/*
+                          The adventures below start you at their own first
+                          room. Everything anybody has drawn since lives behind
+                          this, and until now the only way to reach one was to
+                          know its slug and type it into the address bar.
+                        */}
+                        <Link
+                            href="/levels"
+                            className="rounded-lg border border-amber-300/40 bg-amber-300/10 px-4 py-2 text-sm text-amber-100 transition hover:border-amber-300/70 hover:bg-amber-300/20"
+                        >
+                            Levels people made →
+                        </Link>
                     </header>
 
                     {games.length === 0 ? (
