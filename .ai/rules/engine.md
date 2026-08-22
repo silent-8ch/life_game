@@ -244,3 +244,6 @@ The regenerated `-edge-open` cards look correct only when their unmirrored drawi
 
 ## Open edge orientation is per person
 For regenerated `-edge-open` cards, the unmirrored side is Paul/Wade/Luke = left (`walk: -1`) and Krystal/Luna/William = right (`walk: 1`). All regenerated edge fists currently use left (`run: -1`). These values were checked in-game; do not infer them from prompt handedness.
+
+## Open edge orientation is per person
+For regenerated `-edge-open` cards, the in-game checked unmirrored side is Paul/Wade/William = left (`walk: -1`) and Krystal/Luna/Luke = right (`walk: 1`). All regenerated edge fists currently use left (`run: -1`). Do not infer these values from prompt handedness.

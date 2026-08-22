@@ -95,8 +95,8 @@ const DRAWN: Record<string, Record<Pose, 1 | -1>> = {
     krystal: { walk: 1, run: -1, reach: -1, grip: 1 },
     luna: { walk: 1, run: -1, reach: -1, grip: 1 },
     wade: { walk: -1, run: -1, reach: -1, grip: 1 },
-    luke: { walk: -1, run: -1, reach: -1, grip: 1 },
-    william: { walk: 1, run: -1, reach: -1, grip: 1 },
+    luke: { walk: 1, run: -1, reach: -1, grip: 1 },
+    william: { walk: -1, run: -1, reach: -1, grip: 1 },
 };
 
 /** What to assume for a person nobody has measured: the commoner of the two. */

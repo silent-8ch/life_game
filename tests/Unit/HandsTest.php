@@ -97,8 +97,8 @@ it('turns each drawing round for whichever side it was not made for', function (
         'krystal' => [1, -1],
         'luna' => [1, -1],
         'wade' => [-1, -1],
-        'luke' => [-1, -1],
-        'william' => [1, -1],
+        'luke' => [1, -1],
+        'william' => [-1, -1],
     ]);
 });
 
