@@ -6,8 +6,7 @@ merging to `main`. Agent 1 is session `life-game-22`; agent A is `life-game2-78`
 reaches both of you. This file is the shared state: who owns what, what is in flight, what is
 done, and what is broken.
 
-Last audited against the repo at `ea5ad72`. `origin/agentA` is level with `main`. Agent 1's
-work is on `origin/agent1-constants-guard` (`21857e2`) and **not merged** — see 1-01/1-02.
+Last audited against the repo at `fb7acb2`.
 
 ---
 
@@ -48,10 +47,16 @@ rather than holding it for the editor.
 **Status values:** `todo`, `wip`, `review`, `landed`, `blocked`.
 Keep the branch column honest — it is how work in flight gets found.
 
-**Planning cannot run the suite.** This checkout has no `vendor/` and no `node_modules/`, by
-design — it is a planning tree, not a build tree. So nothing here is verified by planning.
-`composer ci:check` green in your worktree, plus the CI run on the push to `main`, is the only
-evidence the board records.
+**Planning can now run the suite.** The user installed `vendor/` and `node_modules/` here, so
+this tree builds. That changes what the board is: green in your worktree is still what you owe
+before merging, but it is no longer the only evidence — `composer ci:check` is run against
+`main` here too, and what is written below is what it returned, not what was reported. If your
+branch is green and `main` is not, that difference is the interesting thing and it goes on this
+board.
+
+**`main` at `fb7acb2` is green, verified here.** eslint, prettier, tsc, pint and phpstan all
+pass; Pest is **299 of 299, 2250 assertions, 33s**. That is the whole gate, run against `main`
+rather than against a branch.
 
 ---
 
@@ -59,8 +64,6 @@ evidence the board records.
 
 | ID | Task | Status | Depends on | Notes |
 | --- | --- | --- | --- | --- |
-| 1-01 | Constants drift guard | **done, not merged** | — | `21857e2` on `origin/agent1-constants-guard`, green, branched off `3523865`. **Rebase it onto `main` and merge it** — work that only exists on a branch is work nobody can build on, and this branch is the one thing standing between 1-01/1-02 and the landed table. Findings from it are ISSUE-21 and ISSUE-22. |
-| 1-02 | Collision tripwire | **done, not merged** | — | Same branch as 1-01. Closes ISSUE-10 once merged. The wedge test in `plan-test-coverage.md` does not work as that plan describes it — see ISSUE-22. |
 | 1-03 | Prop rendering — data model | **wip** | — | **Unblocks A-03, and A is idle waiting on it.** Migration for `render`, `plane_count`, `uv_mode`, `texture_alt`, `alt_flag`, `animation_frames`, `animation_fps`. `LevelAssets::props()` scanning a new `public/sprites/props`. Payload, TS types, validation, writer, `newProp`. **Land the types half as soon as it is green rather than holding it for the editor** — 1-04 is a separate task on purpose. Plan: `plan-prop-rendering.md`. |
 | 1-05 | Slopes — data model | todo | — | **Unblocks A-04.** Four columns on `level_sectors`, PHP `floorAt`/`ceilingAt` on `LevelSector`, validation sampling corners, and hinge survival through `splitEdge`/`weldCorners`/`carveRooms` in `lib/editor/`. Plan: `plan-slopes-and-stats.md` part 1. |
 | 1-04 | Prop rendering — editor | todo | 1-03 | Inspector controls conditional on mode; prop texture picker; map-view glyphs for cross and billboard props. |
@@ -115,6 +118,8 @@ Audited from the commit history, not self-reported:
 | A-02 extract `prepareReflections` | `910c074` (of `310827e`) | `lib/engine/reflections.ts`, 208 lines. `level-viewport.tsx` 1221 → 1017. `ReflectionsTest.php` — 7 tests over stub panes, with the cameras and bounding spheres real because the frustum test is what decides recursion. Portal demo walked in a browser. Closes ISSUE-9. |
 | A-06 ceilings face down | `952576b` (of `39abe66`) | `faceDownwards` in `build/flats.ts` + `FlatNormalsTest.php`. **Not** a rotation: turning a ceiling over by rotating the other way about x is a reflection, and it mirrors the room in z. The triangles are wound the other way and the normals recomputed from the winding, so the polygon does not move. Sky lid turned too. A/B'd in the browser — pixel for pixel unchanged. Closes ISSUE-3. |
 | A-08 rules-file rot in engine.md | `ea5ad72` (of `8b88078`) | ISSUE-4 and ISSUE-5. The three mirroring sections did not merely contradict each other — **all three described a rule that does not exist**. Read off `ORDERS` in `sprite-direction.ts`: eight drawings per person not five, four of the six use no mirroring at all, nobody's 270° is mirrored, and the flips that exist are there because a sheet has no drawing for that angle. One section now, from the code, naming `SpriteDirectionTest.php`. Hand-art paragraph replaced with what is actually in `public/sprites/hands`. Ceiling rule from A-06 written out in full. Verified against the code, not taken on report. |
+| 1-01 constants drift guard | `fb7acb2` | `ConstantsMatchTest.php`, 114 lines. Asserts both ways, so a seventh person fails loudly rather than quietly. |
+| 1-02 collision tripwire | `fb7acb2` | `CollisionLimitsTest.php`, 151 lines. Closes ISSUE-10. Found two errors in the plan it was written from — see ISSUE-22 — and the true wedge clearance figures, which are ISSUE-21. |
 | ISSUE-15 engine.md staleness | `952576b` (of `39abe66`) | `drawnByRoom` trap named as gone rather than deleted; `carriedOn` → `build/topology.ts`, `buildWall` → `build/walls.ts`, `deepen()` → `engine/reflections.ts`. `game.md`'s "prepareReflections cannot be tested" line fixed in the same commit. |
 
 `plan-test-coverage.md` tasks 1 and 2 are therefore complete. Tasks 3 and 4 remain as 1-01
@@ -138,7 +143,7 @@ and strike an entry rather than deleting it when it closes.
 | ISSUE-7 | **Undecided: normal maps committed or generated at build time.** `public/sprites/textures` is already 17 MB and normal maps compress worse. | low | — | **decided — committed. No build step, and hand-fixes survive. 1-07 unblocked** |
 | ISSUE-8 | **`LevelWriter` deletes and recreates everything on save**, so ids churn and nothing can hold a durable reference to a wall or a room. Not urgent — but anything that wants to reference an edge by id hits this first. | low | 1 | open |
 | ISSUE-9 | **`prepareReflections` cannot be tested** — unexported inside a `.tsx` the Node harness cannot load. | medium | A | **closed** `910c074` |
-| ISSUE-10 | **No swept collision test.** Collision relies on `RUN_SPEED * MAX_FRAME_SECONDS < 2 * PLAYER_RADIUS` and nothing enforces it, so a future speed tweak silently lets the player walk through walls. | medium | 1 | open → 1-02 |
+| ISSUE-10 | **No swept collision test.** Collision relied on `RUN_SPEED * MAX_FRAME_SECONDS < 2 * PLAYER_RADIUS` with nothing enforcing it, so a speed tweak could silently let the player walk through walls. | medium | 1 | **closed** `fb7acb2` |
 | ISSUE-11 | **Files over 1100 lines.** `build-level.ts` came off this list at A-01, and `level-viewport.tsx` is down to 1017 after A-02. Still standing: `inspector.tsx` (1156). See ISSUE-19. | medium | 1 / A | partly closed |
 | ISSUE-12 | **Nothing tests what renders.** Every engine test asserts on structure; the portal, mirror and sky-lid rules describe failures whose only symptom is on screen. Those stay eye-verified. | low | — | accepted |
 | ISSUE-13 | **A-01 was built twice.** Ruling was: main keeps A's `33b4b51`, agent 1 drops `968ab93`. Done — `origin/agent1` has no diff against `main`. I asked agent 1 to delete `origin/agent1-split-build-level` and they refused, correctly: deleting the only copy of a verified refactor is the user's call, not a coordinator's. **Put to the user, who says keep it.** The branch stays; what matters is that it never merges, and that is committed to here. | high | 1 | **closed — branch kept deliberately** |
