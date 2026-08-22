@@ -33,6 +33,13 @@ import {
     wantsProbeBackdrop,
 } from '@/lib/engine/probe-backdrop';
 import { prepareReflections } from '@/lib/engine/reflections';
+import {
+    afterAFreshFrame,
+    publishScan,
+    readNow,
+    scanRowsOf,
+    wantsScan,
+} from '@/lib/engine/scan';
 import { boundsOf, sectorAt } from '@/lib/engine/sectors';
 import { createSky } from '@/lib/engine/sky';
 import { describeSpot, readingOf } from '@/lib/engine/snapshot';
@@ -81,6 +88,14 @@ const RIGHT_KEYS = ['KeyD', 'ArrowRight'];
  */
 /** How long a snapshot's reading stays on screen, in milliseconds. */
 const SNAPSHOT_SHOWN_FOR = 6000;
+
+/**
+ * The fixed timestep a `?scan` runs on, and the frame it reads back at. Sixty a
+ * second for half a second: far enough in that the eye has settled onto the
+ * floor and every pane has been drawn, and identical on any machine.
+ */
+const SCAN_STEP_SECONDS = 1 / 60;
+const SCAN_FRAMES = 30;
 
 export default function LevelViewport({
     level,
@@ -144,13 +159,20 @@ export default function LevelViewport({
             return;
         }
 
+        // `?scan` reads the frame back as data rather than playing the level.
+        // It needs everything debug mode sets up — the painted walls to name
+        // surfaces by, and a drawing buffer that survives being read — so it
+        // turns debug on rather than asking for both in the address.
+        const scanning = wantsScan(window.location.search);
+
         // `?debug` swaps the backdrop for a magenta and green check, so that
         // anything showing through a seam is a colour the art never uses. The
         // fog goes with it: fog fades a leak towards the wall colour, which is
         // the one thing that makes a sliver hard to be sure of.
-        const probe = wantsProbeBackdrop(window.location.search)
-            ? createProbeBackdrop()
-            : null;
+        const probe =
+            scanning || wantsProbeBackdrop(window.location.search)
+                ? createProbeBackdrop()
+                : null;
 
         const scene = new THREE.Scene();
 
@@ -165,13 +187,13 @@ export default function LevelViewport({
         const built = buildLevel(level, textures);
         scene.add(built.group);
 
+        const legend = probe === null ? [] : paintWalls(built.group);
+
         if (probe !== null) {
             // The legend goes to the console rather than on screen: it is one
             // line per wall in the level, which is far too much to read over
             // the view, and it only has to be looked up once a sliver has been
             // caught in a picture.
-            const legend = paintWalls(built.group);
-
             console.log(
                 `[debug] ${legend.length} walls painted. Read a colour off the picture, round each channel to the nearest of 0/51/102/153/204/255, and look it up here.`,
             );
@@ -203,14 +225,7 @@ export default function LevelViewport({
                 // Raced against a timer, because the level stops drawing while
                 // it is paused and waiting on a frame that will never come
                 // would hang whoever asked rather than telling them.
-                await Promise.race([
-                    new Promise((settle) =>
-                        requestAnimationFrame(() =>
-                            requestAnimationFrame(() => settle(null)),
-                        ),
-                    ),
-                    new Promise((settle) => window.setTimeout(settle, 250)),
-                ]);
+                await afterAFreshFrame();
 
                 return scanRow(
                     renderer.domElement,
@@ -577,15 +592,8 @@ export default function LevelViewport({
             magic?.update(seconds);
         };
 
-        const tick = (now: number): void => {
-            frame = requestAnimationFrame(tick);
-
-            const seconds = Math.min(
-                (now - lastTime) / 1000,
-                MAX_FRAME_SECONDS,
-            );
-            lastTime = now;
-
+        /** One frame: move everything on, draw every pane, then draw the view. */
+        const drawFrame = (seconds: number): void => {
             step(seconds);
             setFocus(lookedAtSlug());
             // Out of the way of every other camera in the level. A mirror shows
@@ -596,6 +604,58 @@ export default function LevelViewport({
             hands.object.visible = true;
 
             renderer.render(scene, camera);
+        };
+
+        const tick = (now: number): void => {
+            frame = requestAnimationFrame(tick);
+
+            const seconds = Math.min(
+                (now - lastTime) / 1000,
+                MAX_FRAME_SECONDS,
+            );
+
+            lastTime = now;
+
+            drawFrame(seconds);
+        };
+
+        /**
+         * Draws the level to a standstill and reads the picture back as data.
+         *
+         * Its own frames, on a fixed timestep, rather than the browser's: a
+         * readback has to be the same picture every time it is taken, and real
+         * seconds would put the people a few centimetres further along their
+         * walk on every run — a diff of two captures would then be full of
+         * differences that are only the passage of time. Drawing them here also
+         * means it works in a tab nobody is looking at, which gets no animation
+         * frames at all and would otherwise wait for one for ever.
+         *
+         * The frame left on screen at the end is the frame that was read, so a
+         * screenshot and the JSON are the same picture.
+         */
+        const scan = (): void => {
+            resize();
+
+            for (let drawn = 0; drawn < SCAN_FRAMES; drawn++) {
+                drawFrame(SCAN_STEP_SECONDS);
+            }
+
+            publishScan({
+                level: level.slug,
+                spot:
+                    new URLSearchParams(window.location.search).get('at') ??
+                    'spawn',
+                width: renderer.domElement.width,
+                height: renderer.domElement.height,
+                readings: readNow(
+                    renderer.domElement,
+                    legend,
+                    scanRowsOf(
+                        window.location.search,
+                        renderer.domElement.height,
+                    ),
+                ),
+            });
         };
 
         /**
@@ -942,7 +1002,14 @@ export default function LevelViewport({
         observer.observe(container);
 
         resize();
-        frame = requestAnimationFrame(tick);
+
+        // A scan is a measurement, not a game: it draws its own frames, reads
+        // them back and stops. Nothing else runs.
+        if (scanning) {
+            scan();
+        } else {
+            frame = requestAnimationFrame(tick);
+        }
 
         return () => {
             cancelAnimationFrame(frame);
