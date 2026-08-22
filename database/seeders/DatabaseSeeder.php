@@ -29,6 +29,7 @@ class DatabaseSeeder extends Seeder
             PortalDemoSeeder::class,
             LevelEightSeeder::class,
             ImportedLevelsSeeder::class,
+            ExportedLevelsSeeder::class,
         ]);
     }
 }
