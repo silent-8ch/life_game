@@ -140,25 +140,27 @@ the two halves of the game. **~2 days.**
 
 ## Quick wins
 
-Each of these is under half a day.
+Each of these is under half a day. **Five of the six are done** — struck through, with the
+commit, so the list stays a menu rather than becoming a claim that nothing has happened.
 
-- **Arrow-key nudge for heights in the editor.** The keyboard handler at
-  `pages/editor/level.tsx:99-142` covers Escape, Enter, and the four tool keys — there is
-  nothing for heights at all. Up/down to nudge floor by 0.1, with Shift for ceiling, matching
-  the `HEIGHT_STEP` the side-view drag already snaps to.
-- **Undo/redo.** `pages/editor/level.tsx` already holds `draft` and `saved` as separate
-  state. A bounded history array of drafts plus Cmd-Z is a couple of hours, and the editor
-  currently has *no* way back from a bad carve short of reloading.
-- **Duplicate a room.** Select, Cmd-D, get a copy offset by a metre with a fresh slug.
-  `newSector` and the slug helpers in `lib/editor/map.ts` do most of it.
-- **Drag the spawn point.** `map-view.tsx` already draws it; it just is not grabbable.
-- **Wire up the unused hand art.** 31 of the 43 files in `public/sprites/hands` are loaded by
-  nothing. Two of them per person (`-back.png` and a frame inside `-views-sheet.png`) are
-  current-generation art that only needs a `POSES` entry and a handedness row. Planned in
-  `docs/plan-hand-poses.md` — it is closer to a day than half a day, but the first pose is
-  an afternoon.
-- **A room-count / extent readout in the editor.** One line, genuinely useful when a carve
-  goes wrong and quietly leaves four rooms where you expected one.
+- ~~**Arrow-key nudge for heights in the editor.**~~ `cb7aa76`. Up/down nudges the floor by
+  0.1, Shift for the ceiling, on the whole picked set, sharing `HEIGHT_STEP` with the
+  side-view drag so the two cannot drift apart.
+- ~~**Undo/redo.**~~ `4ba8756`. A bounded history of forty drafts plus Cmd-Z, in
+  `lib/editor/history.ts` so the ordering is testable rather than buried in the component.
+  A drag or a burst of arrow presses coalesces into one step.
+- ~~**Duplicate a room.**~~ `cb7aa76`. Cmd-D copies every picked room a metre along with a
+  free slug. Walls keep their textures and flags; portal links are dropped, since a portal
+  pairs exactly two mouths by name. The copy is not carved against its source.
+- ~~**Drag the spawn point.**~~ `cb7aa76`. Grabbable with the select tool, after a corner and
+  before a thing, matching what draws on top of what.
+- **Wire up the unused hand art.** Still open, and the description below is now wrong in two
+  ways worth knowing about: the `-back` and `-views-sheet` files it names have since been
+  deleted, and the blocker is not wiring but art — 24 of the 36 cards do not exist. Two
+  generation rounds regenerated `edge`/`edge-open`, which already existed, instead. See
+  `docs/plan-hand-poses.md` and the task board's ISSUE-1.
+- ~~**A room-count / extent readout in the editor.**~~ `cb7aa76`. Bottom-left of the floor
+  plan, and it says whether there is an edit to step back from.
 
 ---
 
@@ -166,16 +168,22 @@ Each of these is under half a day.
 
 Ordered by how much it will hurt to leave.
 
-### 1. `UpdateLevelMapRequest::authorize()` returns `true`
+### 1. ~~`UpdateLevelMapRequest::authorize()` returns `true`~~ — **closed, `9110b36`**
 
-`app/Http/Requests/UpdateLevelMapRequest.php:23-26` authorises unconditionally, and there is
-no `app/Policies` directory at all. The only gate on the level editor is the `auth`
-middleware — so **any logged-in user can overwrite any level of any game**, and
-`LevelWriter::save()` deletes and recreates every sector, edge and thing in one transaction.
-There is no soft delete and no version history.
+`app/Policies/LevelPolicy.php` exists and both ways into the editor go through the gate:
+the request defers to it, and `LevelEditorController::edit()` calls `Gate::authorize`.
 
-This is the one item on the list I would not leave. A `LevelPolicy` checking the level's
-game against the user, plus `authorize()` deferring to it, is an hour's work.
+Struck through rather than deleted, because a menu that reports a fixed security hole as
+live is worse than one that is merely out of date — it gets the work done twice, or worse,
+believed.
+
+One thing it did **not** fix, and the reason the rule is still a placeholder: nothing in the
+schema says who owns a game. `LevelPolicy::update()` returns `true` for any signed-in user,
+which is what the `auth` middleware already implied. The gain is structural — there is now
+one method to change when a game gains an owner, instead of a `return true` in a request
+class. Only `update` is defined, deliberately: Filament treats a *missing* policy method as
+allowed, so the generated `return false` stubs would have hidden the Levels resource from
+the admin panel.
 
 ### 2. Test coverage gaps — **now planned in `docs/plan-test-coverage.md`**
 
@@ -185,20 +193,34 @@ it can be tested at all; a constants-drift guard between the PHP and TypeScript 
 `MAX_STEP`/`MIN_HEADROOM`/`CLEARANCE` and `HEIGHTS`; and a CI tripwire for the documented
 collision tunneling condition.
 
-What stays uncovered even after all four is listed at the end of that plan — chiefly that
-there is no React component test runner in the project at all, and that nothing tests what
-actually renders.
+**All four are done**, and so is the gap the plan named as remaining: there is a React
+component test runner now (Vitest and Testing Library, `093f208`), wired into
+`composer ci:check` so it runs on every push rather than when somebody remembers.
 
-### 3. The 1000-line files
+Two corrections came out of doing the work, and are written into the plan file itself:
+`CLEARANCE` was never a copied constant — the engine's is in `portals.ts` and means
+something unrelated — and the wedge test as originally described passes at
+`RESOLVE_PASSES = 3` while pinning nothing at all.
 
-`build-level.ts` (1111), `level-viewport.tsx` (1053), `inspector.tsx` (1051) and
-`map-view.tsx` (821). `build-level.ts` in particular now does flats, walls, step walls,
-mirrors, portal panes, sky lids, colliders and thing boxes in one module — and the slopes
-plan adds to every one of those. Splitting it along those seams before the slopes work
-rather than after is the cheaper ordering.
+What is still uncovered: nothing tests what actually **renders**. The component runner tests
+what a panel does, not what appears on a screen; the engine's rules about portals, mirrors
+and sky lids describe failures whose only symptom is visual, and those stay eye-verified.
 
-`inspector.tsx` has a clean seam already: it is four modes (level, multi-room, room+wall,
-thing) that barely share anything.
+### 3. ~~The 1000-line files~~ — **all three split**
+
+`build-level.ts` went first (`0f2cb7c`) into `lib/engine/build/`, because everything else
+rebased onto it. `level-viewport.tsx` followed. `inspector.tsx` is 124 lines and an
+orchestrator (`a162ba3`), with its panels under `components/editor/inspector/`.
+
+`map-view.tsx` (821) is the one left, and it is not the same kind of problem: it is one
+canvas draw loop and a pointer state machine, not several modes sharing a file.
+
+Worth recording how the last one was done, because the ordering was the whole of it. The
+seams were real, but a React split has no equivalent of the whole-scene diff that made the
+engine refactor safe — so the component tests came **first** (`bd0c9bc`), pinning which
+callback each control reaches as well as what it sends, and the move ran behind them with
+the suite re-run after every panel. That is more work than the refactor it protects, which
+is worth knowing before budgeting the next one.
 
 ### 4. No swept collision
 
@@ -207,17 +229,20 @@ staying under `2 * PLAYER_RADIUS`", and that raising the speed cap or the frame 
 without raising the radius lets the player walk through walls. That is a live tripwire under
 an innocuous-looking constant change.
 
-The CI assertion for it is Task 4 of `docs/plan-test-coverage.md`. A real swept solver is
-folded into vertical physics, above.
+The CI assertion for it now exists — `tests/Unit/CollisionLimitsTest.php`, which fails if
+anyone raises the speed or the frame ceiling without the radius. A real swept solver is
+still folded into vertical physics, above; the tripwire only tells you when you have tripped
+it.
 
 ### 5. `.ai/rules/engine.md` contradicts itself
 
 Three consecutive sections cover sprite mirroring: two both titled "Mirror paired sprite
 directions in UVs" giving *different* rules for 225°/315°, and a third headed "Diagonal
 handedness correction" that supersedes one of them. An agent reading top to bottom gets the
-wrong answer twice before getting the right one. Fold the correction into a single section
-and delete the superseded pair. The same file is also 250+ lines and would read better split
-by subsystem. **~1 hour.**
+wrong answer twice before getting the right one. **The contradictions are fixed** (A-08, A-10) — including a clearance figure that was
+simply false, and which is now stated as a relationship rather than a number, since a number
+in a rules file drifts and the test does not. The file being 250+ lines and readable-if-split
+by subsystem still stands.
 
 ### 6. `LevelWriter` recreates everything on save
 
@@ -232,11 +257,17 @@ urgent — worth knowing before anything tries to reference an edge by id.
 
 ## If you want a suggested order
 
-1. The `LevelPolicy` (an hour, and it is a real hole).
-2. The test-coverage tasks, or at least Task 1 — `carve.ts` is the thing most likely to
-   break silently while you are working on something else.
-3. Slopes, per the existing plan. Split `build-level.ts` on the way in.
-4. Hand poses — a day, and the game feels more responsive for it.
-5. Doors, which is the largest felt improvement per day spent.
-6. Vertical physics, which slopes will have made you want.
-7. Room over room, once physics can support it.
+Items 1 to 3 are done. What is left of the original list, in the same order:
+
+1. ~~The `LevelPolicy`.~~ `9110b36`.
+2. ~~The test-coverage tasks.~~ All four, plus the component runner they said was missing.
+3. ~~Slopes.~~ Data model and editor landed; the engine half is with agent A. Both
+   `build-level.ts` and `inspector.tsx` were split on the way in.
+4. **Hand poses** — blocked on art, not on code. 24 of the 36 cards do not exist.
+5. **Doors**, still the largest felt improvement per day spent. The `Use` verb and
+   `InteractionResolver` already exist, so the interaction plumbing is free.
+6. **Vertical physics**, which slopes will have made you want.
+7. **Room over room**, once physics can support it.
+
+Live work is tracked in `docs/tasks.md`, which is the board rather than the menu: this file
+says what is worth doing, that one says who is doing it.
