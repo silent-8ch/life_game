@@ -37,6 +37,8 @@ it('sends every sector as a polygon the browser can build', function (): void {
             ->has('level.sectors.0', fn (AssertableInertia $sector) => $sector
                 ->hasAll([
                     'slug', 'name', 'floorHeight', 'ceilingHeight',
+                    'floorSlope', 'floorSlopeEdge',
+                    'ceilingSlope', 'ceilingSlopeEdge',
                     'floorTexture', 'ceilingTexture', 'wallTexture',
                     'isSky', 'isWater', 'points',
                 ])

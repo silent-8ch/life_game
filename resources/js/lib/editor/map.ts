@@ -564,6 +564,12 @@ export function newSector(level: Level, points: Point[]): Sector {
         name: `Room ${level.sectors.length + 1}`,
         floorHeight: 0,
         ceilingHeight: level.ceilingHeight,
+        // Flat until somebody slopes it, which is what every room drawn before
+        // slopes existed is.
+        floorSlope: 0,
+        floorSlopeEdge: null,
+        ceilingSlope: 0,
+        ceilingSlopeEdge: null,
         floorTexture: null,
         ceilingTexture: null,
         wallTexture: null,
@@ -636,4 +642,96 @@ export function windingOf(points: Point[]): number {
 
         return total + (point.x * next.z - next.x * point.z);
     }, 0);
+}
+
+/** The slope fields, which travel together and are meaningless apart. */
+export type Hinges = Pick<
+    Sector,
+    'floorSlope' | 'floorSlopeEdge' | 'ceilingSlope' | 'ceilingSlopeEdge'
+>;
+
+/**
+ * Where a hinge wall ended up after the point list was rewritten.
+ *
+ * A hinge is stored as an index into `points`, and almost everything the editor
+ * does to a room rewrites that list: splitting a wall, welding a corner a
+ * neighbour landed on, carving a bite out of it. The index survives all of that
+ * numerically and means something different afterwards, so a floor that rose
+ * towards the window quietly starts rising towards the door. Same class of
+ * fault as a split wall keeping a portal link that no longer pairs anything.
+ *
+ * So the wall is looked up by where it was, not by where its index points:
+ *
+ * - both ends still meet, in order: that is the hinge, wherever it sits now.
+ * - the start is still there and the wall still sets off the same way: the wall
+ *   was split, and the first half carries the hinge. Same line, same plane, so
+ *   the surface it describes is unchanged.
+ * - nothing matches: the wall was carved away, and the slope goes with it
+ *   rather than hinging on whichever wall inherited the index.
+ *
+ * @param  before  The sector as it was, for its hinge indices and old corners.
+ * @param  points  The corners it has now.
+ */
+export function keepHinges(before: Sector, points: SectorPoint[]): Hinges {
+    const found = (
+        slope: number,
+        hinge: number | null,
+    ): [number, number | null] => {
+        const was = before.points;
+
+        // Tolerant of a sector that has no slope fields at all. Levels authored
+        // before slopes existed, and fixtures written against the old shape,
+        // both arrive that way, and neither should be a crash.
+        const rise = slope ?? 0;
+        const on = hinge ?? null;
+
+        if (rise === 0 || on === null || was.length < 2 || on >= was.length) {
+            return [0, null];
+        }
+
+        const from = was[on];
+        const to = was[(on + 1) % was.length];
+
+        const whole = points.findIndex(
+            (point, index) =>
+                samePoint(point, from) &&
+                samePoint(points[(index + 1) % points.length], to),
+        );
+
+        if (whole !== -1) {
+            return [rise, whole];
+        }
+
+        const along = { x: to.x - from.x, z: to.z - from.z };
+        const length = Math.hypot(along.x, along.z) || 1;
+
+        const halved = points.findIndex((point, index) => {
+            if (!samePoint(point, from)) {
+                return false;
+            }
+
+            const next = points[(index + 1) % points.length];
+            const run = { x: next.x - point.x, z: next.z - point.z };
+            const runLength = Math.hypot(run.x, run.z) || 1;
+
+            return (
+                (run.x / runLength) * (along.x / length) +
+                    (run.z / runLength) * (along.z / length) >
+                0.9999
+            );
+        });
+
+        return halved === -1 ? [0, null] : [rise, halved];
+    };
+
+    const [floorSlope, floorSlopeEdge] = found(
+        before.floorSlope,
+        before.floorSlopeEdge,
+    );
+    const [ceilingSlope, ceilingSlopeEdge] = found(
+        before.ceilingSlope,
+        before.ceilingSlopeEdge,
+    );
+
+    return { floorSlope, floorSlopeEdge, ceilingSlope, ceilingSlopeEdge };
 }

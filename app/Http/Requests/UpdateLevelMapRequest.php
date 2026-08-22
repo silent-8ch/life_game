@@ -11,6 +11,9 @@ use App\Enums\ThingUvMode;
 use App\Enums\Verb;
 use App\Models\Item;
 use App\Models\Level;
+use App\Models\LevelSector;
+use App\Models\LevelSectorEdge;
+use App\Models\LevelVertex;
 use App\Services\LevelAssets;
 use App\Services\PersonStats;
 use Illuminate\Foundation\Http\FormRequest;
@@ -62,6 +65,10 @@ class UpdateLevelMapRequest extends FormRequest
             'sectors.*.name' => ['required', 'string', 'max:255'],
             'sectors.*.floorHeight' => ['required', 'numeric', 'between:-64,64'],
             'sectors.*.ceilingHeight' => ['required', 'numeric', 'between:-64,64'],
+            'sectors.*.floorSlope' => ['sometimes', 'numeric', 'between:-8,8'],
+            'sectors.*.floorSlopeEdge' => ['nullable', 'integer', 'min:0'],
+            'sectors.*.ceilingSlope' => ['sometimes', 'numeric', 'between:-8,8'],
+            'sectors.*.ceilingSlopeEdge' => ['nullable', 'integer', 'min:0'],
             'sectors.*.floorTexture' => ['nullable', 'string', $textures],
             'sectors.*.ceilingTexture' => ['nullable', 'string', $textures],
             'sectors.*.wallTexture' => ['nullable', 'string', $textures],
@@ -144,7 +151,9 @@ class UpdateLevelMapRequest extends FormRequest
                 $sectors = $this->input('sectors', []);
                 $ends = [];
 
-                foreach ($sectors as $sector) {
+                foreach ($sectors as $index => $sector) {
+                    $this->checkSlopes($validator, $index, $sector);
+
                     /** @var array<int, array<string, mixed>> $points */
                     $points = $sector['points'] ?? [];
 
@@ -200,6 +209,100 @@ class UpdateLevelMapRequest extends FormRequest
                 }
             },
         ];
+    }
+
+    /**
+     * A sloped room has to hinge on a wall it has, and has to stay a room.
+     *
+     * Both surfaces are planes, so the largest and smallest gap between them
+     * are always at a corner. Sampling the corners is therefore exact rather
+     * than an approximation, and no amount of walking the interior would find
+     * anything the corners miss.
+     *
+     * The flat clamp in prepareForValidation still handles the flat case by
+     * quietly raising the ceiling. A slope cannot be fixed that way — there is
+     * no single number to raise — so this refuses instead of guessing.
+     *
+     * @param  array<string, mixed>  $sector
+     */
+    private function checkSlopes(Validator $validator, int|string $index, array $sector): void
+    {
+        /** @var array<int, array<string, mixed>> $points */
+        $points = $sector['points'] ?? [];
+        $corners = count($points);
+
+        $floorSlope = (float) ($sector['floorSlope'] ?? 0);
+        $ceilingSlope = (float) ($sector['ceilingSlope'] ?? 0);
+        $floorHinge = $sector['floorSlopeEdge'] ?? null;
+        $ceilingHinge = $sector['ceilingSlopeEdge'] ?? null;
+
+        foreach ([
+            ['floorSlope', 'floorSlopeEdge', $floorSlope, $floorHinge],
+            ['ceilingSlope', 'ceilingSlopeEdge', $ceilingSlope, $ceilingHinge],
+        ] as [$slopeKey, $hingeKey, $slope, $hinge]) {
+            if ($slope !== 0.0 && $hinge === null) {
+                $validator->errors()->add(
+                    "sectors.{$index}.{$hingeKey}",
+                    'A sloped surface has to name the wall it hinges on.'
+                );
+            }
+
+            if ($hinge !== null && $corners > 0 && (int) $hinge >= $corners) {
+                $validator->errors()->add(
+                    "sectors.{$index}.{$hingeKey}",
+                    "This room has {$corners} walls, so it has no wall {$hinge}."
+                );
+            }
+        }
+
+        if ($floorSlope === 0.0 && $ceilingSlope === 0.0) {
+            return;
+        }
+
+        if ($corners < 3 || ! $this->hingesAreUsable($corners, $floorHinge, $ceilingHinge)) {
+            return;
+        }
+
+        $sample = new LevelSector([
+            'floor_height' => (float) ($sector['floorHeight'] ?? 0),
+            'ceiling_height' => (float) ($sector['ceilingHeight'] ?? 0),
+            'floor_slope' => $floorSlope,
+            'floor_slope_edge' => $floorHinge,
+            'ceiling_slope' => $ceilingSlope,
+            'ceiling_slope_edge' => $ceilingHinge,
+        ]);
+
+        $sample->setRelation('edges', collect($points)->map(
+            fn (array $point): LevelSectorEdge => tap(
+                new LevelSectorEdge,
+                fn (LevelSectorEdge $edge) => $edge->setRelation(
+                    'vertex',
+                    new LevelVertex(['x' => (float) $point['x'], 'z' => (float) $point['z']]),
+                )
+            )
+        ));
+
+        foreach ($sample->corners() as [$x, $z]) {
+            if ($sample->ceilingAt($x, $z) < $sample->floorAt($x, $z)) {
+                $validator->errors()->add(
+                    "sectors.{$index}.ceilingSlope",
+                    'That slope puts the ceiling under the floor in one of the corners.'
+                );
+
+                return;
+            }
+        }
+    }
+
+    private function hingesAreUsable(int $corners, mixed $floorHinge, mixed $ceilingHinge): bool
+    {
+        foreach ([$floorHinge, $ceilingHinge] as $hinge) {
+            if ($hinge !== null && (int) $hinge >= $corners) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**

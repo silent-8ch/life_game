@@ -1,6 +1,12 @@
 import clipping from 'polygon-clipping';
 import type { Level, Sector, SectorPoint } from '@/types';
-import { closestOnEdge, freeSlug, samePoint, windingOf } from './map';
+import {
+    closestOnEdge,
+    freeSlug,
+    keepHinges,
+    samePoint,
+    windingOf,
+} from './map';
 import type { Point } from './map';
 
 /**
@@ -233,13 +239,20 @@ function cut(sector: Sector, blade: Ring): Sector[] {
         .flatMap((polygon) => intoSlabs(polygon))
         .filter((ring) => areaOf(ring) > MIN_AREA && !isShard(ring));
 
-    return rings.map((ring, index) => ({
-        ...sector,
-        points: dress(sector, toPoints(ring)),
-        // The first piece stays the room it was; the rest are named later.
-        slug: index === 0 ? sector.slug : '',
-        name: index === 0 ? sector.name : `${sector.name} ${index + 1}`,
-    }));
+    return rings.map((ring, index) => {
+        const points = dress(sector, toPoints(ring));
+
+        return {
+            ...sector,
+            points,
+            // A hinge is an index, and this ring is not the ring it indexed.
+            // Re-found by coordinate, or dropped with the wall it named.
+            ...keepHinges(sector, points),
+            // The first piece stays the room it was; the rest are named later.
+            slug: index === 0 ? sector.slug : '',
+            name: index === 0 ? sector.name : `${sector.name} ${index + 1}`,
+        };
+    });
 }
 
 /**
@@ -301,7 +314,7 @@ export function weldCorners(level: Level): Level {
                 }
             });
 
-            return { ...sector, points };
+            return { ...sector, points, ...keepHinges(sector, points) };
         }),
     };
 }

@@ -129,8 +129,27 @@ export type SectorPoint = {
 export type Sector = {
     slug: string;
     name: string;
+    /**
+     * How high the floor is **along its hinge wall**, not everywhere.
+     *
+     * With `floorSlope` at zero — which is every sector that has not been
+     * sloped — that is the whole story and the floor is flat at this height.
+     */
     floorHeight: number;
     ceilingHeight: number;
+    /** Rise in metres per metre, measured straight into the room. */
+    floorSlope: number;
+    /**
+     * Which wall the floor is hinged on, as an index into `points`. Null when
+     * the floor is flat.
+     *
+     * Stored as an index but maintained by coordinate: every editor operation
+     * that rewrites the point list re-finds it, because a bare index silently
+     * points at a different wall the moment a corner is inserted.
+     */
+    floorSlopeEdge: number | null;
+    ceilingSlope: number;
+    ceilingSlopeEdge: number | null;
     floorTexture: string | null;
     ceilingTexture: string | null;
     wallTexture: string | null;
