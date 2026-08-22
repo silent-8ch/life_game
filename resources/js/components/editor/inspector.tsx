@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import InteractionPanel from '@/components/editor/interaction-panel';
 import TexturePicker from '@/components/editor/texture-picker';
-import { twinEdge } from '@/lib/editor/map';
+import { wallFacts } from '@/lib/editor/walls';
 import { cn } from '@/lib/utils';
 import type {
     LevelAssets,
@@ -386,49 +386,12 @@ export default function Inspector({
             ? null
             : (sector.points[selection.edge] ?? null);
 
-    // The same wall as the room on the other side of it names it, if shared.
-    const twin =
-        sector === null || selection === null || selection.edge === null
-            ? null
-            : twinEdge(level, selection.sector, selection.edge);
-    const across = twin === null ? null : level.sectors[twin.sector];
-    // A portal is a pair: the other wall in the level naming the same link.
-    const partner =
-        edge === null || edge.portalLink === null || edge.portalLink === ''
-            ? null
-            : (level.sectors.find(
-                  (other, index) =>
-                      other.points.some(
-                          (point, at) =>
-                              point.portalLink === edge.portalLink &&
-                              !(
-                                  index === selection?.sector &&
-                                  at === selection?.edge
-                              ),
-                      ) &&
-                      other.points.filter(
-                          (point) => point.portalLink === edge.portalLink,
-                      ).length > 0,
-              ) ?? null);
-
-    const portalEnds =
-        edge === null || edge.portalLink === null
-            ? 0
-            : level.sectors.reduce(
-                  (total, other) =>
-                      total +
-                      other.points.filter(
-                          (point) => point.portalLink === edge.portalLink,
-                      ).length,
-                  0,
-              );
-
-    const openDoorway =
-        edge !== null &&
-        twin !== null &&
-        across !== null &&
-        !edge.blocks &&
-        !across.points[twin.edge].blocks;
+    // No `twin` here: it was only ever read to work out `across` and whether
+    // the doorway is open, and both of those are worked out for us now.
+    const { across, partner, portalEnds, openDoorway } = wallFacts(
+        level,
+        selection,
+    );
 
     const themes = Object.keys(assets.backdrops);
     const layers =
