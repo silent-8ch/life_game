@@ -27,30 +27,35 @@ class SupportTicketController extends Controller
     {
         abort_unless($game->is_published, 404);
 
-        $level = $game->levels()
-            ->where('slug', $request->string('level'))
-            ->first();
+        $slug = $request->input('level');
 
-        $ticket = DB::transaction(function () use ($request, $game, $level): SupportTicket {
+        $level = $slug === null
+            ? null
+            : $game->levels()->where('slug', $slug)->first();
+
+        $ticket = DB::transaction(function () use ($request, $game, $level, $slug): SupportTicket {
             $ticket = SupportTicket::create([
                 'game_id' => $game->id,
                 'level_id' => $level?->id,
-                'level_slug' => $request->string('level')->toString(),
+                'level_slug' => $slug,
+                'source' => $request->string('source')->toString(),
                 // Null unless somebody happens to be signed in. Playing needs no
                 // account, so most tickets will be anonymous.
                 'user_id' => $request->user()?->id,
                 'note' => $request->input('note'),
-                'at_x' => $request->float('at.x'),
-                'at_z' => $request->float('at.z'),
-                'at_eye' => $request->float('at.eye'),
-                'at_yaw' => $request->float('at.yaw'),
-                'at_pitch' => $request->float('at.pitch'),
+                // As a set or not at all — half a position looks like
+                // somewhere and is nowhere.
+                'at_x' => $request->input('at.x'),
+                'at_z' => $request->input('at.z'),
+                'at_eye' => $request->input('at.eye'),
+                'at_yaw' => $request->input('at.yaw'),
+                'at_pitch' => $request->input('at.pitch'),
                 'standing_in' => $request->input('standingIn'),
                 'looking_at' => $request->input('lookingAt'),
                 'holding' => $request->input('holding'),
                 'is_running' => $request->boolean('running'),
                 'screen' => $request->input('screen'),
-                'nearby' => $request->input('nearby', []),
+                'nearby' => $request->input('nearby'),
                 // Kept with the pictures rather than beside them. Without it
                 // the colour-coded view decodes to nothing.
                 'legend' => $request->input('legend'),

@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\TicketSource;
 use App\Enums\TicketStatus;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
@@ -40,8 +41,14 @@ return new class extends Migration
             $table->foreignId('level_id')->nullable()->constrained()->nullOnDelete();
 
             // Kept beside the id for that reason — the slug still reads as a
-            // place after the row it pointed at is gone.
-            $table->string('level_slug');
+            // place after the row it pointed at is gone. Nullable because a
+            // ticket need not be about a level at all.
+            $table->string('level_slug')->nullable();
+
+            // Where in the app it was raised. Not the same fact as "this has no
+            // position": the editor has no positions, so an empty spot there is
+            // the shape of the thing rather than something missing.
+            $table->string('source')->default(TicketSource::Play->value);
 
             // Nullable because playing does not require an account. Only the
             // editor and the admin panel sit behind a login; anybody may walk
@@ -50,11 +57,15 @@ return new class extends Migration
 
             $table->text('note')->nullable();
 
-            $table->float('at_x');
-            $table->float('at_z');
-            $table->float('at_eye');
-            $table->float('at_yaw')->comment("The player's own yaw in degrees — not a level's spawn angle, which is its negative.");
-            $table->float('at_pitch');
+            // All nullable together. A ticket raised in the editor has nowhere
+            // to stand — it draws a floor plan and a section, not a scene — so
+            // a spot is something a ticket may have rather than something every
+            // ticket has. They arrive as a set or not at all.
+            $table->float('at_x')->nullable();
+            $table->float('at_z')->nullable();
+            $table->float('at_eye')->nullable();
+            $table->float('at_yaw')->nullable()->comment("The player's own yaw in degrees — not a level's spawn angle, which is its negative.");
+            $table->float('at_pitch')->nullable();
 
             $table->string('standing_in')->nullable()->comment('Sector slug, or null if they were outside every room.');
             $table->string('looking_at')->nullable();
@@ -63,8 +74,8 @@ return new class extends Migration
 
             // Whole shapes rather than columns each. Nothing queries inside
             // them; they are read by a person looking at one ticket.
-            $table->json('screen');
-            $table->json('nearby')->comment('The boundaries within reach, nearest first — where almost every reported fault turns out to be.');
+            $table->json('screen')->nullable();
+            $table->json('nearby')->nullable()->comment('The boundaries within reach, nearest first — where almost every reported fault turns out to be.');
 
             // Without this the colour-coded picture is a file that looks like
             // evidence and decodes to nothing. `paintWalls` hands out colours
@@ -83,6 +94,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->index(['status', 'created_at']);
+            $table->index('source');
             $table->index('level_slug');
         });
 

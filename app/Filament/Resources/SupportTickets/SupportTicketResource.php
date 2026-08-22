@@ -13,6 +13,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Support\Number;
 
 /**
  * "This is wrong", raised by somebody playing.
@@ -35,6 +36,28 @@ class SupportTicketResource extends Resource
     public static function canCreate(): bool
     {
         return false;
+    }
+
+    /**
+     * How much of the disk the pictures are using, said plainly.
+     *
+     * Nothing prunes tickets — that is the decision, not an oversight — so the
+     * plan is to watch the disk, and a plan to watch something needs somewhere
+     * it can be seen.
+     */
+    public static function getNavigationBadgeTooltip(): ?string
+    {
+        $tickets = SupportTicket::query()->count();
+
+        if ($tickets === 0) {
+            return null;
+        }
+
+        return sprintf(
+            '%s tickets, holding %s of pictures',
+            number_format($tickets),
+            Number::fileSize(SupportTicket::bytesHeld(), precision: 1),
+        );
     }
 
     /**

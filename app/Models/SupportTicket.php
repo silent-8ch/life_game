@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\TicketSource;
 use App\Enums\TicketStatus;
 use App\Services\SpotCapture;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -17,20 +18,21 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property int $game_id
  * @property int|null $level_id
- * @property string $level_slug
+ * @property string|null $level_slug
+ * @property TicketSource $source
  * @property int|null $user_id
  * @property string|null $note
- * @property float $at_x
- * @property float $at_z
- * @property float $at_eye
- * @property float $at_yaw
- * @property float $at_pitch
+ * @property float|null $at_x
+ * @property float|null $at_z
+ * @property float|null $at_eye
+ * @property float|null $at_yaw
+ * @property float|null $at_pitch
  * @property string|null $standing_in
  * @property string|null $looking_at
  * @property string|null $holding
  * @property bool $is_running
- * @property array<string, mixed> $screen
- * @property array<int, mixed> $nearby
+ * @property array<string, mixed>|null $screen
+ * @property array<int, mixed>|null $nearby
  * @property array<int, mixed>|null $legend
  * @property TicketStatus $status
  * @property Carbon|null $resolved_at
@@ -45,6 +47,7 @@ use Illuminate\Support\Carbon;
     'game_id',
     'level_id',
     'level_slug',
+    'source',
     'user_id',
     'note',
     'at_x',
@@ -79,6 +82,7 @@ class SupportTicket extends Model
             'screen' => 'array',
             'nearby' => 'array',
             'legend' => 'array',
+            'source' => TicketSource::class,
             'status' => TicketStatus::class,
             'resolved_at' => 'datetime',
         ];
@@ -123,17 +127,34 @@ class SupportTicket extends Model
     }
 
     /**
-     * Where the reporter was, spelled out the way `?at=` takes it, so a ticket
-     * can be stood on again by pasting it into the address bar.
+     * Whether this ticket knows where its reporter was standing.
+     *
+     * One raised in the editor does not, and that is the shape of the thing
+     * rather than something missing — the editor draws a floor plan, not a
+     * scene, so there is nowhere to have been.
      */
-    public function standingAt(): string
+    public function hasSpot(): bool
     {
+        return $this->at_x !== null && $this->at_z !== null;
+    }
+
+    /**
+     * Where the reporter was, spelled out the way `?at=` takes it, so a ticket
+     * can be stood on again by pasting it into the address bar. Null when
+     * there is nowhere to stand.
+     */
+    public function standingAt(): ?string
+    {
+        if (! $this->hasSpot()) {
+            return null;
+        }
+
         return sprintf(
             '%s,%s,%s,%s',
-            round($this->at_x, 4),
-            round($this->at_z, 4),
-            round($this->at_yaw, 2),
-            round($this->at_pitch, 2),
+            round((float) $this->at_x, 4),
+            round((float) $this->at_z, 4),
+            round((float) $this->at_yaw, 2),
+            round((float) $this->at_pitch, 2),
         );
     }
 
@@ -143,6 +164,20 @@ class SupportTicket extends Model
     public function folder(): string
     {
         return "support-tickets/{$this->id}";
+    }
+
+    /**
+     * How much disk every ticket is holding, in bytes.
+     *
+     * There is no retention policy — that was decided, with the alternatives in
+     * front of the decider — so the plan is to watch the disk. This is the part
+     * that makes watching possible rather than aspirational: without a number
+     * on a screen somewhere, "keep an eye on it" is a thing nobody does until
+     * it is already a problem.
+     */
+    public static function bytesHeld(): int
+    {
+        return (int) SupportTicketShot::query()->sum('bytes');
     }
 
     public function markResolved(): void

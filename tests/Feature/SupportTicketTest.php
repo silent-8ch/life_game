@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\TicketSource;
 use App\Enums\TicketStatus;
 use App\Models\Game;
 use App\Models\SupportTicket;
@@ -32,6 +33,7 @@ beforeEach(function (): void {
 function aTicket(array $changes = []): array
 {
     return array_merge([
+        'source' => 'play',
         'level' => 'tech-demo',
         'note' => 'The floor here has a hole in it.',
         'at' => [
@@ -154,9 +156,10 @@ it('refuses a picture bigger than anybody s screen', function (): void {
     $this->postJson(route('games.tickets.store', $this->game), aTicket([
         'shots' => [
             // Wide rather than square: the first version of this test asked
-            // for 20000 x 20000 and exhausted the test runner's memory making
-            // it, which is a fair demonstration of the risk and a poor test.
-            'normal' => UploadedFile::fake()->image('normal.png', 9000, 8),
+            // for 20000 x 20000 and exhausted the test runner's own memory
+            // making it, which is a fair demonstration of the risk and a poor
+            // test. 2400 is past the cap and costs nothing to build.
+            'normal' => UploadedFile::fake()->image('normal.png', 2400, 8),
         ],
     ]))->assertJsonValidationErrors(['shots.normal']);
 });
@@ -312,4 +315,79 @@ it('takes a ticket with no legend, for a client that could not paint one', funct
         ->assertCreated();
 
     expect(SupportTicket::sole()->legend)->toBeNull();
+});
+
+it('takes a ticket from the editor, which has nowhere to have been standing', function (): void {
+    // The editor draws a floor plan and a section, not a scene, so it has no
+    // position, no eye height and none of the three pictures play sends. A
+    // schema that assumed those would have been wrong the first time somebody
+    // filed one.
+    Storage::fake('local');
+
+    $this->postJson(route('games.tickets.store', $this->game), [
+        'source' => 'editor',
+        'level' => 'tech-demo',
+        'note' => 'This room will not carve.',
+        'shots' => [
+            'map' => UploadedFile::fake()->image('map.png', 600, 400),
+            'section' => UploadedFile::fake()->image('section.png', 600, 200),
+        ],
+    ])->assertCreated();
+
+    $ticket = SupportTicket::sole();
+
+    expect($ticket->source)->toBe(TicketSource::Editor)
+        ->and($ticket->hasSpot())->toBeFalse()
+        ->and($ticket->standingAt())->toBeNull()
+        ->and($ticket->level_slug)->toBe('tech-demo')
+        ->and($ticket->shots->pluck('kind')->sort()->values()->all())
+        ->toBe(['map', 'section']);
+});
+
+it('refuses half a position, which looks like somewhere and is nowhere', function (): void {
+    // All of it or none. A ticket carrying an x and no z would put a marker on
+    // a map at a place nobody stood.
+    Storage::fake('local');
+
+    $this->postJson(route('games.tickets.store', $this->game), aTicket([
+        'at' => ['x' => 2.5],
+    ]))->assertJsonValidationErrors(['at.z', 'at.eye', 'at.yaw', 'at.pitch']);
+});
+
+it('refuses a source it does not know', function (): void {
+    Storage::fake('local');
+
+    $this->postJson(route('games.tickets.store', $this->game), aTicket(['source' => 'telepathy']))
+        ->assertJsonValidationErrors(['source']);
+});
+
+it('takes a ticket about no level at all', function (): void {
+    // Somebody reporting the game rather than a room in it.
+    Storage::fake('local');
+
+    $this->postJson(route('games.tickets.store', $this->game), [
+        'source' => 'play',
+        'note' => 'The music stops when I open the menu.',
+        'shots' => ['normal' => UploadedFile::fake()->image('normal.png', 200, 200)],
+    ])->assertCreated();
+
+    expect(SupportTicket::sole()->level_slug)->toBeNull();
+});
+
+it('can say how much disk the pictures are holding', function (): void {
+    // Nothing prunes tickets — that is the decision, with the alternatives in
+    // front of whoever made it — so the plan is to watch the disk. A plan to
+    // watch something needs a number somebody can look at, or "keep an eye on
+    // it" is a thing nobody does until it is already a problem.
+    Storage::fake('local');
+
+    expect(SupportTicket::bytesHeld())->toBe(0);
+
+    $this->postJson(route('games.tickets.store', $this->game), aTicket());
+
+    expect(SupportTicket::bytesHeld())->toBeGreaterThan(0);
+
+    SupportTicket::sole()->delete();
+
+    expect(SupportTicket::bytesHeld())->toBe(0);
 });
