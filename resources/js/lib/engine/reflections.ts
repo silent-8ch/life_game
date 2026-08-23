@@ -5,7 +5,6 @@ import {
     PANE_CLEARANCE,
     PORTAL_BOUNCES,
     PORTAL_RENDER_BUDGET,
-    TUNNEL_SHRINK,
 } from '@/lib/engine/constants';
 import type { PortalSurface } from '@/lib/engine/portal-surface';
 import type { SkyDome } from '@/lib/engine/sky';
@@ -238,20 +237,39 @@ export function prepareReflections(
                     continue;
                 }
 
-                // The tunnel has run out of levels. Rather than leave a hole at
-                // the end of it — which shows the sky, a mouth having nothing
-                // behind it — the panes are given the view from one level out,
-                // pulled in from the edges so it reads as a room further away.
-                // It is last frame's, this frame not having drawn it yet, and
-                // at the far end of a corridor of portals nobody is going to
-                // catch it lagging.
+                // The tunnel has run out of levels, and the picture it ends on
+                // is now the level above it **at its own size**.
                 //
-                // Only from the second level down: at the first there is no
-                // level out to borrow, so the pane goes instead, since a
-                // texture cannot be read and written at once.
+                // Paul's design, and it is how a real infinity mirror works:
+                // the deepest reflection contains the one above it, which
+                // contains the one above that, so the image tiles into itself
+                // and the eye cannot find the last bounce. What it costs is one
+                // frame of lag per level for anything moving, which at eight
+                // levels deep nobody can see.
+                //
+                // **What this replaces, and why it was both of his symptoms.**
+                // The old fallback pulled that picture in from the edges by
+                // `TUNNEL_SHRINK`, so it would read as a room further away.
+                // Down a corridor of portals it does. Between two mirrors it
+                // does not: the level above is the same room at the same size,
+                // and shrinking it paints a picture across a surface it was
+                // never taken for, which is his *super stretched*. Unscaled, it
+                // lines up with the reflection it sits inside and the tiling
+                // closes.
+                //
+                // Still the level above rather than this one, and still only
+                // from the second level down. A mirror is taken out of its own
+                // pass, but a **portal is not** — one hung to look back at
+                // itself has to appear in its own view, which is what puts one
+                // opening inside the last. So a pane fed its own current depth
+                // would be sampling the target being written into, and
+                // `ReflectionsTest` guards exactly that. The level above is a
+                // different texture, so there is no such conflict.
+                //
+                // What has gone is the shrink, and the shrink was the smear.
                 if (depth >= 1) {
                     other.mesh.visible = true;
-                    other.show(depth - 1, TUNNEL_SHRINK);
+                    other.show(depth - 1);
                 } else {
                     other.mesh.visible = false;
                 }

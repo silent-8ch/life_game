@@ -181,16 +181,6 @@ export const PORTAL_BOUNCES = 8;
 export const PORTAL_RENDER_BUDGET = 16;
 
 /**
- * How much the view is pulled in from the edges at the end of a tunnel of
- * portals, standing in for the level that was never drawn. Bigger reads as
- * further off. It is a fudge and cannot be otherwise: the honest figure depends
- * on how far apart the two mouths are and where the player is stood, and the
- * whole point is that it is seen from the far end of a corridor, where nobody
- * can tell.
- */
-export const TUNNEL_SHRINK = 1.45;
-
-/**
  * How many times a frame will let action lines drive action lines before it stops.
  *
  * A thing that answers a line may put another line on, so a chain has to reach
