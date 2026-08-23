@@ -329,7 +329,29 @@ export function prepareReflections(
                 // What has gone is the shrink, and the shrink was the smear.
                 if (depth >= 1) {
                     other.mesh.visible = true;
-                    other.show(depth - 1);
+
+                    // **Paul's cheat, and the end of the tunnel.**
+                    //
+                    // At the last level a pane is fed *its own* picture from
+                    // this same level, which already contains the level above
+                    // it, which contains the one above that. The image tiles
+                    // into itself and there is no last bounce to find. Each
+                    // frame it gains a level and it converges on endless — the
+                    // way a real infinity mirror does, which is also a feedback
+                    // loop and also one frame behind.
+                    //
+                    // Safe wherever the pane being drawn is not the pane being
+                    // shown, because those are different textures. Where they
+                    // are the same it is safe only if that pane is taken out of
+                    // its own pass — **a mirror is, a portal is not**, since a
+                    // portal hung to look back at itself has to appear in its
+                    // own view. That case reads the level above instead, which
+                    // is what the whole tunnel end used to do and what
+                    // `ReflectionsTest` guards.
+                    const readsItself =
+                        other === pane && other.mesh !== other.partner;
+
+                    other.show(readsItself ? depth - 1 : depth);
                 } else {
                     other.mesh.visible = false;
                 }
