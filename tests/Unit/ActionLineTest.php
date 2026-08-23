@@ -216,7 +216,10 @@ it('lets a wanderer stand on a plate and never lets one throw a lever', function
         ->and($answer['byActor'])->toBe([false, true, true]);
 
     // And only a lever answers being used at all.
-    expect($answer['threw'])->toBe(['lever', null]);
+    expect($answer['threw'])->toBe([
+        ['flag' => 'lever:lever', 'on' => true],
+        null,
+    ]);
 });
 
 it('bridges to the flag namespace only through a listener', function (): void {
@@ -310,4 +313,40 @@ it('stops rather than hanging on a ring of things driving each other', function 
     //
     // The assertion is that this test returns at all.
     expect($answer['settled'])->toBeTrue();
+});
+
+it('remembers a lever both ways, and puts it back where it was left', function (): void {
+    $answer = actionLines(
+        "[thing({ slug: 'lever', emitWhen: 'used' }),
+          thing({ slug: 'door', x: 9, bindings: [{ response: 'rotate', on: '90', off: '0' }] })]",
+        "[wire('lever', 'door')]",
+        <<<'JS'
+        // Thrown, then thrown back: the flag is the same name each time and
+        // only which way it sits changes, or the save cannot be told a lever
+        // went off.
+        const on = lines.use('lever');
+        const off = lines.use('lever');
+
+        // And a fresh level, told what the save says.
+        const again = createActionLines(level);
+
+        again.restore(new Set(['lever:lever']));
+        again.settle(nobody, responders);
+
+        process.stdout.write(JSON.stringify({
+            on,
+            off,
+            restored: again.isOn('lever'),
+            told,
+        }));
+        JS
+    );
+
+    expect($answer['on'])->toBe(['flag' => 'lever:lever', 'on' => true])
+        ->and($answer['off'])->toBe(['flag' => 'lever:lever', 'on' => false]);
+
+    // Put back held, so the door it drives is open before the first frame is
+    // drawn rather than swinging open a moment after somebody walks in.
+    expect($answer['restored'])->toBeTrue()
+        ->and($answer['told'])->toBe([['turn', 'door', 90]]);
 });

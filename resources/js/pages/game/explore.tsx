@@ -2,12 +2,15 @@ import { Head, Link, router } from '@inertiajs/react';
 import { useCallback, useRef, useState } from 'react';
 import { index } from '@/actions/App/Http/Controllers/GameController';
 import { store } from '@/actions/App/Http/Controllers/InteractionController';
+import { line as saveLine } from '@/actions/App/Http/Controllers/SaveController';
 import { store as reportFault } from '@/actions/App/Http/Controllers/SupportTicketController';
 import InventoryTray from '@/components/game/inventory-tray';
 import LevelViewport from '@/components/game/level-viewport';
 import VerbMenu from '@/components/game/verb-menu';
 import type { VerbChoice } from '@/components/game/verb-menu';
+import type { ActionLines } from '@/lib/engine/action-lines';
 import type { MovedThings } from '@/lib/engine/build/things';
+import { postFlag } from '@/lib/engine/line-saves';
 import type { ExplorePageProps, LevelThing } from '@/types';
 
 export default function Explore({
@@ -34,6 +37,9 @@ export default function Explore({
 
     /** What this level can move, once built, so Use can move it at once. */
     const moving = useRef<MovedThings | null>(null);
+
+    /** The level's wiring, so a lever is thrown before the next frame reads it. */
+    const lines = useRef<ActionLines | null>(null);
 
     /**
      * A verb, sent off to be settled. Only the inventory and the message come
@@ -93,6 +99,21 @@ export default function Explore({
                     moving.current?.block(
                         move.subject,
                         move.value === '1' || move.value === 'true',
+                    );
+                }
+            }
+
+            // A lever is thrown here rather than by the server, and for the
+            // same reason a door turns here: what a lever drives is a line, and
+            // a line is read on the next frame. The flag it hands back is what
+            // the save is told, by the frame loop, once it has settled.
+            if (choice.verb === 'use') {
+                const thrown = lines.current?.use(thing.slug) ?? null;
+
+                if (thrown !== null) {
+                    postFlag(saveLine(game.slug).url, level.slug)(
+                        thrown.flag,
+                        thrown.on,
                     );
                 }
             }
@@ -158,11 +179,13 @@ export default function Explore({
                         flags={flags}
                         moved={moved}
                         movingRef={moving}
+                        linesRef={lines}
                         onFocus={setFocused}
                         onExamine={examine}
                         onLockChange={lockChanged}
                         onMessage={setNote}
                         reportTo={reportFault(game.slug).url}
+                        rememberTo={saveLine(game.slug).url}
                         paused={asking !== null}
                     >
                         {/* Over the touch controls, which are z-20. */}

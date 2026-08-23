@@ -58,10 +58,11 @@ export type ActionLines = {
     /** Whether a thing's output is on right now. */
     isOn: (slug: string) => boolean;
     /**
-     * A lever thrown. Hands back the flag it should be remembered as, or null
-     * when there is nothing to remember — which is most things.
+     * A lever thrown. Hands back the flag it is remembered as and which way it
+     * now sits, or null when there is nothing to remember — which is most
+     * things, most of them not being levers.
      */
-    use: (slug: string) => string | null;
+    use: (slug: string) => { flag: string; on: boolean } | null;
     /**
      * Reads the sources, follows the lines, and tells the responders what
      * changed.
@@ -210,11 +211,13 @@ export function createActionLines(level: Level): ActionLines {
 
             node.held = !node.held;
 
-            // What the save is told is the flag a listener downstream writes,
-            // not the lever — because a lever has no name any more. That is
-            // worked out on the next settle; here we only say that something
-            // moved.
-            return slug;
+            // A lever is the one node that holds its own state, so it is the
+            // one whose state is worth remembering: everything downstream is
+            // worked out again from it on the next frame. `lever:` rather than
+            // a name of its own, because a lever has no name any more — the
+            // slug is what the drawing already knows it by, and `restore` looks
+            // for exactly this.
+            return { flag: `lever:${slug}`, on: node.held };
         },
 
         settle: (standing, responders) => {

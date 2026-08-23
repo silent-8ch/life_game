@@ -12,6 +12,7 @@ import { MAX_FRAME_SECONDS, REACH } from '@/lib/engine/constants';
 import { createHands } from '@/lib/engine/hands';
 import type { HeldItem } from '@/lib/engine/hands';
 import { createInput } from '@/lib/engine/input';
+import { createLineSaver, postFlag } from '@/lib/engine/line-saves';
 import {
     aimCamera,
     fallPlayer,
@@ -109,6 +110,12 @@ type LevelViewportProps = {
      */
     reportTo?: string;
     /**
+     * Where to post a listener's flag when it changes, or absent for a level
+     * with no save behind it — the editor's preview, where a lamp switched on
+     * is switched on for as long as you are looking at it and no longer.
+     */
+    rememberTo?: string;
+    /**
      * Stops the level taking keys and turning the view, without letting go of
      * the pointer — for while something on top of it, such as the verb menu, is
      * waiting on an answer.
@@ -146,6 +153,7 @@ export default function LevelViewport({
     onLockChange,
     onMessage,
     reportTo,
+    rememberTo,
     paused = false,
     children,
 }: LevelViewportProps) {
@@ -347,6 +355,27 @@ export default function LevelViewport({
 
         lines.restore(flagsSet.current);
 
+        // What the save file is told, and only ever about the flags this
+        // level's listeners declare: everything else the wiring does is worked
+        // out again next frame and is not worth a request.
+        const written = new Set(
+            level.things
+                .map((thing) => thing.writesFlag)
+                .filter((flag): flag is string => flag !== null),
+        );
+
+        const saver =
+            rememberTo === undefined
+                ? null
+                : createLineSaver(
+                      new Set(
+                          [...flagsSet.current].filter((flag) =>
+                              written.has(flag),
+                          ),
+                      ),
+                      postFlag(rememberTo, level.slug),
+                  );
+
         if (movingRef !== undefined) {
             movingRef.current = built.props.moving;
         }
@@ -543,6 +572,8 @@ export default function LevelViewport({
                 ],
                 built.props.moving,
             );
+
+            saver?.push(lines.writing());
 
             built.props.update(seconds);
             built.props.faceViewer(player.x, player.z);
@@ -919,7 +950,7 @@ export default function LevelViewport({
         // identity is stable for the life of whoever made it and listing it is
         // the lint rule being satisfied rather than a dependency being
         // declared.
-    }, [level, touch, reportTo, movingRef, linesRef]);
+    }, [level, touch, reportTo, rememberTo, movingRef, linesRef]);
 
     return (
         <div
