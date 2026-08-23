@@ -88,5 +88,50 @@
       "chin": [109, 255]
     },
     "name": "paul-heads-180"
+  },
+  {
+    "sheet": "krystal-heads-all-angles-options.png",
+    "box": [22, 7, 223, 304],
+    "marks": {
+      "head-top": [110, 27],
+      "chin": [110, 175]
+    },
+    "name": "krystal-heads-000"
+  },
+  {
+    "sheet": "krystal-heads-all-angles-options.png",
+    "box": [25, 314, 238, 287],
+    "marks": {
+      "head-top": [108, 28],
+      "chin": [120, 167]
+    },
+    "name": "krystal-heads-045"
+  },
+  {
+    "sheet": "krystal-heads-all-angles-options.png",
+    "box": [31, 605, 200, 292],
+    "marks": {
+      "head-top": [107, 28],
+      "chin": [157, 164]
+    },
+    "name": "krystal-heads-090"
+  },
+  {
+    "sheet": "krystal-heads-all-angles-options.png",
+    "box": [22, 897, 219, 295],
+    "marks": {
+      "head-top": [107, 19],
+      "chin": [165, 161]
+    },
+    "name": "krystal-heads-135"
+  },
+  {
+    "sheet": "krystal-heads-all-angles-options.png",
+    "box": [29, 1193, 202, 317],
+    "marks": {
+      "head-top": [96, 14],
+      "chin": [99, 143]
+    },
+    "name": "krystal-heads-180"
   }
 ]
