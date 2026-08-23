@@ -162,6 +162,9 @@ looking exactly like the reference.**
 - **The outfit goes in the prompt**, so most of what is drawn is new rather than copied.
 - **No gear** — no backpacks, no bags, nothing carried or strapped on.
 - **Tennis shoes**, of a kind that suits the person.
+- **Nothing green.** The background is keyed out by colour, and `docs/tools/unkey.py` also
+  strips green spill from the figure's edge — it cannot tell spill from cloth, so a green
+  shirt comes out grey. Any other colour is fine.
 - **Neutral expression on every body.** The face is coming from the head file; a body generated
   with a strong expression fights the head that lands on it.
 
