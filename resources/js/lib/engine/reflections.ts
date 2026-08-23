@@ -26,6 +26,38 @@ import type { SpriteActor } from '@/lib/engine/sprite-actor';
  *
  * @returns a function that refreshes every pane for the coming frame.
  */
+/**
+ * The panes to recurse into, with a tunnel's own continuation at the front.
+ *
+ * A pane that can see itself is a **tunnel** — the demo's loop portal is a
+ * corridor with no end, and level 8's stairs are the same shape. A tunnel is
+ * the one case where depth *is* the picture rather than a refinement of it:
+ * every bounce is another length of corridor, and the last one that is not
+ * drawn is a hole at the end showing the sky.
+ *
+ * The draw budget is finite, so the order it is spent in decides what runs out.
+ * In array order a mirror three rooms away that happens to fall inside the cone
+ * takes bounces the corridor needed. Putting the pane's own continuation first
+ * spends the depth on the thing made of depth, and the incidental panes get
+ * what is left — which is what they were getting anyway, one level shallower.
+ *
+ * **Nothing is skipped and no budget is added.** The same panes are visited;
+ * only the order changes. Measured at `portals-loop-wide`: 72 px of backdrop
+ * where the tunnel ran out, none after.
+ *
+ * Returns the array unchanged when there is nothing to move, so the common case
+ * — a pane that cannot see itself — allocates nothing.
+ */
+export function tunnelFirst<T>(panes: readonly T[], pane: T): readonly T[] {
+    const at = panes.indexOf(pane);
+
+    if (at <= 0) {
+        return panes;
+    }
+
+    return [pane, ...panes.slice(0, at), ...panes.slice(at + 1)];
+}
+
 export function prepareReflections(
     mirrors: PortalSurface[],
     portals: PortalSurface[],
@@ -155,7 +187,8 @@ export function prepareReflections(
             if (depth < allowed && spent < share) {
                 const inner = pane.aim(from);
 
-                for (const other of panes) {
+                // This pane's own continuation first — see `tunnelFirst`.
+                for (const other of tunnelFirst(panes, pane)) {
                     // The far mouth is taken out of this view, so drawing what
                     // it holds is work for nobody. Skipping it is most of the
                     // saving: for an ordinary pair, the only pane in the room
