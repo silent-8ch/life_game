@@ -137,32 +137,35 @@ export const PORTAL_BOUNCES = 8;
  * would otherwise cost more than the frame it is in, so depth is given up before
  * frame rate is.
  *
- * ## Why 16
+ * ## Why 96
  *
- * It was 40, set when a pane was rendered at a ninth of its current size. Panes
- * are full resolution now, so every pass costs nine times what it did and the
- * old number was nine times too generous.
+ * It was 40, then 16, and 16 was too mean by a long way.
  *
- * Measured at level 8's spawn — five panes, two of them in view — over the
- * scan's thirty fixed frames:
+ * The cut to 16 was measured — and measured in the wrong rooms. Level 8 and the
+ * portal demo have two panes in view at the spots that were swept, and with the
+ * share divided among the panes in view two is the case where a small budget
+ * still buys a long chain. **A room of mirrors is the case that pays**: four in
+ * view at 16 is four draws each, and Paul saw exactly that as *one reflection
+ * per mirror*. He also noticed the corridors had lost levels, which is the same
+ * arithmetic on portals — ten draws down to eight.
  *
- * | budget | passes | ms/frame | targets held |
- * | ------ | ------ | -------- | ------------ |
- * | 40     | 793    | 22.9     | 33           |
- * | 24     | 530    | 18.0     | 29           |
- * | 16     | 520    | 18.0     | 26           |
- * | 8      | 514    | 19.6     | 24           |
+ * At 96 a pane in a room of four gets twenty-four, which is a full chain of
+ * `PORTAL_BOUNCES` with enough left for the branches beside it, and a corridor
+ * gets more than it ever had. The floor below means the division can never
+ * starve a pane whatever the budget is; this decides how much *more* than the
+ * bare chain each one gets.
  *
- * **16 is where the curve flattens.** Going below it buys six passes out of
- * five hundred and spends the margin a level with more panes in view would
- * need; going above it buys nothing anybody can see. 22.9 ms a frame was most
- * of a frame's budget spent on views of rooms nobody was looking at.
+ * The sweep that produced 16 is still worth reading, because what it got wrong
+ * was where it looked rather than how it measured. At level 8's spawn — five
+ * panes, two in view — over the scan's thirty fixed frames: 40 gave 793 passes
+ * at 22.9 ms a frame, 24 gave 530 at 18.0, 16 gave 520 at 18.0, 8 gave 514 at
+ * 19.6. The curve really does flatten there, and all eighteen scan spots really
+ * were identical at 16 and 40.
  *
- * **The picture does not change.** All eighteen scan spots are identical at 16
- * and at 40, run either side of the change; so is level 8's spawn, which no
- * spot covers; and so is the loop portal's corridor at `portals-loop-wide`,
- * down to the deepest `twist` walls at the far end. The passes this removes
- * were drawing levels that nothing sampled.
+ * **None of those spots is a room of mirrors.** Eighteen identical pictures
+ * said nothing about the one case that pays for depth, and the man playing it
+ * found the difference in a morning. A sweep is only ever evidence about the
+ * places it was swept.
  *
  * ## What this does not fix
  *
@@ -178,7 +181,7 @@ export const PORTAL_BOUNCES = 8;
  * thing in here made entirely of depth. Freeing targets nobody has sampled for
  * a while is the fix, and it is a task rather than a constant.
  */
-export const PORTAL_RENDER_BUDGET = 16;
+export const PORTAL_RENDER_BUDGET = 96;
 
 /**
  * How many times a frame will let action lines drive action lines before it stops.
