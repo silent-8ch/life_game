@@ -1,0 +1,157 @@
+<?php
+
+use Symfony\Component\Process\Process;
+
+/**
+ * What a mirror hangs on.
+ *
+ * A mirrored edge used to build a pane and return, so no wall was made at all.
+ * In an ordinary room that is invisible — the pane is opaque and covers exactly
+ * what the wall would have. In a room whose **every** edge is a mirror it means
+ * there is no geometry at eye level anywhere in the level.
+ *
+ * That is what made Paul's mirrors black, and the shape of the fault says so.
+ * Floor and ceiling seeded the reflections above and below the horizon and came
+ * out perfect — an infinite checker floor, the sky, his own sprite repeating.
+ * Along the horizon there was nothing but panes showing panes, and at the last
+ * bounce those close into a loop with nothing outside it. Black is that loop's
+ * fixed point: it starts black on the first frame and no number of frames fills
+ * it in. Photographed at his own spot: 86 to 100 per cent of every pane's
+ * middle row pure black, at every one of the seventeen levels.
+ *
+ * So the corridor ends on a real wall now, a centimetre behind the glass, and
+ * `prepareReflections` takes the mirrors out of the picture at the last bounce
+ * to show it.
+ */
+
+/**
+ * @return array<string, mixed>
+ */
+function mirrorBacking(string $body): array
+{
+    $script = <<<JS
+        const THREE = await import('three');
+        const { buildMirrorPane } = await import('@/lib/engine/build/mirrors.ts');
+        const { prepareReflections } = await import('@/lib/engine/reflections.ts');
+        const { PORTAL_BOUNCES } = await import('@/lib/engine/constants.ts');
+
+        const scene = { group: new THREE.Group(), targets: [], mirrors: [] };
+        const ctx = {
+            scene,
+            materials: { track: (what) => what },
+            topology: { seenFrom: () => ['room'] },
+        };
+
+        /** Two mirrors facing each other across a room, which is a corridor. */
+        const wall = (z, facing) => {
+            buildMirrorPane(
+                ctx,
+                { sector: { slug: 'room' } },
+                new THREE.Vector3(0, 1.5, z),
+                new THREE.Vector3(0, 0, facing),
+                4,
+                3,
+            );
+
+            return scene.mirrors[scene.mirrors.length - 1];
+        };
+
+        const near = wall(-4, 1);
+        const far = wall(4, -1);
+
+        for (const pane of scene.mirrors) {
+            pane.partner = pane.mesh;
+        }
+
+        const shown = [];
+
+        for (const pane of scene.mirrors) {
+            pane.aim = () => {
+                const inner = new THREE.PerspectiveCamera(75, 1, 0.1, 100);
+                inner.updateMatrixWorld(true);
+
+                return inner;
+            };
+            pane.viewerAt = () => ({ x: 0, z: 0, yaw: 0 });
+            pane.render = (r, s, from, depth) => {
+                shown.push({
+                    drew: depth,
+                    hidden: scene.mirrors.filter((o) => !o.mesh.visible).length,
+                });
+            };
+            pane.bounds = new THREE.Sphere(new THREE.Vector3(0, 0, -5), 1);
+        }
+
+        const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 100);
+        camera.updateMatrixWorld(true);
+
+        const noop = { object: { visible: false }, faceViewer() {}, follow() {} };
+
+        prepareReflections(
+            scene.mirrors,
+            [],
+            noop,
+            noop,
+            noop,
+            camera,
+            null,
+        )({ getDrawingBufferSize: (v) => v.set(64, 64) }, {});
+
+        {$body}
+        JS;
+
+    $process = new Process([
+        'node',
+        '--experimental-strip-types',
+        '--import',
+        './tests/js/typescript-imports.mjs',
+        '--input-type=module',
+        '--eval',
+        $script,
+    ], dirname(__DIR__, 2));
+
+    $process->mustRun();
+
+    return json_decode($process->getOutput(), true, flags: JSON_THROW_ON_ERROR);
+}
+
+it('says outright whether a surface is a mirror', function (): void {
+    $answer = mirrorBacking(<<<'JS'
+        process.stdout.write(JSON.stringify({
+            mirrored: scene.mirrors.map((pane) => pane.mirrored),
+        }));
+        JS);
+
+    // Read off `partner` before, which is a mesh doing two unrelated jobs and
+    // only accidentally told the two kinds apart.
+    expect($answer['mirrored'])->toBe([true, true]);
+});
+
+it('takes the mirrors out of the picture at the last bounce', function (): void {
+    $answer = mirrorBacking(<<<'JS'
+        const deepest = Math.max(...shown.map((row) => row.drew));
+
+        process.stdout.write(JSON.stringify({
+            deepest,
+            hiddenAtDeepest: shown
+                .filter((row) => row.drew === deepest)
+                .map((row) => row.hidden),
+            hiddenAbove: shown
+                .filter((row) => row.drew === 0)
+                .map((row) => row.hidden),
+            panes: scene.mirrors.length,
+        }));
+        JS);
+
+    // At the end of the tunnel every mirror is hidden, so what draws is the
+    // wall a centimetre behind each one. That is the whole fix: the corridor
+    // ends on a surface instead of on a loop of panes showing each other.
+    foreach ($answer['hiddenAtDeepest'] as $hidden) {
+        expect($hidden)->toBe($answer['panes']);
+    }
+
+    // And nowhere above it, or there would be no reflection to nest.
+    foreach ($answer['hiddenAbove'] as $hidden) {
+        expect($hidden)->toBe(0);
+    }
+});

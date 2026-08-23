@@ -115,7 +115,29 @@ export function buildWall(
             height,
         );
 
-        return null;
+        // ...and then the wall it hangs on, which this used to skip entirely.
+        //
+        // **A room whose every edge is a mirror had no geometry at eye level at
+        // all.** Floor and ceiling seeded the reflections above and below, and
+        // reflected beautifully. Along the horizon there was nothing but panes
+        // showing panes, and at the last bounce those close into a loop with
+        // nothing to end on. Black is that loop's fixed point: it starts black
+        // on the first frame and no number of frames fills it in. Photographed
+        // at Paul's own spot, 86 to 100 per cent of every pane's middle row
+        // came back pure black while the floor a few rows below was perfect.
+        //
+        // So the corridor now ends on plaster, the way it ends in a real room
+        // of mirrors — because there is a real wall there, not because
+        // something paints one on. `prepareReflections` takes the mirrors out
+        // of the picture at the last bounce and this is what is behind them.
+        //
+        // A hair further back than the wall would otherwise stand, so the pane
+        // and its backing are not in the same plane fighting over which is in
+        // front. That leaves the pane where it was, which matters: the pane's
+        // plane *is* the mirror, and moving it would move every reflection in
+        // the room.
+        holder.position.x -= normal.x * WALL_INSET;
+        holder.position.z -= normal.z * WALL_INSET;
     }
 
     const drawn = length + back + front;

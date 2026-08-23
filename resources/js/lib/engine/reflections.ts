@@ -327,6 +327,30 @@ export function prepareReflections(
                 // different texture, so there is no such conflict.
                 //
                 // What has gone is the shrink, and the shrink was the smear.
+                // A mirror comes out of the picture at the last bounce, and
+                // the wall it hangs on is drawn in its place.
+                //
+                // That wall is real geometry — `buildWall` puts one a hair
+                // behind every mirror — so the corridor ends on plaster the way
+                // it ends in a real room of mirrors. Without it the panes at
+                // the last level close into a loop showing each other, and a
+                // loop with nothing to seed it settles on black and stays
+                // there however many frames run. Measured at 86 to 100 per cent
+                // of every pane's middle row, in a room whose floor and sky
+                // reflected perfectly a few rows either side.
+                //
+                // **A portal is the opposite case and must not do this.** There
+                // is no wall behind a mouth; there is the room it opens onto.
+                // Taking the pane out would show whatever the tilt failed to
+                // clip, and the tunnel of portals that this whole branch exists
+                // for would end in a hole. So a mouth stays in and reads a
+                // level further out, exactly as before.
+                if (other.mirrored) {
+                    other.mesh.visible = false;
+
+                    continue;
+                }
+
                 if (depth >= 1) {
                     other.mesh.visible = true;
 

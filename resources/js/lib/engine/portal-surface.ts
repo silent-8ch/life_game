@@ -296,6 +296,20 @@ export function tiltNearPlaneOnto(
 
 export type PortalSurface = {
     mesh: THREE.Mesh;
+    /**
+     * Whether this is a mirror rather than a portal mouth.
+     *
+     * Asked outright because the two want opposite things at the last bounce. A
+     * mirror comes out of the picture and the wall behind it is drawn instead,
+     * which is how the corridor ends on a surface rather than on a loop. A
+     * portal mouth has no wall behind it — it is an opening — so it stays in
+     * and reads a level further out, which is what makes a tunnel of portals
+     * keep going.
+     *
+     * This was read off `partner` before, which is a mesh doing two jobs and
+     * only accidentally distinguishes the two.
+     */
+    mirrored: boolean;
     /** The pane at the far end of the same portal, hidden while this one draws. */
     partner: THREE.Mesh | null;
     /**
@@ -698,6 +712,7 @@ export function createPortalSurface(
 
     const surface: PortalSurface = {
         mesh,
+        mirrored: options.mirrored === true,
         partner: null,
         behind: [],
         blocking: [],
