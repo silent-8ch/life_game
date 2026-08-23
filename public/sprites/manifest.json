@@ -1,5 +1,5 @@
 {
- "generated": "2026-08-23T15:09:01+00:00",
+ "generated": "2026-08-23T15:37:04+00:00",
  "sprites": [
   {
    "folder": "bg",
@@ -782,7 +782,7 @@
    "name": "william-illustrated-diagonal-aligned-4step",
    "url": "/sprites/illustrated/william-illustrated-diagonal-aligned-4step.png",
    "w": 1024,
-  "h": 1024
+   "h": 1024
   },
   {
    "folder": "people",
@@ -1444,6 +1444,51 @@
   {
    "folder": "people",
    "sub": "v4",
+   "file": "debug-heads-000.png",
+   "name": "debug-heads-000",
+   "url": "/sprites/people/v4/debug-heads-000.png",
+   "w": 240,
+   "h": 280
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "debug-heads-045.png",
+   "name": "debug-heads-045",
+   "url": "/sprites/people/v4/debug-heads-045.png",
+   "w": 225,
+   "h": 298
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "debug-heads-090.png",
+   "name": "debug-heads-090",
+   "url": "/sprites/people/v4/debug-heads-090.png",
+   "w": 249,
+   "h": 290
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "debug-heads-135.png",
+   "name": "debug-heads-135",
+   "url": "/sprites/people/v4/debug-heads-135.png",
+   "w": 241,
+   "h": 293
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "debug-heads-180.png",
+   "name": "debug-heads-180",
+   "url": "/sprites/people/v4/debug-heads-180.png",
+   "w": 237,
+   "h": 295
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
    "file": "debug-heads-all-angles-options.png",
    "name": "debug-heads-all-angles-options",
    "url": "/sprites/people/v4/debug-heads-all-angles-options.png",
@@ -1462,11 +1507,101 @@
   {
    "folder": "people",
    "sub": "v4",
-   "file": "sheet.png",
-   "name": "sheet",
-   "url": "/sprites/people/v4/sheet.png",
-   "w": 864,
-   "h": 1730
+   "file": "krystal-heads-000.png",
+   "name": "krystal-heads-000",
+   "url": "/sprites/people/v4/krystal-heads-000.png",
+   "w": 223,
+   "h": 304
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "krystal-heads-045.png",
+   "name": "krystal-heads-045",
+   "url": "/sprites/people/v4/krystal-heads-045.png",
+   "w": 238,
+   "h": 287
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "krystal-heads-090.png",
+   "name": "krystal-heads-090",
+   "url": "/sprites/people/v4/krystal-heads-090.png",
+   "w": 200,
+   "h": 292
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "krystal-heads-135.png",
+   "name": "krystal-heads-135",
+   "url": "/sprites/people/v4/krystal-heads-135.png",
+   "w": 219,
+   "h": 295
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "krystal-heads-180.png",
+   "name": "krystal-heads-180",
+   "url": "/sprites/people/v4/krystal-heads-180.png",
+   "w": 202,
+   "h": 317
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "krystal-heads-all-angles-options.png",
+   "name": "krystal-heads-all-angles-options",
+   "url": "/sprites/people/v4/krystal-heads-all-angles-options.png",
+   "w": 1024,
+   "h": 1536
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "paul-heads-000.png",
+   "name": "paul-heads-000",
+   "url": "/sprites/people/v4/paul-heads-000.png",
+   "w": 220,
+   "h": 314
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "paul-heads-045.png",
+   "name": "paul-heads-045",
+   "url": "/sprites/people/v4/paul-heads-045.png",
+   "w": 240,
+   "h": 312
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "paul-heads-090.png",
+   "name": "paul-heads-090",
+   "url": "/sprites/people/v4/paul-heads-090.png",
+   "w": 234,
+   "h": 315
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "paul-heads-135.png",
+   "name": "paul-heads-135",
+   "url": "/sprites/people/v4/paul-heads-135.png",
+   "w": 229,
+   "h": 294
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "paul-heads-180.png",
+   "name": "paul-heads-180",
+   "url": "/sprites/people/v4/paul-heads-180.png",
+   "w": 223,
+   "h": 296
   },
   {
    "folder": "people",
@@ -1476,6 +1611,15 @@
    "url": "/sprites/people/v4/paul-heads-all-angles-options.png",
    "w": 992,
    "h": 1586
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "sheet.png",
+   "name": "sheet",
+   "url": "/sprites/people/v4/sheet.png",
+   "w": 864,
+   "h": 1730
   },
   {
    "folder": "props",
