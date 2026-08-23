@@ -2,12 +2,15 @@ import { Field, inputClass } from '@/components/editor/inspector/controls';
 import type { LevelThing, ThingBinding } from '@/types';
 
 /**
- * What a thing does while an action line is on, and while it is off.
+ * What a thing does while its input is on, and while it is off.
  *
- * The responding half of Paul's redstone idea. The emitting half is above, in
- * the drawing panel, because what a thing *is* and what it *puts on* are both
- * properties of the thing; this is a list, because a thing may answer several
- * lines and one line may drive several things.
+ * The responding half of Paul's redstone idea. There is no line to name here
+ * any more: a thing answers **its own input**, and what feeds that input is the
+ * lines somebody drew into it in the map view. A thing with two lines drawn in
+ * answers whichever of them its logic says to.
+ *
+ * That is the whole of what the second slice changed, and it is why this panel
+ * lost a field rather than gaining one.
  *
  * **Both sides are always authored.** *On and off each say what they do* — an
  * on-value with an implied resting position is the same thing with a worse
@@ -41,8 +44,8 @@ export default function BindingsPanel({
 
             {bindings.length === 0 && (
                 <p className="text-xs leading-relaxed text-slate-500">
-                    Nothing yet. Give it a line to answer and it moves whenever
-                    anything puts that line on.
+                    Nothing yet. Add one and it moves whenever a line drawn into
+                    it comes on.
                 </p>
             )}
 
@@ -52,17 +55,6 @@ export default function BindingsPanel({
                     className="flex flex-col gap-2 rounded border border-slate-800 p-2"
                 >
                     <div className="grid grid-cols-2 gap-2">
-                        <Field label="Line">
-                            <input
-                                type="text"
-                                value={binding.line}
-                                onChange={(event) =>
-                                    change(at, { line: event.target.value })
-                                }
-                                className={inputClass}
-                            />
-                        </Field>
-
                         <Field label="Does">
                             <select
                                 value={binding.response}
@@ -127,7 +119,6 @@ export default function BindingsPanel({
                         bindings: [
                             ...bindings,
                             {
-                                line: '',
                                 response: 'rotate',
                                 on: '90',
                                 off: '0',

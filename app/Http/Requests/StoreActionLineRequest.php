@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests;
 
-use App\Enums\EmitWhen;
 use App\Models\Game;
 use App\Models\Level;
 use App\Models\LevelThing;
@@ -10,20 +9,21 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 
 /**
- * A lever thrown, on its way to being remembered.
+ * A listener's flag, on its way to being remembered.
  *
- * ## Why this is not just a flag endpoint
+ * ## Why this is not a flag endpoint
  *
- * A line name and a flag name are the same namespace, so an endpoint that
- * took a name and wrote it would let the browser set **any** flag — including
- * the ones an interaction's conditions are gating on, which is every lock in
- * every game.
+ * Line names and flag names share a namespace, so an endpoint that took a name
+ * and wrote it would let the browser set **any** flag — including the ones
+ * every interaction's conditions are gated on, which is every lock in every
+ * game.
  *
- * So the name is not taken on trust. It has to be an action line some thing in the
- * named level actually emits, and emits **by being used** — a plate's line is
- * momentary and has no business being written to a save at all. What the
- * browser is allowed to say is therefore exactly *this lever moved*, which is
- * the only thing it knows that the server does not.
+ * The first slice checked that some thing in the level emitted that name by
+ * being used. Drawn lines have no names, so that check had nowhere to stand and
+ * has moved rather than gone: **only a listener may write a flag, and only the
+ * name it declares.** Same guarantee. What the browser is allowed to say is
+ * exactly *this listener's input changed*, which is the only thing it knows
+ * that the server does not.
  */
 class StoreActionLineRequest extends FormRequest
 {
@@ -39,7 +39,7 @@ class StoreActionLineRequest extends FormRequest
     {
         return [
             'level' => ['required', 'string', 'max:255'],
-            'line' => ['required', 'string', 'max:255'],
+            'flag' => ['required', 'string', 'max:255'],
             'on' => ['required', 'boolean'],
         ];
     }
@@ -59,16 +59,15 @@ class StoreActionLineRequest extends FormRequest
                 ->where('slug', $this->string('level')->toString())
                 ->first();
 
-            $thrown = $level === null ? false : LevelThing::query()
+            $declared = $level !== null && LevelThing::query()
                 ->where('level_id', $level->id)
-                ->where('emits', $this->string('line')->toString())
-                ->where('emit_when', EmitWhen::Used)
+                ->where('writes_flag', $this->string('flag')->toString())
                 ->exists();
 
-            if (! $thrown) {
+            if (! $declared) {
                 $validator->errors()->add(
-                    'line',
-                    'Nothing in that level throws that line.',
+                    'flag',
+                    'Nothing in that level writes that flag.',
                 );
             }
         });

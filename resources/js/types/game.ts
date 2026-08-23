@@ -258,6 +258,20 @@ export type EmitWhen = 'used' | 'stood_on';
 export type TriggeredBy = 'player' | 'actors' | 'anyone';
 
 /**
+ * How the lines drawn into a thing combine.
+ *
+ * `none` with nothing drawn in is **on** — a NOT of nothing is a thing that is
+ * always on, which redstone calls a torch.
+ */
+export type LineLogic = 'any' | 'all' | 'none';
+
+/** A line drawn by hand from one thing to another. */
+export type ActionLine = {
+    from: string;
+    to: string;
+};
+
+/**
  * What a thing does while an action line is on, and while it is off.
  *
  * Both sides always, rather than one side and a resting default — which is the
@@ -266,7 +280,6 @@ export type TriggeredBy = 'player' | 'actors' | 'anyone';
  * sense field and no inversion to build.
  */
 export type ThingBinding = {
-    line: string;
     response: 'rotate' | 'blocking';
     on: string;
     off: string;
@@ -337,19 +350,40 @@ export type LevelThing = {
      */
     hinge: ThingHinge | null;
     /**
-     * The line this thing puts on, or null for the great majority that put on
-     * nothing.
+     * `used` for a lever, `stood_on` for a plate, null for everything that is
+     * not a source.
      *
-     * A line name **is** a flag name: they share one namespace, so a lamp
-     * with `altFlag` set to an action line lights while that line is on and nothing
-     * had to be written for it.
+     * A source has no name any more: it is joined to whatever it drives by a
+     * line drawn from it, which is the whole of the wiring.
      */
-    emits: string | null;
-    /** `used` for a lever, `stood_on` for a plate. */
     emitWhen: EmitWhen | null;
     /** Who can stand on it. A lever is always the player's. */
     triggeredBy: TriggeredBy;
-    /** What this thing does while an action line is on, and while it is off. */
+    /**
+     * How the lines drawn *into* this thing combine.
+     *
+     * Where a gate lives: `all` is an AND, `none` is a NOT, and `any` is what a
+     * wire does anyway. A gate is an ordinary invisible thing with an opinion
+     * here rather than a kind of its own.
+     */
+    logic: LineLogic;
+    /**
+     * A listener: its output is on while this flag is set.
+     *
+     * One of the two bridges between drawn wiring and the flag namespace, which
+     * keeps `FlagIs` and the save reachable without a name existing merely to
+     * join two things.
+     */
+    readsFlag: string | null;
+    /**
+     * A listener the other way: this flag is set while its input is on.
+     *
+     * **The only way a flag is ever written from the browser.** Line names and
+     * flag names share a namespace, so an endpoint that wrote what it was given
+     * would let anybody set the flags every lock is gated on.
+     */
+    writesFlag: string | null;
+    /** What this thing does while its input is on, and while it is off. */
     bindings: ThingBinding[];
     isSolid: boolean;
     /** What the player may try on it. */
@@ -379,6 +413,8 @@ export type Level = {
     sky: Sky | null;
     sectors: Sector[];
     things: LevelThing[];
+    /** The wiring: lines drawn by hand between the things above. */
+    lines: ActionLine[];
 };
 
 /**

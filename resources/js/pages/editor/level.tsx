@@ -18,6 +18,8 @@ import {
 } from '@/lib/editor/history';
 import type { EditKind, HistoryStep, LevelHistory } from '@/lib/editor/history';
 import {
+    cutLine,
+    drawLine,
     duplicateRooms,
     moveCorner,
     newPerson,
@@ -64,6 +66,12 @@ export default function LevelEditor({
     const [saved, setSaved] = useState<Level>(level);
     const [tool, setTool] = useState<Tool>('select');
     const [grid, setGrid] = useState(0.5);
+    /**
+     * Whether every action line is drawn, rather than only the ones running in
+     * or out of whatever is picked. Off by default: a level with wiring all
+     * over it is unreadable when you are drawing rooms.
+     */
+    const [showLines, setShowLines] = useState(false);
     const [selection, setSelection] = useState<Selection>(null);
     // Every room picked. The one in `selection` is among them, and is the one
     // whose walls the panel offers when only one is picked.
@@ -315,6 +323,10 @@ export default function LevelEditor({
             if (event.key === 't') {
                 setTool('prop');
             }
+
+            if (event.key === 'w') {
+                setTool('wire');
+            }
         };
 
         window.addEventListener('keydown', handleKey);
@@ -442,6 +454,7 @@ export default function LevelEditor({
                                     ['draw', 'Draw room', 'D'],
                                     ['person', 'Add person', 'P'],
                                     ['prop', 'Add thing', 'T'],
+                                    ['wire', 'Draw line', 'W'],
                                     ['spawn', 'Move start', ''],
                                 ] as const
                             ).map(([value, label, key]) => (
@@ -491,6 +504,19 @@ export default function LevelEditor({
                                 </button>
                             ))}
 
+                            <button
+                                type="button"
+                                onClick={() => setShowLines((on) => !on)}
+                                className={cn(
+                                    'ml-4 rounded border px-2 py-1 text-xs',
+                                    showLines
+                                        ? 'border-sky-400 text-sky-200'
+                                        : 'border-slate-700 text-slate-400 hover:border-slate-500',
+                                )}
+                            >
+                                Lines
+                            </button>
+
                             {tool === 'draw' && (
                                 <span className="ml-auto text-xs text-slate-400">
                                     Click corners · click the first again or
@@ -519,6 +545,13 @@ export default function LevelEditor({
                                 <span className="ml-auto text-xs text-slate-400">
                                     Click to put one down · again for another ·
                                     Esc to stop
+                                </span>
+                            )}
+
+                            {tool === 'wire' && (
+                                <span className="ml-auto text-xs text-slate-400">
+                                    Drag from one thing to another to wire them
+                                    up · click a line to cut it
                                 </span>
                             )}
 
@@ -595,6 +628,17 @@ export default function LevelEditor({
                                     setThing(draft.things.length);
                                     setSelection(null);
                                 }}
+                                showLines={showLines}
+                                onDrawLine={(from, to) =>
+                                    commit('line', (current) =>
+                                        drawLine(current, from, to),
+                                    )
+                                }
+                                onCutLine={(from, to) =>
+                                    commit('line', (current) =>
+                                        cutLine(current, from, to),
+                                    )
+                                }
                                 onMoveThing={(index, to) =>
                                     commit('thing', (current) =>
                                         updateThing(current, index, to),

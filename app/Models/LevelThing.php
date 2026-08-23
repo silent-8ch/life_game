@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\EmitWhen;
+use App\Enums\LineLogic;
 use App\Enums\ThingHinge;
 use App\Enums\ThingKind;
 use App\Enums\ThingRender;
@@ -35,9 +36,11 @@ use Illuminate\Support\Carbon;
  * @property string|null $texture
  * @property ThingRender $render
  * @property ThingHinge|null $hinge
- * @property string|null $emits
  * @property EmitWhen|null $emit_when
  * @property TriggeredBy $triggered_by
+ * @property LineLogic $logic
+ * @property string|null $reads_flag
+ * @property string|null $writes_flag
  * @property-read Collection<int, LevelThingBinding> $bindings
  * @property-read Pivot|null $pivot
  * @property int $plane_count
@@ -86,9 +89,11 @@ use Illuminate\Support\Carbon;
     'height',
     'angle',
     'hinge',
-    'emits',
     'emit_when',
     'triggered_by',
+    'logic',
+    'reads_flag',
+    'writes_flag',
     'is_solid',
     'sort_order',
 ])]
@@ -108,6 +113,7 @@ class LevelThing extends Model
             'hinge' => ThingHinge::class,
             'emit_when' => EmitWhen::class,
             'triggered_by' => TriggeredBy::class,
+            'logic' => LineLogic::class,
             'uv_mode' => ThingUvMode::class,
             'stats' => 'array',
             'plane_count' => 'integer',

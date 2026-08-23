@@ -38,6 +38,7 @@ export type EditKind =
     | 'duplicate'
     | 'field'
     | 'heights'
+    | 'line'
     | 'nudge'
     | 'place'
     | 'revert'

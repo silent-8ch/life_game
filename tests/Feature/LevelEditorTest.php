@@ -571,3 +571,58 @@ it('turns away a crate with a personality', function (): void {
         ->put(route('levels.editor.update', $this->level), $map)
         ->assertSessionHasErrors('things.1.stats');
 });
+
+it('saves the lines drawn between things, and finds them again on the way out', function (): void {
+    $map = drawnMap();
+    $map['lines'] = [
+        ['from' => 'krystal', 'to' => 'crate'],
+        ['from' => 'crate', 'to' => 'krystal'],
+    ];
+
+    $this->actingAs($this->editor)
+        ->put(route('levels.editor.update', $this->level), $map)
+        ->assertSessionHasNoErrors();
+
+    $level = $this->level->fresh(['actionLines.from', 'actionLines.to']);
+
+    expect($level->actionLines
+        ->map(fn ($line): array => [$line->from->slug, $line->to->slug])
+        ->all()
+    )->toBe([['krystal', 'crate'], ['crate', 'krystal']]);
+
+    // And back out the way the editor reads it: by slug, because that is what
+    // the drawing is made of. Ids never leave the database.
+    $this->actingAs($this->editor)
+        ->get(route('levels.editor', $this->level))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('level.lines', [
+                ['from' => 'krystal', 'to' => 'crate'],
+                ['from' => 'crate', 'to' => 'krystal'],
+            ])
+        );
+});
+
+it('cuts a line by saving a map without it', function (): void {
+    $map = drawnMap();
+    $map['lines'] = [['from' => 'krystal', 'to' => 'crate']];
+
+    $this->actingAs($this->editor)
+        ->put(route('levels.editor.update', $this->level), $map);
+
+    $map['lines'] = [];
+
+    $this->actingAs($this->editor)
+        ->put(route('levels.editor.update', $this->level), $map)
+        ->assertSessionHasNoErrors();
+
+    expect($this->level->fresh()->actionLines)->toHaveCount(0);
+});
+
+it('turns away a line to a thing the map does not carry', function (): void {
+    $map = drawnMap();
+    $map['lines'] = [['from' => 'krystal', 'to' => 'ghost']];
+
+    $this->actingAs($this->editor)
+        ->put(route('levels.editor.update', $this->level), $map)
+        ->assertSessionHasErrors('lines.0.to');
+});

@@ -36,12 +36,12 @@ class SaveController extends Controller
     }
 
     /**
-     * A lever thrown, remembered.
+     * A listener's flag, remembered.
      *
-     * A latching line is a flag, which is the whole reason there is no second
-     * store to write it to. A momentary one — a plate — never reaches here at
-     * all: you are not standing on it next session, and putting it back would
-     * open a door in an empty room.
+     * The one place a flag is written from the browser, and the request refuses
+     * any name no listener in that level declares — because line names and flag
+     * names share a namespace and the alternative is letting anybody set the
+     * flags every lock is gated on.
      *
      * Posted on the change rather than on the frame, so a lever costs one
      * request however fast the game is drawing.
@@ -51,12 +51,12 @@ class SaveController extends Controller
         abort_unless($game->is_published, 404);
 
         $state = GameState::for($game);
-        $line = $request->string('line')->toString();
+        $flag = $request->string('flag')->toString();
 
         if ($request->boolean('on')) {
-            $state->flags()->updateOrCreate(['key' => $line], ['value' => 'on']);
+            $state->flags()->updateOrCreate(['key' => $flag], ['value' => 'on']);
         } else {
-            $state->flags()->where('key', $line)->delete();
+            $state->flags()->where('key', $flag)->delete();
         }
 
         return response()->noContent();

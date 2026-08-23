@@ -483,9 +483,11 @@ export function newPerson(
         height,
         angle: 0,
         hinge: null,
-        emits: null,
         emitWhen: null,
         triggeredBy: 'player',
+        logic: 'any',
+        readsFlag: null,
+        writesFlag: null,
         bindings: [],
         isSolid: false,
         verbs: [],
@@ -527,9 +529,11 @@ export function newProp(level: Level, at: Point): LevelThing {
         height: 0.8,
         angle: 0,
         hinge: null,
-        emits: null,
         emitWhen: null,
         triggeredBy: 'player',
+        logic: 'any',
+        readsFlag: null,
+        writesFlag: null,
         bindings: [],
         isSolid: true,
         verbs: [],
@@ -567,6 +571,71 @@ export function thingNear(
     });
 
     return found === null ? null : (found as { index: number }).index;
+}
+
+/**
+ * The drawn line nearest a point, for picking one up to cut it.
+ *
+ * Measured against the segment between the two things it joins, which is
+ * exactly what the map view draws, so what you clicked is what you get.
+ */
+export function lineNear(
+    level: Level,
+    at: Point,
+    reach: number,
+): { from: string; to: string } | null {
+    const middles = new Map(
+        level.things.map((thing) => [thing.slug, { x: thing.x, z: thing.z }]),
+    );
+
+    let found: { line: { from: string; to: string }; away: number } | null =
+        null;
+
+    for (const line of level.lines ?? []) {
+        const from = middles.get(line.from);
+        const to = middles.get(line.to);
+
+        if (from === undefined || to === undefined) {
+            continue;
+        }
+
+        const on = closestOnEdge(from, to, at);
+        const away = Math.hypot(at.x - on.x, at.z - on.z);
+
+        if (away < reach && (found === null || away < found.away)) {
+            found = { line: { from: line.from, to: line.to }, away };
+        }
+    }
+
+    return found === null ? null : found.line;
+}
+
+/**
+ * Wires one thing to another. A line is one-way and there is only ever one of
+ * it: drawing the same line twice leaves the level as it was, and drawing the
+ * reverse of an existing line leaves both, which is how two things listen to
+ * each other.
+ */
+export function drawLine(level: Level, from: string, to: string): Level {
+    const lines = level.lines ?? [];
+
+    if (
+        from === to ||
+        lines.some((line) => line.from === from && line.to === to)
+    ) {
+        return level;
+    }
+
+    return { ...level, lines: [...lines, { from, to }] };
+}
+
+export function cutLine(level: Level, from: string, to: string): Level {
+    return {
+        ...level,
+        lines: (level.lines ?? []).filter(
+            (line) => !(line.from === from && line.to === to),
+        ),
+    };
 }
 
 /** A new room, drawn at the level's default height, with nothing textured yet. */

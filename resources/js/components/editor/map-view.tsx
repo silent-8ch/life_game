@@ -4,6 +4,7 @@ import {
     closestOnEdge,
     distanceToEdge,
     fitView,
+    lineNear,
     MAX_SCALE,
     MIN_SCALE,
     boxBetween,
@@ -32,7 +33,7 @@ import type { Level } from '@/types';
  * middle button, the left one being busy.
  */
 
-export type Tool = 'select' | 'draw' | 'spawn' | 'person' | 'prop';
+export type Tool = 'select' | 'draw' | 'spawn' | 'person' | 'prop' | 'wire';
 
 type MapViewProps = {
     level: Level;
@@ -52,6 +53,20 @@ type MapViewProps = {
     onToggleRoom: (index: number) => void;
     onSelectThing: (index: number | null) => void;
     onPlaceThing: (at: Point) => void;
+    /**
+     * A line drawn from one thing to another, which is the whole of how two
+     * things are connected.
+     *
+     * Drawing it here rather than typing a name either end is the second slice
+     * of action lines: Paul asked to *switch to manual drawing of the redstone
+     * line*, and this is the drawing. Passed the two slugs because that is what
+     * a line is; the map has no opinion about what either end does with it.
+     */
+    /** Whether to draw every line, rather than only the picked thing's. */
+    showLines: boolean;
+    onDrawLine: (from: string, to: string) => void;
+    /** A line taken out again, by its two ends. */
+    onCutLine: (from: string, to: string) => void;
     onMoveThing: (index: number, to: Point) => void;
     onMoveCorner: (from: Point, to: Point) => void;
     onDropCorner: () => void;
@@ -71,6 +86,9 @@ const COLORS = {
     roomSelected: 'rgba(251, 191, 36, 0.18)',
     /** A room the camera sees through. Faint, because it barely exists. */
     roomSeeThrough: 'rgba(148, 163, 184, 0.08)',
+    /** A drawn action line, and the one being dragged out. */
+    line: 'rgba(56, 189, 248, 0.75)',
+    lineDragging: 'rgba(250, 204, 21, 0.9)',
     sweep: 'rgba(251, 191, 36, 0.08)',
     wall: '#7dd3fc',
     wallSelected: '#fbbf24',
@@ -103,6 +121,9 @@ export default function MapView({
     onToggleRoom,
     onSelectThing,
     onPlaceThing,
+    showLines,
+    onDrawLine,
+    onCutLine,
     onMoveThing,
     onMoveCorner,
     onDropCorner,
@@ -128,6 +149,15 @@ export default function MapView({
     /** Where a sweep of empty space started, while it is being dragged out. */
     const [sweeping, setSweeping] = useState<Point | null>(null);
 
+    /**
+     * The line being pulled out of a thing, while the button is down: which
+     * thing it left, and where the pointer has got to, in metres.
+     */
+    const [wiring, setWiring] = useState<{
+        from: string;
+        at: Point;
+    } | null>(null);
+
     // Everything the draw loop needs, without making it a dependency of itself.
     const sweepRef = useRef<Point | null>(null);
 
@@ -142,6 +172,8 @@ export default function MapView({
         view,
         pointer,
         dragging,
+        wiring,
+        showLines,
     });
 
     useEffect(() => {
@@ -156,6 +188,8 @@ export default function MapView({
             view,
             pointer,
             dragging,
+            wiring,
+            showLines,
         };
 
         sweepRef.current = sweeping;
@@ -400,6 +434,93 @@ export default function MapView({
                     }
                 }
             });
+
+            // The wiring, under the things so a line never hides the dot it
+            // joins. Drawn from the middle of one to the middle of the other,
+            // with a head near the far end so which way it runs is readable —
+            // a line that does not say which end is the input is half a line.
+            const middles = new Map(
+                map.things.map((held) => [
+                    held.slug,
+                    toScreen(at, held.x, held.z),
+                ]),
+            );
+
+            context.lineWidth = 1.5;
+            context.strokeStyle = COLORS.line;
+
+            // Which lines are worth showing: all of them while the wire tool
+            // is out or the toggle is on, and otherwise only the ones running
+            // in or out of whatever is picked, so wiring does not clutter a
+            // level somebody is drawing rooms in.
+            const pickedThing =
+                state.current.thing === null
+                    ? null
+                    : (map.things[state.current.thing]?.slug ?? null);
+
+            const showsEvery =
+                state.current.showLines || state.current.tool === 'wire';
+
+            for (const drawn of map.lines ?? []) {
+                const from = middles.get(drawn.from);
+                const to = middles.get(drawn.to);
+
+                if (from === undefined || to === undefined) {
+                    continue;
+                }
+
+                if (
+                    !showsEvery &&
+                    drawn.from !== pickedThing &&
+                    drawn.to !== pickedThing
+                ) {
+                    continue;
+                }
+
+                context.beginPath();
+                context.moveTo(from[0], from[1]);
+                context.lineTo(to[0], to[1]);
+                context.stroke();
+
+                // The head, three quarters of the way along rather than at the
+                // end, so it is not buried under the thing it points at.
+                const angle = Math.atan2(to[1] - from[1], to[0] - from[0]);
+                const headX = from[0] + (to[0] - from[0]) * 0.72;
+                const headY = from[1] + (to[1] - from[1]) * 0.72;
+
+                context.beginPath();
+                context.moveTo(headX, headY);
+                context.lineTo(
+                    headX - Math.cos(angle - 0.4) * 8,
+                    headY - Math.sin(angle - 0.4) * 8,
+                );
+                context.lineTo(
+                    headX - Math.cos(angle + 0.4) * 8,
+                    headY - Math.sin(angle + 0.4) * 8,
+                );
+                context.closePath();
+                context.fillStyle = COLORS.line;
+                context.fill();
+            }
+
+            // And the one being dragged out, from its thing to the pointer.
+            const pulling = state.current.wiring;
+
+            if (pulling !== null) {
+                const from = middles.get(pulling.from);
+
+                if (from !== undefined) {
+                    const to = toScreen(at, pulling.at.x, pulling.at.z);
+
+                    context.strokeStyle = COLORS.lineDragging;
+                    context.setLineDash([5, 4]);
+                    context.beginPath();
+                    context.moveTo(from[0], from[1]);
+                    context.lineTo(to[0], to[1]);
+                    context.stroke();
+                    context.setLineDash([]);
+                }
+            }
 
             // Things, so there is something to place rooms around.
             map.things.forEach((held, index) => {
@@ -759,6 +880,30 @@ export default function MapView({
 
         const held = thingNear(level, spot, GRAB_PIXELS / (view?.scale ?? 1));
 
+        // The wire tool turns every thing into a peg to pull a line off. It is
+        // the only tool that does not move what it grabs, which is why it is a
+        // tool rather than a modifier: dragging a thing and dragging a line out
+        // of a thing are the same gesture, and one of them has to say so first.
+        if (tool === 'wire') {
+            if (held !== null) {
+                setWiring({ from: level.things[held].slug, at: spot });
+            } else {
+                // Nothing under it, so the click is asking to cut whatever line
+                // it landed on.
+                const cut = lineNear(
+                    level,
+                    spot,
+                    GRAB_PIXELS / (view?.scale ?? 1),
+                );
+
+                if (cut !== null) {
+                    onCutLine(cut.from, cut.to);
+                }
+            }
+
+            return;
+        }
+
         if (held !== null) {
             onSelectThing(held);
             setDraggingThing(held);
@@ -821,6 +966,12 @@ export default function MapView({
 
         setPointer({ x: snap(spot.x, grid), z: snap(spot.z, grid) });
 
+        if (wiring !== null) {
+            setWiring({ ...wiring, at: spot });
+
+            return;
+        }
+
         if (draggingSpawn) {
             onMoveSpawn({ x: snap(spot.x, grid), z: snap(spot.z, grid) });
 
@@ -866,6 +1017,25 @@ export default function MapView({
 
     const handleUp = (event: React.PointerEvent<HTMLCanvasElement>): void => {
         event.currentTarget.releasePointerCapture(event.pointerId);
+
+        // A line lands on whatever thing it was let go over, and on nothing at
+        // all otherwise: a line has two ends and both of them are things.
+        if (wiring !== null) {
+            const spot = at(event);
+
+            const landed =
+                spot === null
+                    ? null
+                    : thingNear(level, spot, GRAB_PIXELS / (view?.scale ?? 1));
+
+            if (landed !== null && level.things[landed].slug !== wiring.from) {
+                onDrawLine(wiring.from, level.things[landed].slug);
+            }
+
+            setWiring(null);
+
+            return;
+        }
 
         if (dragging !== null) {
             if (moved) {

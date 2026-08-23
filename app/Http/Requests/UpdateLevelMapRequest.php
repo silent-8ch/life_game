@@ -7,6 +7,7 @@ use App\Enums\BindingResponse;
 use App\Enums\ConditionType;
 use App\Enums\EffectType;
 use App\Enums\EmitWhen;
+use App\Enums\LineLogic;
 use App\Enums\ThingHinge;
 use App\Enums\ThingKind;
 use App\Enums\ThingRender;
@@ -142,20 +143,30 @@ class UpdateLevelMapRequest extends FormRequest
             'things.*.render' => ['sometimes', Rule::enum(ThingRender::class)],
             'things.*.hinge' => ['nullable', Rule::enum(ThingHinge::class)],
 
-            // A line name is a flag name — they share one namespace, so this
-            // is the same shape `alt_flag` already validates as.
-            'things.*.emits' => ['nullable', 'string', 'max:255'],
             'things.*.emitWhen' => ['nullable', Rule::enum(EmitWhen::class)],
             'things.*.triggeredBy' => ['nullable', Rule::enum(TriggeredBy::class)],
+            'things.*.logic' => ['nullable', Rule::enum(LineLogic::class)],
+
+            // A listener is the only bridge between drawn wiring and the flag
+            // namespace, and `writesFlag` is the only way a flag is written
+            // from the browser at all. See `StoreActionLineRequest`.
+            'things.*.readsFlag' => ['nullable', 'string', 'max:255'],
+            'things.*.writesFlag' => ['nullable', 'string', 'max:255'],
 
             'things.*.bindings' => ['sometimes', 'array', 'max:16'],
-            'things.*.bindings.*.line' => ['required', 'string', 'max:255'],
             'things.*.bindings.*.response' => ['required', Rule::enum(BindingResponse::class)],
             // Strings rather than numbers because the two responses want
             // different kinds: degrees for a rotate, on or off for a blocking.
             // The engine reads each one the way its own response means it.
             'things.*.bindings.*.on' => ['required', 'string', 'max:32'],
             'things.*.bindings.*.off' => ['required', 'string', 'max:32'],
+
+            // The wiring, by slug. That both ends name a thing in this same
+            // save is a question about the map as a whole, so it is checked
+            // after the things rather than here.
+            'lines' => ['sometimes', 'array', 'max:512'],
+            'lines.*.from' => ['required', 'string', 'max:255'],
+            'lines.*.to' => ['required', 'string', 'max:255'],
             'things.*.planeCount' => ['sometimes', 'integer', 'in:2,3'],
             'things.*.uvMode' => ['sometimes', Rule::enum(ThingUvMode::class)],
             'things.*.textureAlt' => ['nullable', 'string', $props],
@@ -250,6 +261,7 @@ class UpdateLevelMapRequest extends FormRequest
                 }
 
                 $this->checkItemsExist($validator, $things);
+                $this->checkLinesJoinThings($validator, $things);
 
                 foreach ($ends as $link => $count) {
                     if ($count !== 2) {
@@ -420,6 +432,34 @@ class UpdateLevelMapRequest extends FormRequest
                 "things.{$index}.stats",
                 'A stat block names exactly: '.implode(', ', PersonStats::ATTRIBUTES).'.'
             );
+        }
+    }
+
+    /**
+     * Both ends of every drawn line have to be things in this same map.
+     *
+     * A line to a slug nothing carries is a wire to nowhere, and it would save
+     * and then be silently ignored for ever — which is worse than a refusal,
+     * because the editor would go on drawing it.
+     *
+     * @param  array<int, array<string, mixed>>  $things
+     */
+    private function checkLinesJoinThings(Validator $validator, array $things): void
+    {
+        /** @var array<int, array<string, mixed>> $lines */
+        $lines = $this->input('lines', []);
+
+        $slugs = array_column($things, 'slug');
+
+        foreach ($lines as $index => $line) {
+            foreach (['from', 'to'] as $end) {
+                if (! in_array($line[$end] ?? null, $slugs, strict: true)) {
+                    $validator->errors()->add(
+                        "lines.{$index}.{$end}",
+                        'A line has to join two things in this level.',
+                    );
+                }
+            }
         }
     }
 

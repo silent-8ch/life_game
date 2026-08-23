@@ -19,6 +19,7 @@ use App\Models\Hotspot;
 use App\Models\Interaction;
 use App\Models\Item;
 use App\Models\Level;
+use App\Models\LevelActionLine;
 use App\Models\LevelSector;
 use App\Models\LevelThing;
 use App\Models\LevelThingBinding;
@@ -450,12 +451,14 @@ trait AuthorsGames
     }
 
     /**
-     * A pressure plate: an invisible, walk-through thing that puts an action
-     * line on while somebody is standing in its footprint.
+     * A pressure plate: an invisible, walk-through thing whose output is on
+     * while somebody is standing in its footprint.
      *
-     * Paul: *invisible non-solid things triggering more complex things.* So it
-     * has no picture and no collider — it is a rectangle on the floor plan and
-     * nothing else, and what it does is put a name on.
+     * Paul: *invisible non-solid things triggering more complex things.* No
+     * picture, no collider — a rectangle on the floor plan and nothing else.
+     *
+     * It has no name, and that is the point of the second slice: what it drives
+     * is whatever a line is drawn to. See `wire`.
      */
     protected function plate(
         Level $level,
@@ -466,7 +469,6 @@ trait AuthorsGames
         float $z,
         float $width,
         float $depth,
-        string $puts,
         TriggeredBy $worksFor = TriggeredBy::Anyone,
     ): LevelThing {
         $plate = $this->thing(
@@ -484,7 +486,6 @@ trait AuthorsGames
         );
 
         $plate->update([
-            'emits' => $puts,
             'emit_when' => EmitWhen::StoodOn,
             'triggered_by' => $worksFor,
         ]);
@@ -493,7 +494,20 @@ trait AuthorsGames
     }
 
     /**
-     * What a thing does while an action line is on, and while it is off.
+     * A line drawn from one thing to another: the wiring itself.
+     *
+     * A chain is two of these and nobody types a name.
+     */
+    protected function wire(LevelThing $from, LevelThing $to): LevelActionLine
+    {
+        return $from->level->actionLines()->create([
+            'from_thing_id' => $from->id,
+            'to_thing_id' => $to->id,
+        ]);
+    }
+
+    /**
+     * What a thing does while its input is on, and while it is off.
      *
      * Both sides always. *On and off each say what they do* — a resting default
      * is the same thing with a worse name and lets an author forget to say what
@@ -502,13 +516,11 @@ trait AuthorsGames
      */
     protected function answers(
         LevelThing $thing,
-        string $line,
         BindingResponse $response,
         string $on,
         string $off,
     ): LevelThingBinding {
         return $thing->bindings()->create([
-            'line' => $line,
             'response' => $response,
             'value_on' => $on,
             'value_off' => $off,

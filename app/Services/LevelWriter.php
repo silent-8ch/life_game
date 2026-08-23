@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\LineLogic;
 use App\Enums\ThingRender;
 use App\Enums\ThingUvMode;
 use App\Enums\TriggeredBy;
@@ -41,6 +42,10 @@ class LevelWriter
             ]);
 
             $this->writeThings($level, $map['things'] ?? []);
+
+            // After the things, because a line is two of them by slug and they
+            // have only just been given their ids.
+            $this->writeLines($level, $map['lines'] ?? []);
 
             // Edges point at both, so the shape goes before the corners do.
             $level->sectors()->delete();
@@ -92,6 +97,36 @@ class LevelWriter
     }
 
     /**
+     * The wiring, replaced wholesale like everything else a map save carries.
+     *
+     * By slug on the way in and by id on the way out, which is the only reason
+     * this cannot happen alongside the things: a line names two of them, and
+     * they do not have ids until they are written.
+     *
+     * @param  array<int, array<string, mixed>>  $lines
+     */
+    private function writeLines(Level $level, array $lines): void
+    {
+        $level->actionLines()->delete();
+
+        $ids = $level->things()->pluck('id', 'slug');
+
+        foreach ($lines as $line) {
+            $from = $ids[$line['from']] ?? null;
+            $to = $ids[$line['to']] ?? null;
+
+            if ($from === null || $to === null || $from === $to) {
+                continue;
+            }
+
+            $level->actionLines()->create([
+                'from_thing_id' => $from,
+                'to_thing_id' => $to,
+            ]);
+        }
+    }
+
+    /**
      * The people and the furniture, replaced wholesale like the shape is. What
      * a thing is called stays its own; nothing outside the level points at one
      * by id, so rebuilding the rows loses nothing.
@@ -119,9 +154,11 @@ class LevelWriter
                 'texture' => $thing['texture'] ?? null,
                 'render' => $thing['render'] ?? ThingRender::Box->value,
                 'hinge' => $thing['hinge'] ?? null,
-                'emits' => $thing['emits'] ?? null,
                 'emit_when' => $thing['emitWhen'] ?? null,
                 'triggered_by' => $thing['triggeredBy'] ?? TriggeredBy::Player->value,
+                'logic' => $thing['logic'] ?? LineLogic::Any->value,
+                'reads_flag' => $thing['readsFlag'] ?? null,
+                'writes_flag' => $thing['writesFlag'] ?? null,
                 'plane_count' => $thing['planeCount'] ?? 2,
                 'uv_mode' => $thing['uvMode'] ?? ThingUvMode::Tile->value,
                 'texture_alt' => $thing['textureAlt'] ?? null,
@@ -146,7 +183,6 @@ class LevelWriter
             // a binding somebody deleted.
             foreach ($thing['bindings'] ?? [] as $order => $binding) {
                 $written->bindings()->create([
-                    'line' => $binding['line'],
                     'response' => $binding['response'],
                     'value_on' => $binding['on'],
                     'value_off' => $binding['off'],

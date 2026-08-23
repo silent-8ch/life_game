@@ -10,6 +10,7 @@ use App\Models\Interaction;
 use App\Models\InteractionCondition;
 use App\Models\InteractionEffect;
 use App\Models\Level;
+use App\Models\LevelActionLine;
 use App\Models\LevelSector;
 use App\Models\LevelSectorEdge;
 use App\Models\LevelThing;
@@ -106,18 +107,28 @@ class LevelPayload
                 'angle' => $thing->angle,
                 'isSolid' => $thing->is_solid,
                 'hinge' => $thing->hinge?->value,
-                'emits' => $thing->emits,
                 'emitWhen' => $thing->emit_when?->value,
                 'triggeredBy' => $thing->triggered_by->value,
+                'logic' => $thing->logic->value,
+                'readsFlag' => $thing->reads_flag,
+                'writesFlag' => $thing->writes_flag,
                 'bindings' => $thing->bindings
                     ->map(fn (LevelThingBinding $binding): array => [
-                        'line' => $binding->line,
                         'response' => $binding->response->value,
                         'on' => $binding->value_on,
                         'off' => $binding->value_off,
                     ])->values()->all(),
                 'verbs' => $this->verbsFor($thing),
             ])->all(),
+            // The wiring, by slug rather than by id: a line is a thing the
+            // browser has to draw and follow, and it knows things by slug.
+            'lines' => $level->actionLines
+                ->map(fn (LevelActionLine $line): array => [
+                    'from' => $line->from->slug,
+                    'to' => $line->to->slug,
+                ])
+                ->values()
+                ->all(),
         ];
     }
 

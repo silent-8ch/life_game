@@ -115,28 +115,11 @@ export default function DrawingPanel({
 
             <div className="flex flex-col gap-2 border-t border-slate-800 pt-3">
                 <span className="text-[11px] tracking-wider text-slate-400 uppercase">
-                    Action line
+                    Action lines
                 </span>
 
                 <div className="grid grid-cols-2 gap-2">
-                    <Field label="Puts on">
-                        <input
-                            type="text"
-                            value={thing.emits ?? ''}
-                            placeholder="nothing"
-                            onChange={(event) =>
-                                onChangeThing({
-                                    emits:
-                                        event.target.value === ''
-                                            ? null
-                                            : event.target.value,
-                                })
-                            }
-                            className={inputClass}
-                        />
-                    </Field>
-
-                    <Field label="While">
+                    <Field label="Turns on">
                         <select
                             value={thing.emitWhen ?? ''}
                             onChange={(event) =>
@@ -150,11 +133,28 @@ export default function DrawingPanel({
                             }
                             className={inputClass}
                         >
-                            <option value="">Never</option>
-                            <option value="used">
-                                Used — a lever, and it stays
+                            <option value="">Not a source</option>
+                            <option value="used">When used — a lever</option>
+                            <option value="stood_on">
+                                While stood on — a plate
                             </option>
-                            <option value="stood_on">Stood on — a plate</option>
+                        </select>
+                    </Field>
+
+                    <Field label="Lines in combine">
+                        <select
+                            value={thing.logic}
+                            onChange={(event) =>
+                                onChangeThing({
+                                    logic: event.target
+                                        .value as LevelThing['logic'],
+                                })
+                            }
+                            className={inputClass}
+                        >
+                            <option value="any">Any — a wire, or an OR</option>
+                            <option value="all">All — an AND</option>
+                            <option value="none">None — a NOT</option>
                         </select>
                     </Field>
                 </div>
@@ -178,16 +178,47 @@ export default function DrawingPanel({
                     </Field>
                 )}
 
-                {thing.emits !== null && thing.emitWhen !== null && (
-                    <p className="text-xs leading-relaxed text-slate-500">
-                        {thing.emitWhen === 'used'
-                            ? 'It stays on once thrown, and is remembered.'
-                            : 'On only while somebody is standing on it, and never remembered — you are not standing on it next time.'}{' '}
-                        Anything that answers{' '}
-                        <span className="text-slate-200">{thing.emits}</span>{' '}
-                        moves with it.
-                    </p>
-                )}
+                <div className="grid grid-cols-2 gap-2">
+                    <Field label="On while flag">
+                        <input
+                            type="text"
+                            value={thing.readsFlag ?? ''}
+                            placeholder="never"
+                            onChange={(event) =>
+                                onChangeThing({
+                                    readsFlag:
+                                        event.target.value === ''
+                                            ? null
+                                            : event.target.value,
+                                })
+                            }
+                            className={inputClass}
+                        />
+                    </Field>
+
+                    <Field label="Sets flag while on">
+                        <input
+                            type="text"
+                            value={thing.writesFlag ?? ''}
+                            placeholder="none"
+                            onChange={(event) =>
+                                onChangeThing({
+                                    writesFlag:
+                                        event.target.value === ''
+                                            ? null
+                                            : event.target.value,
+                                })
+                            }
+                            className={inputClass}
+                        />
+                    </Field>
+                </div>
+
+                <p className="text-xs leading-relaxed text-slate-500">
+                    Nothing in a chain needs a name — draw a line from one thing
+                    to the next in the map. The two flag fields are the only
+                    bridge to names, for reaching a lock or the save.
+                </p>
             </div>
 
             <Field label="Frames">

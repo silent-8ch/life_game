@@ -82,7 +82,8 @@ it('sends every thing as a box with a kind', function (): void {
                     'animationFrames', 'animationFps',
                     'x', 'z', 'elevation', 'width', 'depth', 'height',
                     'angle', 'isSolid', 'hinge',
-                    'emits', 'emitWhen', 'triggeredBy', 'bindings',
+                    'emitWhen', 'triggeredBy', 'logic',
+                    'readsFlag', 'writesFlag', 'bindings',
                     'verbs',
                 ])
             )

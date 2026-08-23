@@ -137,4 +137,14 @@ class Level extends Model
     {
         return $this->hasMany(LevelThing::class)->orderBy('sort_order');
     }
+
+    /**
+     * The lines drawn between the things in this level.
+     *
+     * @return HasMany<LevelActionLine, $this>
+     */
+    public function actionLines(): HasMany
+    {
+        return $this->hasMany(LevelActionLine::class);
+    }
 }

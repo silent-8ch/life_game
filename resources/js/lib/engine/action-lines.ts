@@ -2,34 +2,42 @@ import { ACTION_LINE_PASSES } from '@/lib/engine/constants';
 import type { Level, LevelThing } from '@/types';
 
 /**
- * Named lines that are on or off, the things that put them on, and the things
- * that do something while they are.
+ * Lines drawn between things, and what runs along them.
  *
- * Paul: *maybe we steal from redstone. Have an interactions level where things
- * trigger other things. Invisible non-solid things triggering more complex
- * things. All lines are either on or off and things interact with it being on
- * or off.*
+ * Paul: *I need to be able to chain items. I think we need to switch to manual
+ * drawing of the redstone line.*
  *
- * ## An action line is a flag
+ * The first version connected things by **sharing a name**. This one connects
+ * them by a line drawn from one to the other, and the difference is not
+ * cosmetic: a chain of three things is now two lines and nothing typed, where
+ * before it was two names invented purely to join things that were already next
+ * to each other on the plan.
  *
- * One namespace, not two beside each other. A game flag is already a named line
- * that is on or off — `SetFlag` writes one, `FlagIs` reads one, and presence is
- * already the whole test. Making an action line the same name means `alt_flag` lights
- * a lamp while a line is on with nothing written for it, and an interaction can
- * be gated on an action line for free.
+ * ## Every thing is a node
  *
- * The cost is one namespace with two writers, and the ruling is that **the
- * engine owns it while the level is being played**. A plate flips its line this
- * frame, not a round trip later. The save is told afterwards, and only about
- * the lines worth remembering.
+ * There is no separate kind for a wire, a gate or a relay. A thing has an
+ * **input** — how the lines drawn into it combine — and an **output**, and what
+ * it is depends only on which of those it has anything to say about.
  *
- * ## What is cheap about this
+ * - A **plate** has no lines in and an output that follows who is standing on
+ *   it.
+ * - A **door** has lines in and bindings that answer them.
+ * - A **relay** has lines in and lines out and nothing else, so its output is
+ *   its input and a chain passes through it.
+ * - A **gate** is a thing with an opinion about how its inputs combine: `all`
+ *   is an AND, `none` is a NOT, `any` is what a wire does anyway.
+ * - A **listener** reads a flag into its output or writes its input to a flag,
+ *   and is the only bridge between drawn wiring and the name namespace.
  *
- * Two indexes, built once. Emitters are a flat list, and there are a handful in
- * a level. Bindings are a map from line name to the things that answer it —
- * which is how the frame finds the things that care: it does not look, it is
- * told. Only action lines that **changed** are looked up, so a frame in which
- * nothing moves costs the emitter reads and one comparison.
+ * That list is five names for one rule, which is the point: nothing in here
+ * asks what sort of thing it is holding.
+ *
+ * ## What is cheap about it
+ *
+ * The graph is built once. Each pass reads the sources, walks the edges, and
+ * stops when nothing changed — and what a pass costs is the number of lines,
+ * not the number of things. A level with no lines drawn costs one comparison a
+ * frame.
  */
 
 /** Somebody who can stand on a plate. */
@@ -40,50 +48,43 @@ export type Stander = {
     isPlayer: boolean;
 };
 
-/** What an action line asks of one thing, on each side. */
-export type Binding = {
-    /** The thing that answers, by slug. */
-    slug: string;
-    response: 'rotate' | 'blocking';
-    on: string;
-    off: string;
-};
-
-/** What the engine is asked to do when a line changes. */
+/** What the engine is asked to do when a thing's input changes. */
 export type Responders = {
     turn: (slug: string, degrees: number) => void;
     block: (slug: string, blocking: boolean) => void;
 };
 
 export type ActionLines = {
-    /** Whether a line is on right now. */
-    isOn: (line: string) => boolean;
-    /** Every line that is on, for anything that wants the set. */
-    live: () => ReadonlySet<string>;
+    /** Whether a thing's output is on right now. */
+    isOn: (slug: string) => boolean;
     /**
-     * A lever thrown. Returns the line it moved, or null if this thing is not
-     * a lever — so the caller knows whether there is anything to tell the save.
+     * A lever thrown. Hands back the flag it should be remembered as, or null
+     * when there is nothing to remember — which is most things.
      */
     use: (slug: string) => string | null;
     /**
-     * Reads the emitters, works out what changed, and tells the responders.
+     * Reads the sources, follows the lines, and tells the responders what
+     * changed.
      *
      * Called **after** everything has moved, so a plate answers about where
      * people are this frame rather than where they were last.
      */
     settle: (standing: Stander[], responders: Responders) => void;
-    /** Puts the latching lines back to what a save says. */
+    /** Puts the latching things back to what a save says. */
     restore: (flags: ReadonlySet<string>) => void;
+    /** Which flags the listeners are writing, for the save to be told. */
+    writing: () => string[];
 };
 
-/** A thing that puts a line on, and the test for whether it is. */
-type Emitter = {
+/** One thing, as the graph sees it. */
+type Node = {
     thing: LevelThing;
-    line: string;
-    /** A lever holds what it was last set to; a plate is asked every frame. */
-    latching: boolean;
-    /** Only meaningful for a lever: what it was last set to. */
+    /** Things with a line drawn into this one. */
+    from: string[];
+    /** Whether it is holding its own output on: a lever that has been thrown. */
     held: boolean;
+    /** Whether its output is on. */
+    out: boolean;
 };
 
 /**
@@ -91,8 +92,8 @@ type Emitter = {
  *
  * The thing's own rectangle, turned by its own angle — the same shape its
  * collider is, so a plate covers exactly what it looks like it covers. A plate
- * is not solid, so nothing about this is collision; it is the same arithmetic
- * asked for a different reason.
+ * is not solid, so nothing here is collision; it is the same arithmetic asked
+ * for a different reason.
  */
 function standingOn(thing: LevelThing, x: number, z: number): boolean {
     const angle = (thing.angle * Math.PI) / 180;
@@ -108,152 +109,172 @@ function standingOn(thing: LevelThing, x: number, z: number): boolean {
     );
 }
 
-/** Whether this emitter cares about whoever is standing there. */
+/** Whether this thing cares about whoever is standing there. */
 function counts(thing: LevelThing, who: Stander): boolean {
     if (thing.triggeredBy === 'anyone') {
         return true;
     }
 
-    // Paul's ruling: actors work plates and never levers, because standing on
-    // something is physical and flipping a switch is a deliberate act.
+    // Paul's ruling: actors stand on plates and never throw levers. Standing on
+    // something is physical; flipping a switch is a deliberate act.
     return thing.triggeredBy === 'player' ? who.isPlayer : !who.isPlayer;
 }
 
 export function createActionLines(level: Level): ActionLines {
-    const emitters: Emitter[] = level.things
-        .filter(
-            (thing) =>
-                (thing.emits ?? null) !== null &&
-                (thing.emitWhen ?? null) !== null,
-        )
-        .map((thing) => ({
-            thing,
-            line: thing.emits as string,
-            latching: thing.emitWhen === 'used',
-            held: false,
-        }));
-
-    /** Signal name to the things that answer it. Built once, read on change. */
-    const answering = new Map<string, Binding[]>();
+    const nodes = new Map<string, Node>();
 
     for (const thing of level.things) {
-        for (const binding of thing.bindings ?? []) {
-            answering.set(binding.line, [
-                ...(answering.get(binding.line) ?? []),
-                {
-                    slug: thing.slug,
-                    response: binding.response,
-                    on: binding.on,
-                    off: binding.off,
-                },
-            ]);
-        }
+        nodes.set(thing.slug, { thing, from: [], held: false, out: false });
     }
 
-    let live = new Set<string>();
+    for (const line of level.lines ?? []) {
+        nodes.get(line.to)?.from.push(line.from);
+    }
 
-    /** Puts one thing where a line being on or off asks it to be. */
-    const answer = (
-        binding: Binding,
-        on: boolean,
-        responders: Responders,
-    ): void => {
-        const value = on ? binding.on : binding.off;
+    /** Flags the level has been handed, for listeners that read one. */
+    let known: ReadonlySet<string> = new Set<string>();
 
-        if (binding.response === 'rotate') {
-            responders.turn(binding.slug, Number(value));
+    /** How the lines drawn into a thing combine. */
+    const inputOf = (node: Node): boolean => {
+        const on = node.from.map((slug) => nodes.get(slug)?.out === true);
 
-            return;
+        if (node.thing.logic === 'all') {
+            return on.length > 0 && on.every(Boolean);
         }
 
-        responders.block(binding.slug, value === '1' || value === 'true');
+        if (node.thing.logic === 'none') {
+            // A NOT of nothing is a thing that is always on, which redstone
+            // calls a torch. Not a mistake, and somebody will find it before
+            // anybody documents it.
+            return !on.some(Boolean);
+        }
+
+        return on.some(Boolean);
     };
 
-    /** Every line that is on, given who is standing where. */
-    const read = (standing: Stander[]): Set<string> => {
-        const on = new Set<string>();
-
-        for (const emitter of emitters) {
-            const lit = emitter.latching
-                ? emitter.held
-                : standing.some(
-                      (who) =>
-                          counts(emitter.thing, who) &&
-                          standingOn(emitter.thing, who.x, who.z),
-                  );
-
-            if (lit) {
-                on.add(emitter.line);
-            }
+    /**
+     * What a thing puts out.
+     *
+     * A source answers for itself and ignores whatever is drawn into it; a
+     * lever is not made to change its mind by a wire. Everything else passes
+     * its input on, which is what makes a plain thing a relay without being
+     * told to be one.
+     */
+    const outputOf = (node: Node, standing: Stander[]): boolean => {
+        if (node.thing.emitWhen === 'used') {
+            return node.held;
         }
 
-        return on;
+        if (node.thing.emitWhen === 'stood_on') {
+            return standing.some(
+                (who) =>
+                    counts(node.thing, who) &&
+                    standingOn(node.thing, who.x, who.z),
+            );
+        }
+
+        if (node.thing.readsFlag !== null) {
+            return known.has(node.thing.readsFlag);
+        }
+
+        return inputOf(node);
+    };
+
+    /** Puts one thing where its input being on or off asks it to be. */
+    const answer = (node: Node, on: boolean, responders: Responders): void => {
+        for (const binding of node.thing.bindings ?? []) {
+            const value = on ? binding.on : binding.off;
+
+            if (binding.response === 'rotate') {
+                responders.turn(node.thing.slug, Number(value));
+
+                continue;
+            }
+
+            responders.block(
+                node.thing.slug,
+                value === '1' || value === 'true',
+            );
+        }
     };
 
     return {
-        isOn: (line) => live.has(line),
-
-        live: () => live,
+        isOn: (slug) => nodes.get(slug)?.out === true,
 
         use: (slug) => {
-            const lever = emitters.find(
-                (emitter) => emitter.latching && emitter.thing.slug === slug,
-            );
+            const node = nodes.get(slug);
 
-            if (lever === undefined) {
+            if (node === undefined || node.thing.emitWhen !== 'used') {
                 return null;
             }
 
-            lever.held = !lever.held;
+            node.held = !node.held;
 
-            return lever.line;
+            // What the save is told is the flag a listener downstream writes,
+            // not the lever — because a lever has no name any more. That is
+            // worked out on the next settle; here we only say that something
+            // moved.
+            return slug;
         },
 
         settle: (standing, responders) => {
-            // Settled in passes rather than once, because a thing that answers
-            // a line may put another line on, and a chain has to reach the end
-            // of itself inside one frame or it reads as lag.
+            // Passes rather than one sweep, because a line's far end may be the
+            // near end of another and a chain has to reach its own end inside
+            // one frame or it reads as lag.
             //
             // Bounded, and `resolveCollisions` bounds itself the same way for
             // the same reason: some arrangements never settle. A ring of things
-            // driving each other is a redstone clock, which is a thing somebody
-            // will build on purpose, and the honest answer to one is to stop
-            // after a fixed number of passes and let it oscillate rather than
-            // to hang the tab looking for a resting state it does not have.
+            // driving each other is a redstone clock, which somebody will build
+            // on purpose, and the honest answer is to stop after a fixed number
+            // of passes and let it oscillate rather than to hang the tab
+            // looking for a rest it does not have.
             for (let pass = 0; pass < ACTION_LINE_PASSES; pass++) {
-                const now = read(standing);
+                let moved = false;
 
-                const changed = [
-                    ...[...now].filter((line) => !live.has(line)),
-                    ...[...live].filter((line) => !now.has(line)),
-                ];
+                for (const node of nodes.values()) {
+                    const was = node.out;
+                    const now = outputOf(node, standing);
 
-                live = now;
+                    if (now === was) {
+                        continue;
+                    }
 
-                if (changed.length === 0) {
+                    node.out = now;
+                    moved = true;
+                }
+
+                if (!moved) {
                     return;
                 }
 
-                // Only what changed, which is the whole reason this is cheap
-                // enough to run every frame. Nothing looks through the level
-                // for things that might care.
-                for (const line of changed) {
-                    for (const binding of answering.get(line) ?? []) {
-                        answer(binding, now.has(line), responders);
+                // Only things whose own input changed are told, and a thing
+                // with no bindings is told nothing whatever its input does.
+                for (const node of nodes.values()) {
+                    if ((node.thing.bindings ?? []).length > 0) {
+                        answer(node, inputOf(node), responders);
                     }
                 }
             }
         },
 
         restore: (flags) => {
-            for (const emitter of emitters) {
-                // Only the latching ones. A plate is momentary and you are not
-                // standing on it next session; putting it back would open a
+            known = flags;
+
+            for (const node of nodes.values()) {
+                // Only the latching ones. A plate is momentary: you are not
+                // standing on it next session, and putting it back would open a
                 // door in an empty room.
-                if (emitter.latching) {
-                    emitter.held = flags.has(emitter.line);
+                if (node.thing.emitWhen === 'used') {
+                    node.held = flags.has(`lever:${node.thing.slug}`);
                 }
             }
         },
+
+        writing: () =>
+            [...nodes.values()]
+                .filter(
+                    (node) => node.thing.writesFlag !== null && inputOf(node),
+                )
+                .map((node) => node.thing.writesFlag as string),
     };
 }
