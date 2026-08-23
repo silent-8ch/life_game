@@ -180,6 +180,18 @@
                     why: "Paul's own room: eight metres square with a mirror on every wall, and the exact spot he reported it from. Four mutually visible panes is the worst case the pane budget has — each recurses into the other three, so the tree is 3^depth and eight bounces ask for 6561 draws against a budget of 40. Spent as one counter in array order the first pane took all of it, and his five words for the result were that some mirrors are black and some are super stretched. Kept because it is the only spot in any level where panes compete for the budget at all.",
                 },
                 {
+                    label: 'mirrors-turned-a',
+                    level: 'hall-of-mirrors',
+                    at: '-0.3286,0.4759,72.61',
+                    why: "F-08's first snapshot, to the four decimals he sent. Paul reports this room by standing still and turning: two captures 3.5 s apart, same position, same pitch, yaw 72.61 then 36.55 — which is what he does when the thing that is wrong *moves as he rotates*. Every spot before this pair was a single fixed yaw, so a fault that only shows at some angles could sit in the four-mirror room through eighteen green scans. This is the half of the pair he saw it at first.",
+                },
+                {
+                    label: 'mirrors-turned-b',
+                    level: 'hall-of-mirrors',
+                    at: '-0.3286,0.4759,36.55',
+                    why: 'The same standing spot 36 degrees round, which is the other half of his turn. Its whole value is being compared with the one above: four mutually visible panes means which pane recurses into which changes with the yaw, and so does which of them the budget reaches. A difference between these two that is not just a different view of the same room is the fault he is reporting.',
+                },
+                {
                     label: 'mirrors-into-a-corner',
                     level: 'hall-of-mirrors',
                     at: '0,0,45',

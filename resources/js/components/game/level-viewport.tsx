@@ -8,7 +8,11 @@ import { createActors } from '@/lib/engine/actors';
 import type { MovedThings, PropSet } from '@/lib/engine/build/things';
 import { buildLevel } from '@/lib/engine/build-level';
 import { captureShots } from '@/lib/engine/capture';
-import { MAX_FRAME_SECONDS, REACH } from '@/lib/engine/constants';
+import {
+    MAX_FRAME_SECONDS,
+    PORTAL_BOUNCES,
+    REACH,
+} from '@/lib/engine/constants';
 import { createHands } from '@/lib/engine/hands';
 import type { HeldItem } from '@/lib/engine/hands';
 import { createInput } from '@/lib/engine/input';
@@ -654,24 +658,40 @@ export default function LevelViewport({
                         renderer.domElement.height,
                     ),
                 ),
-                // `?panes` also reads back what each portal is holding, which
-                // is a different picture from the one on the screen whenever a
+                // `?panes` also reads back what each pane is holding, which is
+                // a different picture from the one on the screen whenever a
                 // pane is hugged.
+                //
+                // **Mirrors as well as portals, and every depth.** It read
+                // `built.portals` at depth 0, which meant it read nothing at
+                // all in the one room anybody has ever reported a pane fault
+                // in: Paul's four mirrored walls have no portal in them. And
+                // *some mirrors are black* is a statement about a depth that
+                // was never drawn, so a reading of depth 0 cannot answer it.
+                //
+                // `drawn` is the diagnostic and is what makes black legible:
+                // `peek` hands back null for a depth nothing has rendered into,
+                // which is precisely the black pane. The mid-row reading is
+                // kept for the ones that do have a picture.
                 ...(new URLSearchParams(window.location.search).has('panes')
                     ? {
-                          panes: built.portals.flatMap((pane) =>
-                              [0.06, 0.5, 0.84].map((at) => ({
-                                  home: pane.home,
-                                  onto: pane.onto,
-                                  reading: readPane(
-                                      renderer,
-                                      pane,
-                                      legend,
-                                      0,
-                                      at,
-                                  ),
-                              })),
-                          ),
+                          panes: [
+                              ...built.mirrors.map(
+                                  (pane) => ['mirror', pane] as const,
+                              ),
+                              ...built.portals.map(
+                                  (pane) => ['portal', pane] as const,
+                              ),
+                          ].map(([kind, pane]) => ({
+                              kind,
+                              home: pane.home,
+                              onto: pane.onto,
+                              drawn: Array.from(
+                                  { length: PORTAL_BOUNCES + 1 },
+                                  (_, depth) => pane.peek(depth) !== null,
+                              ),
+                              reading: readPane(renderer, pane, legend, 0, 0.5),
+                          })),
                       }
                     : {}),
             });
