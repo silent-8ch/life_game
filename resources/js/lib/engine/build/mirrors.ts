@@ -9,13 +9,15 @@ import { createPortalSurface } from '@/lib/engine/portal-surface';
 import type { Edge } from '@/lib/engine/sectors';
 
 /**
+ * The left-for-right turn every mirror camera carries, so that its basis stays
+ * right-handed. Shared: it is the same matrix for every wall in every level.
+ */
+const TURNED = new THREE.Matrix4().makeScale(-1, 1, 1);
+
+/**
  * A mirror: the same pane as a portal, except that the camera drawing it is
  * the viewpoint reflected in the wall rather than carried through it, and
  * the plane it is clipped against is the wall itself.
- *
- * The camera is built by looking from the reflected eye rather than by a
- * reflection matrix, because a matrix with a flip in it reverses the winding
- * of every triangle in the scene and turns one-sided surfaces inside out.
  */
 export function buildMirrorPane(
     ctx: BuildContext,
@@ -94,7 +96,31 @@ export function buildMirrorPane(
             // rotation that is merely near it is wrong by a flip, and worst
             // where the mirror faces you square on, because that is where the
             // most of it is on screen.
-            out.matrixWorld.multiplyMatrices(reflection, from.matrixWorld);
+            out.matrixWorld
+                .multiplyMatrices(reflection, from.matrixWorld)
+                // ...and then turned left-for-right, which costs nothing and
+                // is the difference between a mirror that nests and one that
+                // does not.
+                //
+                // `R · M` alone has a determinant of −1, because a reflection
+                // is left-handed. Three reverses the winding of every triangle
+                // drawn through such a camera and does not know it has: the
+                // renderer compensates for a negative determinant on an
+                // **object** and never looks at the camera's. Every
+                // single-sided material in the level is then culled inside
+                // out — the panes first of all, so a mirror's view contains no
+                // mirrors and there is nothing for the next level to nest in;
+                // the sky, which is `BackSide`, so it goes black; and any prop
+                // that did not ask for two sides.
+                //
+                // Flipping x in the camera's own space makes the basis
+                // right-handed again. The picture it draws is the same picture
+                // left-for-right, and the pane reads it back flipped, which is
+                // one subtraction in the fragment shader. Measured equal to six
+                // figures at every point tried, and on this wall's own plane it
+                // lands on the same pixel as the player's own camera — the
+                // identity the screen-space read is built on.
+                .multiply(TURNED);
             out.matrixWorldInverse.copy(out.matrixWorld).invert();
         },
         viewerAt: (from) => {
@@ -109,6 +135,7 @@ export function buildMirrorPane(
                 yaw: Math.atan2(-ahead.x, -ahead.z),
             };
         },
+        mirrored: true,
         exitPoint: centre,
         exitNormal: normal,
         textureWidth: MIRROR_TEXTURE_WIDTH,

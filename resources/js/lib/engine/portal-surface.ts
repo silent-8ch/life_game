@@ -30,18 +30,16 @@ import {
  * view at a place the pane is not.)
  */
 /**
- * Where a fragment reads the far view from. A portal pane reads by its own
- * position on the screen: both cameras share one projection and the portal maps
- * one frustum onto the other, so a ray leaving the eye through a point on the
- * screen arrives, on the far side, through that same point — which is the whole
- * reason stepping through is continuous.
+ * Where a fragment reads the far view from. **Both kinds read the same way**:
+ * by where the fragment lands on the screen. Both cameras share one projection
+ * and each transform maps one frustum exactly onto the other, so a ray leaving
+ * the eye through a point on the screen arrives, on the far side, through that
+ * same point — which is the whole reason stepping through a portal is
+ * continuous, and the same reason a mirror's edge never disagrees with the wall
+ * it is set into.
  *
- * A mirror reads through the far camera's own projection instead. Reflecting
- * leaves the mirror's plane exactly where it was, so the points being shaded are
- * fixed by the transform and project the same either way; and the camera that
- * draws a reflection is built by looking from the reflected eye rather than by a
- * reflection matrix, because a matrix with a flip in it turns every surface in
- * the scene inside out.
+ * A mirror adds one thing to that: its camera is the player's reflected in the
+ * wall and then turned left-for-right, and the read flips back. See `mirrored`.
  */
 /**
  * How far in from its own edge a pane reads, in texels of the target it reads
@@ -103,6 +101,7 @@ const FRAGMENT_SHADER = `
     uniform vec2 paneTexels;
     uniform float edgeBias;
     uniform float shrink;
+    uniform float mirrored;
     varying vec4 vPane;
     varying vec3 vMiddle;
 
@@ -130,6 +129,15 @@ const FRAGMENT_SHADER = `
                 at = mix(at, centre, clamp(edgeBias / max(reach, 0.0001), 0.0, 0.25));
                 at = centre + (at - centre) * shrink;
             }
+
+            // Undo the mirror camera's left-for-right turn: see the
+            // mirrored option, which is where the reasoning lives.
+            // Exact, and cheap: the two cameras differ by nothing else, so the
+            // whole of the correction is one subtraction about the middle of
+            // the screen. Last of all, after the edge bias and the shrink,
+            // which are both symmetric about that same middle and so give the
+            // same answer whichever side of the flip they are done on.
+            at.x = mix(at.x, 1.0 - at.x, mirrored);
 
             gl_FragColor = vec4(texture2D(pane, at).rgb, 1.0);
 
@@ -418,8 +426,25 @@ export type PortalSurfaceOptions = {
         z: number;
         yaw: number;
     };
-    /** True for a mirror: read the far view through the far camera, not the screen. */
-    /** Multiplied into what the surface shows; a mirror gives back less light. */
+    /**
+     * True for a mirror, and the whole of what makes one different here.
+     *
+     * A reflection is left-handed. Built honestly, as `R · M`, the camera that
+     * draws it has a determinant of −1, and three reverses the winding of every
+     * triangle drawn through it — `WebGLRenderer` compensates for a negative
+     * determinant on an **object**, never on a camera. Every single-sided
+     * material in the scene is then culled inside out: the panes themselves,
+     * which is a mirror with no other mirror in it; the sky, which is
+     * `BackSide` and so goes black; and any prop that did not think to ask for
+     * two sides.
+     *
+     * So the camera carries a further flip in its own x, which makes it
+     * right-handed again, and the pane reads back flipped. The picture is
+     * identical — measured to six figures across the frame, and on the mirror's
+     * own plane it lands on the same pixel as the player's camera, which is the
+     * identity the whole screen-space read rests on.
+     */
+    mirrored?: boolean;
     /**
      * The plane the camera's near plane is tilted onto, so nothing between it
      * and the surface is drawn. A portal's is its far mouth; a mirror's is
@@ -616,6 +641,7 @@ export function createPortalSurface(
                 ),
             },
             edgeBias: { value: EDGE_BIAS_TEXELS },
+            mirrored: { value: options.mirrored === true ? 1 : 0 },
         },
         vertexShader: VERTEX_SHADER,
         fragmentShader: FRAGMENT_SHADER,
