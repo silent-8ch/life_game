@@ -117,6 +117,21 @@ it('round-trips how a thing is drawn', function (): void {
         ->and($thing->animation_fps)->toEqual(12.0);
 });
 
+it('round-trips a flat thing, which keeps its angle and nothing else', function (): void {
+    saveMap(aMapWithThing(['render' => 'flat', 'angle' => 30.0]))
+        ->assertRedirect()->assertSessionHasNoErrors();
+
+    $thing = LevelThing::where('slug', 'pot-plant')->firstOrFail();
+
+    // The angle is the whole of what a flat thing is authored with. `box`,
+    // `billboard` and `cross` left the same gap between them — none of them is
+    // one quad at a fixed angle, which is what a window, a picture, a sign or a
+    // door is — and closing it needed no column, because a thing has carried an
+    // angle since before any of them existed.
+    expect($thing->render)->toBe(ThingRender::Flat)
+        ->and($thing->angle)->toEqual(30.0);
+});
+
 it('turns away a star with a number of planes nobody draws', function (): void {
     // Two quads or three. One is a billboard that forgot to turn, and four is
     // twice the fill rate for a silhouette nobody can tell from three.

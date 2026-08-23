@@ -422,7 +422,10 @@ trait AuthorsGames
         );
 
         $door->update([
-            'render' => ThingRender::Box,
+            // One quad at the door's own angle, which is what a door is. It was
+            // a box until `flat` existed: six faces to show one picture, four
+            // of them edge-on slivers and one of them the picture backwards.
+            'render' => ThingRender::Flat,
             'uv_mode' => ThingUvMode::Fit,
             'is_door' => true,
             'swing' => $swing,

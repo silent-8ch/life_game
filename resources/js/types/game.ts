@@ -208,7 +208,7 @@ export type Stats = {
  * three quads in a star and stays put, so a row of plants does not swivel
  * together as the player walks past.
  */
-export type ThingRender = 'box' | 'billboard' | 'cross';
+export type ThingRender = 'box' | 'billboard' | 'cross' | 'flat';
 
 /**
  * Whether a thing's texture repeats or is stretched to fit.

@@ -47,6 +47,7 @@ export default function DrawingPanel({
                         Billboard — always faces you
                     </option>
                     <option value="cross">Cross — planes in a star</option>
+                    <option value="flat">Flat — one quad, locked angle</option>
                 </select>
             </Field>
 

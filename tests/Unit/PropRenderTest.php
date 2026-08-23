@@ -321,3 +321,54 @@ it('leaves a tiling box tiling and lets a fitting one fill its faces', function 
     expect($answer['door'])->toEqual([0, 1])
         ->and($answer['counter'][1])->toEqual(3);
 });
+
+it('leaves a flat thing at its own angle while a billboard chases the viewer', function (): void {
+    $answer = propsBuilt(
+        "[thing({ slug: 'window', render: 'flat', angle: 30 }), thing({ slug: 'sign', render: 'billboard', angle: 30, x: 7 })]",
+        <<<'JS'
+        const holderOf = (slug) => propMeshes
+            .find((mesh) => mesh.userData.thingSlug === slug)
+            .parent;
+
+        const facing = (slug) => round(
+            (holderOf(slug).rotation.y * 180) / Math.PI,
+        );
+
+        const quads = (slug) => propMeshes
+            .filter((mesh) => mesh.userData.thingSlug === slug).length;
+
+        const before = { window: facing('window'), sign: facing('sign') };
+
+        // Somebody walks round to the other side and everything is turned to
+        // face them, which is what happens once a frame in play.
+        built.props.faceViewer(-20, -20);
+
+        process.stdout.write(JSON.stringify({
+            before,
+            after: { window: facing('window'), sign: facing('sign') },
+            quads: { window: quads('window'), sign: quads('sign') },
+            sides: propMeshes
+                .filter((mesh) => mesh.userData.thingSlug === 'window')
+                .map((mesh) => mesh.material.side),
+            doubleSide: 2,
+        }));
+        JS
+    );
+
+    // One quad each, and both start at the thing's own angle — negated, as
+    // every authored angle is at the boundary.
+    expect($answer['quads'])->toEqual(['window' => 1, 'sign' => 1])
+        ->and($answer['before'])->toEqual(['window' => -30, 'sign' => -30]);
+
+    // Then somebody moves. The billboard turns to them and the flat does not,
+    // and that is the entire difference between the two modes: a flat is a
+    // billboard left out of the list of things that get turned.
+    expect($answer['after']['window'])->toEqual(-30)
+        ->and($answer['after']['sign'])->not->toEqual(-30);
+
+    // Drawn on both sides, which is what makes the back of a door read as a
+    // door. The mirroring comes with it and costs nothing: the back face of a
+    // quad shows its own UVs the other way round, so the back is the front
+    // flipped without anybody arranging it.
+    expect($answer['sides'])->toEqual([$answer['doubleSide']]);
+});

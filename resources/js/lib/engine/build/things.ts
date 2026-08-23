@@ -9,7 +9,7 @@ import type { LevelThing } from '@/types';
 /**
  * Everything on the plan that is not a room and not a person.
  *
- * Three ways of drawing one:
+ * Four ways of drawing one:
  *
  * - `box` is what everything was before there were props: six faces of the
  *   thing's own size. Its `uvMode` decides whether the picture tiles across
@@ -19,6 +19,20 @@ import type { LevelThing } from '@/types';
  * - `cross` is two or three quads standing in each other, evenly spaced and
  *   turned by the thing's own angle. Nothing moves at runtime, which is why a
  *   plant costs nothing across forty portal passes.
+ * - `flat` is one quad at the thing's own angle, which never turns. A window, a
+ *   picture, a sign, a door.
+ *
+ * `flat` is a billboard that is not told to face anybody, and that is the whole
+ * of it in code — one quad, the same cutout material, left in the holder the
+ * thing's `angle` already turns. It is called out rather than left to fall
+ * through the same branch by accident, because *not being in the list of things
+ * that turn* is the entire behaviour and a reader should not have to notice its
+ * absence to find that out.
+ *
+ * Both sides come free and so does the mirroring: props are drawn
+ * `DoubleSide`, and the back face of a quad shows its own UVs the other way
+ * round, so the back is the front flipped. Paul's ruling for a door, arrived at
+ * by not doing anything.
  */
 
 /** How long a cutout pixel has to be to be drawn at all. */
@@ -285,6 +299,8 @@ export function buildThings(ctx: BuildContext): PropSet {
             const material = cutout(map);
             thingMaterials.set(thing.slug, material);
 
+            // A cross is a star of them; a billboard and a flat are one each,
+            // and differ only in whether anybody turns them afterwards.
             const angles =
                 thing.render === 'cross'
                     ? crossAngles(thing.planeCount, 0)
@@ -306,7 +322,9 @@ export function buildThings(ctx: BuildContext): PropSet {
 
             if (thing.render === 'billboard') {
                 // Turned every pass rather than built facing anywhere, so the
-                // holder's own angle is not what decides where it looks.
+                // holder's own angle is not what decides where it looks. A
+                // `flat` is the same quad left out of this list, which is what
+                // makes its angle mean something.
                 billboards.push(holder);
             }
         }
