@@ -832,18 +832,29 @@ export default function LevelViewport({
                 );
             };
 
-            void postSnapshot(spot, store().url).then((what) => {
-                if ('failed' in what) {
-                    failed(what.failed);
+            // The pictures, the same three the ticket path takes, read back
+            // offscreen so this works in ordinary play rather than only in
+            // debug mode. A snapshot that carries only a position is a
+            // position somebody else has to go and stand on before they can
+            // see anything, which is most of a day's round trip.
+            const sending = captureShots(renderer, scene, camera, built.group)
+                .then((taken) => taken)
+                .catch(() => null);
 
-                    return;
-                }
+            void sending
+                .then((taken) => postSnapshot(spot, store().url, taken))
+                .then((what) => {
+                    if ('failed' in what) {
+                        failed(what.failed);
 
-                show(`Saved as ${what.saved}`);
-                callbacks.current.onMessage?.(
-                    `Snapshot saved as ${what.saved}.`,
-                );
-            });
+                        return;
+                    }
+
+                    show(`Saved as ${what.saved}`);
+                    callbacks.current.onMessage?.(
+                        `Snapshot saved as ${what.saved}.`,
+                    );
+                });
         };
 
         /**

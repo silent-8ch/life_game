@@ -26,10 +26,11 @@ function ticketAnswer(string $body): array
     $script = <<<JS
         globalThis.document = { cookie: '' };
 
-        const {
-            ticketFromSpot,
-            ticketForm,
-        } = await import('@/lib/engine/ticket.ts');
+        const { ticketFromSpot } = await import('@/lib/engine/ticket.ts');
+        // The flattener lives with `guardHeaders` now, because a debug snapshot
+        // carries the same pictures and wants the same form — and a ticket that
+        // imported it back from here would close a cycle between the two.
+        const { reportForm } = await import('@/lib/engine/snapshot.ts');
 
         /** A spot as `describeSpot()` hands one back. */
         const aSpot = (changes = {}) => ({
@@ -130,7 +131,7 @@ it('leaves out what nobody said rather than sending the word null', function ():
         );
 
         process.stdout.write(JSON.stringify({
-            held: contents(ticketForm(fields, {})),
+            held: contents(reportForm(fields, {})),
         }));
         JS);
 
@@ -146,7 +147,7 @@ it('spells nested fields the way PHP reassembles them', function (): void {
     // any test written against my own assumption and fail against the server.
     $answer = ticketAnswer(<<<'JS'
         const fields = ticketFromSpot(aSpot(), 'wrong');
-        const held = contents(ticketForm(fields, {}));
+        const held = contents(reportForm(fields, {}));
 
         process.stdout.write(JSON.stringify({ held }));
         JS);
@@ -177,7 +178,7 @@ it('names each picture by the view it is of', function (): void {
         };
 
         process.stdout.write(JSON.stringify({
-            keys: Object.keys(contents(ticketForm(fields, shots))),
+            keys: Object.keys(contents(reportForm(fields, shots))),
         }));
         JS);
 
@@ -191,7 +192,7 @@ it('still sends a report when there were no pictures to take', function (): void
     // much the worse outcome.
     $answer = ticketAnswer(<<<'JS'
         const fields = ticketFromSpot(aSpot(), 'no pictures');
-        const held = contents(ticketForm(fields, {}));
+        const held = contents(reportForm(fields, {}));
 
         process.stdout.write(JSON.stringify({
             note: held.note,

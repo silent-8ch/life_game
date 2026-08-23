@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\File;
 
 /**
@@ -103,4 +104,63 @@ it('is not there anywhere but the machine the game is built on', function (): vo
     $this->post(route('debug.snapshot'), aSnapshot())->assertNotFound();
 
     expect(File::exists($this->where))->toBeFalse();
+});
+
+it('puts the pictures down beside the note', function (): void {
+    $answer = $this->post(route('debug.snapshot'), [
+        ...aSnapshot(['edgesNearby' => []]),
+        'shots' => [
+            'normal' => UploadedFile::fake()->image('n.png'),
+            'wireframe' => UploadedFile::fake()->image('w.png'),
+            'walls' => UploadedFile::fake()->image('p.png'),
+        ],
+        'legend' => [['wall' => 'north', 'css' => '0,255,102']],
+    ]);
+
+    $answer->assertOk();
+
+    $saved = $answer->json('saved');
+    $stem = substr($saved, 0, -strlen('.json'));
+
+    // Named for the note rather than filed under a folder of their own, so one
+    // `ls` shows the notes in the order they were taken with their pictures
+    // beside them.
+    expect($answer->json('shots'))->toBe([
+        "{$stem}-normal.png",
+        "{$stem}-wireframe.png",
+        "{$stem}-walls.png",
+    ]);
+
+    foreach ($answer->json('shots') as $shot) {
+        expect(File::exists("{$this->where}/{$shot}"))->toBeTrue();
+    }
+
+    // The legend goes in the note itself. Without it the walls view decodes to
+    // nothing — the colours belong to that build of that level and cannot be
+    // worked out from the pixels — so the two are written together or not at
+    // all, which is the rule SpotCapture already keeps for a ticket.
+    $note = json_decode(File::get("{$this->where}/{$saved}"), true);
+
+    expect($note['legend'])->toBe([['wall' => 'north', 'css' => '0,255,102']])
+        ->and($note)->not->toHaveKey('shots');
+});
+
+it('takes a snapshot from the middle of a room, where no edge is near', function (): void {
+    // A multipart form cannot carry an empty array: the flattener writes one
+    // entry per item, so nought items writes nothing at all and the key arrives
+    // missing. When `edgesNearby` was `present` that refused every snapshot
+    // taken away from a wall, which is most of any room — and it would have
+    // failed only once pictures were attached, which is the worst way to find
+    // out.
+    $spot = aSnapshot();
+    unset($spot['edgesNearby']);
+
+    $answer = $this->post(route('debug.snapshot'), $spot);
+
+    $answer->assertOk();
+
+    $note = json_decode(File::get("{$this->where}/{$answer->json('saved')}"), true);
+
+    // Put back, so that whoever reads it is not reading a transport detail.
+    expect($note['edgesNearby'])->toBe([]);
 });

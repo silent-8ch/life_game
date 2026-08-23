@@ -1,5 +1,5 @@
 import type { WallPaint } from '@/lib/engine/probe-backdrop';
-import { guardHeaders } from '@/lib/engine/snapshot';
+import { guardHeaders, reportForm } from '@/lib/engine/snapshot';
 import type { Snapshot } from '@/lib/engine/snapshot';
 
 /**
@@ -93,70 +93,6 @@ export function ticketFromSpot(
 }
 
 /**
- * Writes one value into a form under PHP's bracket notation.
- *
- * The reason this is not `JSON.stringify` under a single key, which is the
- * obvious thing and is wrong: a multipart body carries strings, and the
- * endpoint's rules say `'at' => ['nullable', 'array']`. A JSON string is not an
- * array, so every nested field would fail validation — and it would fail at the
- * worst possible moment, after somebody has stopped playing, typed out what was
- * wrong and pressed send. `at[x]=2.5` is what PHP reassembles into an array.
- *
- * Nulls are **left out entirely** rather than written. `FormData` has one type,
- * string, so a null becomes the four characters `null` — and a player standing
- * outside every room would report standing in a room *called* null.
- */
-function put(form: FormData, key: string, value: unknown): void {
-    if (value === null || value === undefined) {
-        return;
-    }
-
-    if (Array.isArray(value)) {
-        value.forEach((item, index) => put(form, `${key}[${index}]`, item));
-
-        return;
-    }
-
-    if (typeof value === 'object') {
-        for (const [name, item] of Object.entries(value)) {
-            put(form, `${key}[${name}]`, item);
-        }
-
-        return;
-    }
-
-    // Booleans as 1 and 0, not "true" and "false": PHP's boolean validation
-    // takes the former, and the string "false" is truthy in every language
-    // that would read it by accident.
-    form.set(
-        key,
-        typeof value === 'boolean' ? (value ? '1' : '0') : String(value),
-    );
-}
-
-/**
- * Flattens a ticket into a form, because it carries files.
- */
-export function ticketForm(
-    fields: TicketFields,
-    shots: Record<string, Blob>,
-): FormData {
-    const form = new FormData();
-
-    for (const [key, value] of Object.entries(fields)) {
-        put(form, key, value);
-    }
-
-    for (const [kind, blob] of Object.entries(shots)) {
-        // Named for the view rather than numbered, because the server files
-        // them by name and the admin panel reads them back the same way.
-        form.set(`shots[${kind}]`, blob, `${kind}.png`);
-    }
-
-    return form;
-}
-
-/**
  * Sends a ticket and says what happened.
  *
  * Never throws, for the same reason `postSnapshot` does not: the person who
@@ -180,7 +116,7 @@ export async function postTicket(
             // multipart boundary it just generated. Setting it by hand here is
             // the classic way to make every upload arrive empty.
             headers: { Accept: 'application/json', ...guardHeaders() },
-            body: ticketForm(fields, shots),
+            body: reportForm(fields, shots),
         });
     } catch {
         return { failed: 'the server did not answer' };
