@@ -208,8 +208,10 @@ nothing to recover.
 
 **An ordering from planning comes with Paul's sentence, not just a priority.** Scanner was sent F-08 as ahead of everything and stopped on reaching Paul's earlier words via production — *log it at the end* — because those were his and planning's were not. He had moved it up because scanner was free; planning relayed the move without the reason. Scanner built an instrument and a reproduction in the gap, so nothing was lost, but: **when a relay carries an ordering, his words are the part the agent needs.**
 
+**A new request gets asked where it goes.** Paul: *"maybe ask me where in the queue new requests should go."* One question, with the current queue shown, when he asks for something — not assumed front, not assumed back. The mirror bug went both ways in one afternoon because planning guessed each time.
+
 **Paul's comments are priorities.** His words, and the standing rule from here: anything he says in
-passing goes to the **front** of the queue, not behind whatever is in flight. A-11 waits behind
+passing goes to the **front** of the queue, not behind whatever is in flight — **unless he has placed it**, which is now the default. A-11 waits behind
 his door-pathfinding ask; 1-24/25/26 go ahead of the sky lids. The board orders by what he
 said last, not by what was planned first.
 
