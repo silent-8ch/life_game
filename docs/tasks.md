@@ -206,6 +206,8 @@ nothing to recover.
 
 **Always fix forward. Finish what you are doing.** Paul: *"don't let me stop you mid work."* A new instruction that arrives mid-task changes what comes **next**, not what is in hand. Land the slice, then take the change. A half-built thing abandoned for a better idea is worth less than a finished thing the better idea is then applied to — and a stop-and-reverse, which happened once on signals, costs a session two messages that read as one decision.
 
+**An ordering from planning comes with Paul's sentence, not just a priority.** Scanner was sent F-08 as ahead of everything and stopped on reaching Paul's earlier words via production — *log it at the end* — because those were his and planning's were not. He had moved it up because scanner was free; planning relayed the move without the reason. Scanner built an instrument and a reproduction in the gap, so nothing was lost, but: **when a relay carries an ordering, his words are the part the agent needs.**
+
 **Paul's comments are priorities.** His words, and the standing rule from here: anything he says in
 passing goes to the **front** of the queue, not behind whatever is in flight. A-11 waits behind
 his door-pathfinding ask; 1-24/25/26 go ahead of the sky lids. The board orders by what he
