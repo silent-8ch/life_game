@@ -163,12 +163,33 @@ export function prepareReflections(
          */
         const inView = panes.filter((pane) => inViewOf(pane, camera));
 
+        // Never less than the depth one pane's own chain needs.
+        //
+        // Dividing the budget among the panes in view stops any one of them
+        // taking the lot, which is what a room of four mirrors needed. But
+        // divide far enough and every pane is starved instead: at a budget of
+        // 16 with four mirrors in view each got **four** draws for a chain that
+        // wants `PORTAL_BOUNCES`, so half the corridor was never drawn. The end
+        // of it went black, and the fallback then showed a level that did not
+        // match the one around it — which is exactly the pair of symptoms Paul
+        // reports, *black and super stretched*, in exactly the room he reports
+        // them in.
+        //
+        // **That was mine.** A-23 cut the budget from 40 to 16 on measurements
+        // taken at level 8 and in the portal demo, and neither has four
+        // mutually visible panes; at 40 the share was 10 and the chain fitted.
+        // The floor is what makes the cut safe rather than the number: a pane
+        // the player can see is always allowed the depth its own tunnel needs,
+        // and the division only decides who gets more than that.
+        //
+        // The cost is bounded by the panes actually in view rather than by the
+        // budget, so a mirrored octagon costs eight chains instead of four.
+        // Correctness first: an illusion that ends in a black wall is not worth
+        // the milliseconds it saves.
         const share = Math.max(
-            1,
+            PORTAL_BOUNCES,
             Math.floor(PORTAL_RENDER_BUDGET / Math.max(inView.length, 1)),
         );
-
-        let spent = 0;
 
         /**
          * Draws a pane as seen from a viewpoint. Going deeper draws whatever
@@ -182,36 +203,60 @@ export function prepareReflections(
             from: THREE.PerspectiveCamera,
             depth: number,
             allowed: number,
+            /** Draws this branch may spend, itself included. */
+            purse: number,
         ): void => {
-            if (depth < allowed && spent < share) {
+            if (depth < allowed && purse > 1) {
                 const inner = pane.aim(from);
 
                 // This pane's own continuation first — see `tunnelFirst`.
-                for (const other of tunnelFirst(panes, pane)) {
-                    // The far mouth is taken out of this view, so drawing what
-                    // it holds is work for nobody. Skipping it is most of the
-                    // saving: for an ordinary pair, the only pane in the room
-                    // beyond is the partner, so that whole branch disappears
-                    // and the budget goes where it can be seen — a portal hung
-                    // to look back at itself.
-                    if (other.mesh === pane.partner) {
-                        continue;
-                    }
-
-                    // And only what stands in a room this pane can see into. A
-                    // frustum knows nothing of walls, so without this every pane
-                    // in the level that happened to fall in the cone would be
-                    // drawn, and the depth would go on rooms that are not on the
-                    // other side of this one at all. A doorway counts: a mirror
-                    // one room further on is still in the picture, and if it is
-                    // never drawn for this view its reflection sits frozen.
-                    if (
+                // Every branch gets the same purse, and that is the point.
+                //
+                // This used to spend one counter shared across the whole tree,
+                // in array order. In a room of four mirrors the first sibling
+                // in the array took the depth and the other three met an
+                // exhausted budget and got nothing — so in a **perfectly
+                // symmetric room one mirror looked right and three did not**,
+                // decided by nothing but position in an array. Paul found that
+                // with four captures ninety degrees apart from one spot, and no
+                // geometry can produce it.
+                //
+                // Splitting what is left evenly means the room degrades
+                // symmetrically: every mirror gets the same depth, and a
+                // shallower one is shallower everywhere at once rather than
+                // being the unlucky one.
+                const kids = tunnelFirst(panes, pane).filter(
+                    (other) =>
+                        other.mesh !== pane.partner &&
                         pane.onto.includes(other.home) &&
-                        inViewOf(other, inner)
-                    ) {
-                        deepen(other, inner, depth + 1, allowed);
-                    }
-                }
+                        inViewOf(other, inner),
+                );
+
+                // Half down the chain, half shared among the rest.
+                //
+                // An even split would be fair and shallow: three siblings each
+                // taking a third means the corridor gets a third of the depth
+                // it would otherwise reach, and depth is the whole of what a
+                // tunnel is. `tunnelFirst` has already put the pane that
+                // continues this one at the front, so the front branch takes
+                // half and the others divide the remainder evenly between them
+                // — deep where depth is the picture, and even where it is not,
+                // with no branch favoured by where it happens to sit.
+                const left = purse - 1;
+                const ahead = kids.length > 1 ? Math.ceil(left / 2) : left;
+                const rest = Math.floor(
+                    (left - ahead) / Math.max(kids.length - 1, 1),
+                );
+
+                kids.forEach((other, at) => {
+                    deepen(
+                        other,
+                        inner,
+                        depth + 1,
+                        allowed,
+                        at === 0 ? ahead : rest,
+                    );
+                });
             }
 
             // Running out of `allowed` is the end of the tunnel; running out
@@ -275,8 +320,6 @@ export function prepareReflections(
                 }
             }
 
-            spent++;
-
             drawPane(pane, renderer, scene, from, depth);
 
             for (const other of panes) {
@@ -292,9 +335,7 @@ export function prepareReflections(
             // divided among the panes in view rather than among all of them.
             const seen = inView.includes(pane);
 
-            spent = 0;
-
-            deepen(pane, camera, 0, seen ? PORTAL_BOUNCES : 0);
+            deepen(pane, camera, 0, seen ? PORTAL_BOUNCES : 0, share);
         }
 
         // Back around the player, for the view they actually get.
