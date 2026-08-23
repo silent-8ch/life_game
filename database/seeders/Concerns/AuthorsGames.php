@@ -3,12 +3,15 @@
 namespace Database\Seeders\Concerns;
 
 use App\Enums\ActorBehaviour;
+use App\Enums\BindingResponse;
 use App\Enums\ConditionType;
 use App\Enums\EffectType;
+use App\Enums\EmitWhen;
 use App\Enums\ThingHinge;
 use App\Enums\ThingKind;
 use App\Enums\ThingRender;
 use App\Enums\ThingUvMode;
+use App\Enums\TriggeredBy;
 use App\Enums\Verb;
 use App\Exceptions\LevelAlreadyDrawn;
 use App\Models\Game;
@@ -18,6 +21,7 @@ use App\Models\Item;
 use App\Models\Level;
 use App\Models\LevelSector;
 use App\Models\LevelThing;
+use App\Models\LevelThingBinding;
 use App\Models\LevelVertex;
 use App\Models\Scene;
 
@@ -442,6 +446,73 @@ trait AuthorsGames
         return $this->interaction($thing, Verb::Use, $response, effects: [
             [EffectType::RotateThing, $thing->slug, (string) $degrees],
             [EffectType::SetBlocking, $thing->slug, '0'],
+        ]);
+    }
+
+    /**
+     * A pressure plate: an invisible, walk-through thing that puts an action
+     * line on while somebody is standing in its footprint.
+     *
+     * Paul: *invisible non-solid things triggering more complex things.* So it
+     * has no picture and no collider — it is a rectangle on the floor plan and
+     * nothing else, and what it does is put a name on.
+     */
+    protected function plate(
+        Level $level,
+        string $slug,
+        string $name,
+        string $description,
+        float $x,
+        float $z,
+        float $width,
+        float $depth,
+        string $puts,
+        TriggeredBy $worksFor = TriggeredBy::Anyone,
+    ): LevelThing {
+        $plate = $this->thing(
+            $level,
+            $slug,
+            $name,
+            $description,
+            $x,
+            $z,
+            $width,
+            $depth,
+            0.02,
+            ThingKind::Fixture,
+            solid: false,
+        );
+
+        $plate->update([
+            'emits' => $puts,
+            'emit_when' => EmitWhen::StoodOn,
+            'triggered_by' => $worksFor,
+        ]);
+
+        return $plate;
+    }
+
+    /**
+     * What a thing does while an action line is on, and while it is off.
+     *
+     * Both sides always. *On and off each say what they do* — a resting default
+     * is the same thing with a worse name and lets an author forget to say what
+     * happens when the line goes off. Swapping the two arguments is a NOT,
+     * which is why there is no sense to author and no inversion to build.
+     */
+    protected function answers(
+        LevelThing $thing,
+        string $line,
+        BindingResponse $response,
+        string $on,
+        string $off,
+    ): LevelThingBinding {
+        return $thing->bindings()->create([
+            'line' => $line,
+            'response' => $response,
+            'value_on' => $on,
+            'value_off' => $off,
+            'sort_order' => $thing->bindings()->count(),
         ]);
     }
 

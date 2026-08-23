@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\BindingResponse;
 use App\Enums\EffectType;
 use App\Enums\ThingHinge;
 use App\Enums\Verb;
@@ -310,6 +311,25 @@ class TheHouseSeeder extends Seeder
         );
 
         $this->opens($utility, 'It swings open.');
+
+        // And the utility door answers an action line as well as a verb. A
+        // plate in the hall outside it opens it while somebody is standing
+        // there, which is the whole of Paul's redstone idea at its smallest:
+        // an invisible non-solid thing putting a named line on, and another
+        // thing doing something while it is on.
+        //
+        // Both sides are authored. While `utility-plate` is on the door stands
+        // at ninety degrees and lets you through; while it is off it is shut
+        // and solid again — which is what makes it swing closed behind you
+        // rather than staying open because nobody said otherwise.
+        $this->plate($house, 'utility-plate', 'A Worn Patch',
+            'The lino is worn through here, in the shape of somebody waiting.',
+            x: 1.3, z: 7.7, width: 1.2, depth: 1.0,
+            puts: 'utility-plate',
+        );
+
+        $this->answers($utility, 'utility-plate', BindingResponse::Rotate, '90', '0');
+        $this->answers($utility, 'utility-plate', BindingResponse::Blocking, '0', '1');
     }
 
     private function furniture(Level $house): void

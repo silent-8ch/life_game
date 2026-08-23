@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import type { ReactNode, RefObject } from 'react';
 import * as THREE from 'three';
 import { store } from '@/actions/App/Http/Controllers/DebugSnapshotController';
+import { createActionLines } from '@/lib/engine/action-lines';
+import type { ActionLines } from '@/lib/engine/action-lines';
 import { createActors } from '@/lib/engine/actors';
 import type { MovedThings, PropSet } from '@/lib/engine/build/things';
 import { buildLevel } from '@/lib/engine/build-level';
@@ -89,6 +91,15 @@ type LevelViewportProps = {
      * is fast enough.
      */
     movingRef?: RefObject<MovedThings | null>;
+    /**
+     * Filled in with the level's action lines once it is built, so a lever can be
+     * thrown the instant it is used.
+     *
+     * The same reason as `movingRef`, one layer up: a lever's whole effect is
+     * what its line drives, and the line has to be on before the next frame
+     * reads it. The save is told afterwards.
+     */
+    linesRef?: RefObject<ActionLines | null>;
     onLockChange: (locked: boolean) => void;
     /** Anything the level wants to tell the player, such as a snapshot saving. */
     onMessage?: (text: string) => void;
@@ -131,6 +142,7 @@ export default function LevelViewport({
     onExamine,
     moved = {},
     movingRef,
+    linesRef,
     onLockChange,
     onMessage,
     reportTo,
@@ -330,8 +342,17 @@ export default function LevelViewport({
         built.props.setFlags(flagsSet.current);
         propSet.current = built.props;
 
+        // The level's named lines: what puts them on, and what answers them.
+        const lines = createActionLines(level);
+
+        lines.restore(flagsSet.current);
+
         if (movingRef !== undefined) {
             movingRef.current = built.props.moving;
+        }
+
+        if (linesRef !== undefined) {
+            linesRef.current = lines;
         }
 
         scene.add(built.group);
@@ -507,6 +528,22 @@ export default function LevelViewport({
             );
             actors.update(moving, built.colliders);
             actors.faceViewer(player.x, player.z, player.yaw);
+
+            // Read after everybody has moved, so a plate answers about where
+            // people are this frame rather than where they were last. What
+            // changed is applied at once, so a collider that stops blocking has
+            // stopped before the next frame's walk reads it — the same
+            // state-not-animation rule the hinge already keeps.
+            lines.settle(
+                [
+                    { x: player.x, z: player.z, isPlayer: true },
+                    ...actors
+                        .standing()
+                        .map((at) => ({ ...at, isPlayer: false })),
+                ],
+                built.props.moving,
+            );
+
             built.props.update(seconds);
             built.props.faceViewer(player.x, player.z);
 
@@ -858,6 +895,10 @@ export default function LevelViewport({
                 movingRef.current = null;
             }
 
+            if (linesRef !== undefined) {
+                linesRef.current = null;
+            }
+
             input.dispose();
             actors.dispose();
             playerSprite.dispose();
@@ -878,7 +919,7 @@ export default function LevelViewport({
         // identity is stable for the life of whoever made it and listing it is
         // the lint rule being satisfied rather than a dependency being
         // declared.
-    }, [level, touch, reportTo, movingRef]);
+    }, [level, touch, reportTo, movingRef, linesRef]);
 
     return (
         <div

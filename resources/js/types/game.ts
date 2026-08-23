@@ -246,6 +246,33 @@ export type ThingRender = 'box' | 'billboard' | 'cross' | 'flat';
 export type ThingHinge = 'left' | 'right' | 'top' | 'bottom';
 
 /**
+ * When a thing puts its line on.
+ *
+ * `used` latches and persists — a lever you threw is still thrown. `stood_on`
+ * is momentary and deliberately does not: you are not standing on the plate
+ * next session.
+ */
+export type EmitWhen = 'used' | 'stood_on';
+
+/** Who can work an emitter. Actors stand on plates and never work levers. */
+export type TriggeredBy = 'player' | 'actors' | 'anyone';
+
+/**
+ * What a thing does while an action line is on, and while it is off.
+ *
+ * Both sides always, rather than one side and a resting default — which is the
+ * same thing with a worse name and lets an author forget to say what happens
+ * when the line goes off. Swapping the two is a NOT, which is why there is no
+ * sense field and no inversion to build.
+ */
+export type ThingBinding = {
+    line: string;
+    response: 'rotate' | 'blocking';
+    on: string;
+    off: string;
+};
+
+/**
  * Whether a thing's texture repeats or is stretched to fit.
  *
  * Tiling suits a surface that carries on past what you can see. Fitting suits a
@@ -309,6 +336,21 @@ export type LevelThing = {
      * thing's own `angle` points at.
      */
     hinge: ThingHinge | null;
+    /**
+     * The line this thing puts on, or null for the great majority that put on
+     * nothing.
+     *
+     * A line name **is** a flag name: they share one namespace, so a lamp
+     * with `altFlag` set to an action line lights while that line is on and nothing
+     * had to be written for it.
+     */
+    emits: string | null;
+    /** `used` for a lever, `stood_on` for a plate. */
+    emitWhen: EmitWhen | null;
+    /** Who can stand on it. A lever is always the player's. */
+    triggeredBy: TriggeredBy;
+    /** What this thing does while an action line is on, and while it is off. */
+    bindings: ThingBinding[];
     isSolid: boolean;
     /** What the player may try on it. */
     verbs: VerbOffer[];

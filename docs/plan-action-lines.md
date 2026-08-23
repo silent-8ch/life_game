@@ -1,4 +1,4 @@
-# Signals
+# ActionLines
 
 ## What Paul asked for
 
@@ -26,7 +26,7 @@ it.
   `SetBlocking` turn a thing about its hinge and switch its collider, and
   neither knows what it is holding.
 
-So signals are not a new idea to bolt on. They are the same idea evaluated
+So action lines are not a new idea to bolt on. They are the same idea evaluated
 **per frame** rather than per interaction, and with something other than a verb
 allowed to raise them.
 
@@ -34,15 +34,15 @@ allowed to raise them.
 
 Four nouns. Only the first is new as a concept.
 
-### A signal is a name
+### An action line is a name
 
-A string, on or off, and nothing else. **Signals and flags share one namespace**
+A string, on or off, and nothing else. **ActionLines and flags share one namespace**
 rather than sitting beside each other, which is the single most valuable
 decision in this document:
 
-- `alt_flag` starts working for signals for free, so a lamp lights while its
+- `alt_flag` starts working for action lines for free, so a lamp lights while its
   line is on with no new column and no new code.
-- `FlagIs` conditions start reading signals for free, so an interaction can be
+- `FlagIs` conditions start reading action lines for free, so an interaction can be
   gated on one — a door that only opens while the power is on.
 - There is one answer to *is `kitchen-door` on*, rather than two that can
   disagree.
@@ -50,9 +50,9 @@ decision in this document:
 The cost is that one name space now has two writers, and the ruling below says
 which wins.
 
-### An emitter puts a signal on
+### An emitter puts an action line on
 
-A thing gains `emits` (a signal name) and `emit_when`:
+A thing gains `emits` (a line name) and `emit_when`:
 
 | `emit_when` | On while | Redstone |
 | --- | --- | --- |
@@ -70,12 +70,12 @@ either grows a second implementation.
 `triggered_by` is the player, actors, or both. A plate only the people can work
 is a thing Paul will want within a day of having plates.
 
-### A responder does something while a signal is on
+### A responder does something while an action line is on
 
 A thing gains a list of **bindings**, and a binding is the whole of the
 authoring:
 
-    while <signal> is <on|off>, <response> me to <value>
+    while <line> is <on|off>, <response> me to <value>
 
 | Response | Value | Notes |
 | --- | --- | --- |
@@ -94,14 +94,14 @@ being about the same things.
 ### A target is a thing, or the player
 
 `subject` on a binding is a thing's slug, and the reserved name `player` is the
-option. That is the ruling already made, and it is what makes teleport a signal
+option. That is the ruling already made, and it is what makes teleport an action line
 response rather than a second kind of portal.
 
 ## The rulings already made
 
-1. **The engine owns signal state while the level is being played; the server is
+1. **The engine owns line state while the level is being played; the server is
    told.** A plate flips its line *this frame*, not a round trip later. This is
-   ISSUE-48's ruling about doors, generalised — and it is why signals cannot
+   ISSUE-48's ruling about doors, generalised — and it is why action lines cannot
    simply be flags refreshed by the existing per-interaction reload.
 2. **Targets are things by default and the player by exception.**
 
@@ -136,7 +136,7 @@ Two indexes built once, at level build:
   point-in-box test per candidate. A level with ten plates and six people is
   seventy tests a frame, which is nothing next to one wall.
 - **Signal name → bindings**, as a map. This is the answer to *how does the
-  update find the things that care*: it does not look, it is told. Only signals
+  update find the things that care*: it does not look, it is told. Only action lines
   that **changed** are looked up, so a frame in which nothing moves costs the
   emitter reads and one set comparison.
 
@@ -146,7 +146,7 @@ every frame.
 
 ### Chains, and the loop they invite
 
-A responder may emit, so signals can drive signals, and a cycle can be authored
+A responder may emit, so action lines can drive action lines, and a cycle can be authored
 by accident or on purpose — redstone clocks are cycles on purpose.
 
 **Settle in a bounded number of passes and stop.** `resolveCollisions` already
@@ -160,15 +160,15 @@ which is the behaviour a clock wants anyway.
 The distinction is the one redstone already makes, and getting it wrong would be
 felt immediately.
 
-- **Latching** signals persist: a lever you threw is still thrown next session.
-- **Momentary** signals do not: you are not standing on the plate next session,
+- **Latching** action lines persist: a lever you threw is still thrown next session.
+- **Momentary** action lines do not: you are not standing on the plate next session,
   and restoring it would open a door in an empty room.
 
 `emit_when` decides it rather than a separate column — `used` and `always` latch,
 `stood_on` and `inside` are momentary. One less thing to author, and no way to
 author the pair inconsistently.
 
-Persistence rides the existing flag machinery: a latching signal is a flag, and
+Persistence rides the existing flag machinery: a latching line is a flag, and
 `game_flags` already stores it. **The engine posts a change rather than a
 frame** — coalesced on transition, so a lever costs one request and a plate
 costs two whatever the frame rate.
@@ -178,11 +178,11 @@ costs two whatever the frame rate.
 | Where | What |
 | --- | --- |
 | `level_things` | `emits`, `emit_when`, `triggered_by` |
-| `level_thing_bindings` | `thing_id`, `signal`, `sense`, `response`, `subject`, `value` |
-| `game_flags` | unchanged; latching signals are flags |
+| `level_thing_bindings` | `thing_id`, `line`, `sense`, `response`, `subject`, `value` |
+| `game_flags` | unchanged; latching action lines are flags |
 
 The bindings table rather than columns on the thing, because a thing may respond
-to several signals and one signal drives several things — which is the whole
+to several action lines and one line drives several things — which is the whole
 point, and columns cannot hold it.
 
 `level_thing_bindings` is authored in the inspector beside the interaction panel,
@@ -211,8 +211,8 @@ any of it is written.
    more to type and says exactly what happens.
 2. **Should an actor be able to work a lever**, or only plates? Wanderers open
    doors already by ruling; a wanderer flipping a switch is a different feeling.
-3. **Is a momentary signal a pulse or a level?** A plate held down is a level. A
+3. **Is a momentary line a pulse or a level?** A plate held down is a level. A
    button is a pulse. Redstone has both and the difference is a column.
-4. **Do signals need to cross levels?** A lever in one room lighting a lamp in
+4. **Do action lines need to cross levels?** A lever in one room lighting a lamp in
    another is free; a lever in one *level* is not, and the answer decides whether
-   a signal name is scoped to a level or to a game.
+   a line name is scoped to a level or to a game.

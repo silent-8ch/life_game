@@ -1,3 +1,4 @@
+import BindingsPanel from '@/components/editor/inspector/bindings-panel';
 import {
     Field,
     inputClass,
@@ -87,6 +88,8 @@ export default function ThingPanel({
                     </Field>
                 </div>
             </section>
+
+            <BindingsPanel thing={held} onChangeThing={onChangeThing} />
 
             {isPerson ? (
                 <section className="flex flex-col gap-3 border-t border-slate-800 pt-4">
@@ -236,6 +239,8 @@ export default function ThingPanel({
                     />
                 </section>
             )}
+
+            <BindingsPanel thing={held} onChangeThing={onChangeThing} />
 
             {isPerson ? (
                 <StatsPanel thing={held} onChangeThing={onChangeThing} />

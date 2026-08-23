@@ -2,10 +2,12 @@
 
 namespace App\Models;
 
+use App\Enums\EmitWhen;
 use App\Enums\ThingHinge;
 use App\Enums\ThingKind;
 use App\Enums\ThingRender;
 use App\Enums\ThingUvMode;
+use App\Enums\TriggeredBy;
 use App\Services\PersonStats;
 use Database\Factories\LevelThingFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -33,6 +35,10 @@ use Illuminate\Support\Carbon;
  * @property string|null $texture
  * @property ThingRender $render
  * @property ThingHinge|null $hinge
+ * @property string|null $emits
+ * @property EmitWhen|null $emit_when
+ * @property TriggeredBy $triggered_by
+ * @property-read Collection<int, LevelThingBinding> $bindings
  * @property-read Pivot|null $pivot
  * @property int $plane_count
  * @property ThingUvMode $uv_mode
@@ -80,6 +86,9 @@ use Illuminate\Support\Carbon;
     'height',
     'angle',
     'hinge',
+    'emits',
+    'emit_when',
+    'triggered_by',
     'is_solid',
     'sort_order',
 ])]
@@ -97,6 +106,8 @@ class LevelThing extends Model
             'kind' => ThingKind::class,
             'render' => ThingRender::class,
             'hinge' => ThingHinge::class,
+            'emit_when' => EmitWhen::class,
+            'triggered_by' => TriggeredBy::class,
             'uv_mode' => ThingUvMode::class,
             'stats' => 'array',
             'plane_count' => 'integer',
@@ -142,5 +153,15 @@ class LevelThing extends Model
     public function interactions(): HasMany
     {
         return $this->hasMany(Interaction::class);
+    }
+
+    /**
+     * What this thing does while an action line is on, and while it is off.
+     *
+     * @return HasMany<LevelThingBinding, $this>
+     */
+    public function bindings(): HasMany
+    {
+        return $this->hasMany(LevelThingBinding::class)->orderBy('sort_order');
     }
 }

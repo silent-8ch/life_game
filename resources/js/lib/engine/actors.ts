@@ -61,6 +61,8 @@ export type Actors = {
     faceViewer: (x: number, z: number, yaw: number) => void;
     /** Where an actor is standing, for the look-at ray to test against. */
     positionOf: (slug: string) => THREE.Vector3 | null;
+    /** Where everybody is standing on the floor plan, for the action-line pass. */
+    standing: () => { x: number; z: number }[];
     dispose: () => void;
 };
 
@@ -353,6 +355,9 @@ export function createActors(level: Level): Actors {
                 wanderer.sprite.faceViewer(x, z, yaw);
             }
         },
+
+        standing: () =>
+            wanderers.map((wanderer) => ({ x: wanderer.x, z: wanderer.z })),
 
         positionOf: (slug) =>
             wanderers.find((wanderer) => wanderer.thing.slug === slug)?.sprite

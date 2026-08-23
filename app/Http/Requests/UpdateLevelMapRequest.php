@@ -3,12 +3,15 @@
 namespace App\Http\Requests;
 
 use App\Enums\ActorBehaviour;
+use App\Enums\BindingResponse;
 use App\Enums\ConditionType;
 use App\Enums\EffectType;
+use App\Enums\EmitWhen;
 use App\Enums\ThingHinge;
 use App\Enums\ThingKind;
 use App\Enums\ThingRender;
 use App\Enums\ThingUvMode;
+use App\Enums\TriggeredBy;
 use App\Enums\Verb;
 use App\Models\Item;
 use App\Models\Level;
@@ -138,6 +141,21 @@ class UpdateLevelMapRequest extends FormRequest
             // strictly when they are sent.
             'things.*.render' => ['sometimes', Rule::enum(ThingRender::class)],
             'things.*.hinge' => ['nullable', Rule::enum(ThingHinge::class)],
+
+            // A line name is a flag name — they share one namespace, so this
+            // is the same shape `alt_flag` already validates as.
+            'things.*.emits' => ['nullable', 'string', 'max:255'],
+            'things.*.emitWhen' => ['nullable', Rule::enum(EmitWhen::class)],
+            'things.*.triggeredBy' => ['nullable', Rule::enum(TriggeredBy::class)],
+
+            'things.*.bindings' => ['sometimes', 'array', 'max:16'],
+            'things.*.bindings.*.line' => ['required', 'string', 'max:255'],
+            'things.*.bindings.*.response' => ['required', Rule::enum(BindingResponse::class)],
+            // Strings rather than numbers because the two responses want
+            // different kinds: degrees for a rotate, on or off for a blocking.
+            // The engine reads each one the way its own response means it.
+            'things.*.bindings.*.on' => ['required', 'string', 'max:32'],
+            'things.*.bindings.*.off' => ['required', 'string', 'max:32'],
             'things.*.planeCount' => ['sometimes', 'integer', 'in:2,3'],
             'things.*.uvMode' => ['sometimes', Rule::enum(ThingUvMode::class)],
             'things.*.textureAlt' => ['nullable', 'string', $props],

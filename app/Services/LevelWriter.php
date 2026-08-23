@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\ThingRender;
 use App\Enums\ThingUvMode;
+use App\Enums\TriggeredBy;
 use App\Models\Item;
 use App\Models\Level;
 use App\Models\LevelThing;
@@ -118,6 +119,9 @@ class LevelWriter
                 'texture' => $thing['texture'] ?? null,
                 'render' => $thing['render'] ?? ThingRender::Box->value,
                 'hinge' => $thing['hinge'] ?? null,
+                'emits' => $thing['emits'] ?? null,
+                'emit_when' => $thing['emitWhen'] ?? null,
+                'triggered_by' => $thing['triggeredBy'] ?? TriggeredBy::Player->value,
                 'plane_count' => $thing['planeCount'] ?? 2,
                 'uv_mode' => $thing['uvMode'] ?? ThingUvMode::Tile->value,
                 'texture_alt' => $thing['textureAlt'] ?? null,
@@ -136,6 +140,19 @@ class LevelWriter
             ]);
 
             $this->writeInteractions($written, $thing['interactions'] ?? [], $items);
+
+            // Replaced wholesale, like everything else a map save carries: what
+            // arrives is the level, and a binding the editor no longer sends is
+            // a binding somebody deleted.
+            foreach ($thing['bindings'] ?? [] as $order => $binding) {
+                $written->bindings()->create([
+                    'line' => $binding['line'],
+                    'response' => $binding['response'],
+                    'value_on' => $binding['on'],
+                    'value_off' => $binding['off'],
+                    'sort_order' => $order,
+                ]);
+            }
         }
     }
 

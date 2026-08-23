@@ -3,7 +3,9 @@
 namespace App\Services;
 
 use App\Enums\EffectType;
+use App\Enums\EmitWhen;
 use App\Enums\ThingKind;
+use App\Enums\Verb;
 use App\Models\Interaction;
 use App\Models\InteractionCondition;
 use App\Models\InteractionEffect;
@@ -11,6 +13,7 @@ use App\Models\Level;
 use App\Models\LevelSector;
 use App\Models\LevelSectorEdge;
 use App\Models\LevelThing;
+use App\Models\LevelThingBinding;
 
 /**
  * A level as the browser engine wants it. The game and the map editor both
@@ -103,6 +106,16 @@ class LevelPayload
                 'angle' => $thing->angle,
                 'isSolid' => $thing->is_solid,
                 'hinge' => $thing->hinge?->value,
+                'emits' => $thing->emits,
+                'emitWhen' => $thing->emit_when?->value,
+                'triggeredBy' => $thing->triggered_by->value,
+                'bindings' => $thing->bindings
+                    ->map(fn (LevelThingBinding $binding): array => [
+                        'line' => $binding->line,
+                        'response' => $binding->response->value,
+                        'on' => $binding->value_on,
+                        'off' => $binding->value_off,
+                    ])->values()->all(),
                 'verbs' => $this->verbsFor($thing),
             ])->all(),
         ];
@@ -208,12 +221,21 @@ class LevelPayload
      */
     private function verbsFor(LevelThing $thing): array
     {
-        return $thing->interactions
+        // A lever needs no interaction to be worth pressing Use on. It emits,
+        // and emitting is the whole of what it does — so the offer is made
+        // because of what the thing is rather than because somebody remembered
+        // to author an empty interaction beside it.
+        $lever = $thing->emit_when === EmitWhen::Used
+            ? [['verb' => Verb::Use->value, 'item' => null, 'moves' => []]]
+            : [];
+
+        return collect($lever)->merge($thing->interactions
             ->map(fn (Interaction $interaction): array => [
                 'verb' => $interaction->verb->value,
                 'item' => $interaction->requiredItem?->slug,
                 'moves' => $this->movesOf($interaction),
             ])
+        )
             ->unique(fn (array $offer): string => $offer['verb'].'|'.($offer['item'] ?? ''))
             ->sortBy([['verb', 'asc'], ['item', 'asc']])
             ->values()

@@ -113,6 +113,83 @@ export default function DrawingPanel({
                 />
             )}
 
+            <div className="flex flex-col gap-2 border-t border-slate-800 pt-3">
+                <span className="text-[11px] tracking-wider text-slate-400 uppercase">
+                    Action line
+                </span>
+
+                <div className="grid grid-cols-2 gap-2">
+                    <Field label="Puts on">
+                        <input
+                            type="text"
+                            value={thing.emits ?? ''}
+                            placeholder="nothing"
+                            onChange={(event) =>
+                                onChangeThing({
+                                    emits:
+                                        event.target.value === ''
+                                            ? null
+                                            : event.target.value,
+                                })
+                            }
+                            className={inputClass}
+                        />
+                    </Field>
+
+                    <Field label="While">
+                        <select
+                            value={thing.emitWhen ?? ''}
+                            onChange={(event) =>
+                                onChangeThing({
+                                    emitWhen:
+                                        event.target.value === ''
+                                            ? null
+                                            : (event.target
+                                                  .value as LevelThing['emitWhen']),
+                                })
+                            }
+                            className={inputClass}
+                        >
+                            <option value="">Never</option>
+                            <option value="used">
+                                Used — a lever, and it stays
+                            </option>
+                            <option value="stood_on">Stood on — a plate</option>
+                        </select>
+                    </Field>
+                </div>
+
+                {thing.emitWhen === 'stood_on' && (
+                    <Field label="Stood on by">
+                        <select
+                            value={thing.triggeredBy}
+                            onChange={(event) =>
+                                onChangeThing({
+                                    triggeredBy: event.target
+                                        .value as LevelThing['triggeredBy'],
+                                })
+                            }
+                            className={inputClass}
+                        >
+                            <option value="player">You</option>
+                            <option value="actors">The people</option>
+                            <option value="anyone">Anyone</option>
+                        </select>
+                    </Field>
+                )}
+
+                {thing.emits !== null && thing.emitWhen !== null && (
+                    <p className="text-xs leading-relaxed text-slate-500">
+                        {thing.emitWhen === 'used'
+                            ? 'It stays on once thrown, and is remembered.'
+                            : 'On only while somebody is standing on it, and never remembered — you are not standing on it next time.'}{' '}
+                        Anything that answers{' '}
+                        <span className="text-slate-200">{thing.emits}</span>{' '}
+                        moves with it.
+                    </p>
+                )}
+            </div>
+
             <Field label="Frames">
                 <NumberInput
                     step="1"

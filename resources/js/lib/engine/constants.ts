@@ -152,6 +152,20 @@ export const PORTAL_RENDER_BUDGET = 40;
  */
 export const TUNNEL_SHRINK = 1.45;
 
+/**
+ * How many times a frame will let action lines drive action lines before it stops.
+ *
+ * A thing that answers a line may put another line on, so a chain has to reach
+ * the end of itself inside one frame or it reads as lag. Eight is deeper than
+ * any arrangement anybody has drawn and shallow enough to cost nothing.
+ *
+ * Bounded rather than run to a resting state, because some arrangements do not
+ * have one: a ring of things driving each other is a redstone clock, and
+ * somebody will build one on purpose. `RESOLVE_PASSES` bounds itself the same
+ * way and for the same reason.
+ */
+export const ACTION_LINE_PASSES = 8;
+
 export const BACKGROUND_COLOR = '#05070a';
 
 /**
