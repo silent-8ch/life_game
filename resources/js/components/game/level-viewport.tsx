@@ -691,6 +691,20 @@ export default function LevelViewport({
                                   (_, depth) => pane.peek(depth) !== null,
                               ),
                               reading: readPane(renderer, pane, legend, 0, 0.5),
+                              // Every level, not just the first. What a pane
+                              // holds *deep* is the whole question when the
+                              // complaint is that reflections do not nest.
+                              deep: Array.from(
+                                  { length: PORTAL_BOUNCES + 1 },
+                                  (_, depth) =>
+                                      readPane(
+                                          renderer,
+                                          pane,
+                                          legend,
+                                          depth,
+                                          0.5,
+                                      ),
+                              ),
                           })),
                       }
                     : {}),
