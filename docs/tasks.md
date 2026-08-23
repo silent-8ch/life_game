@@ -91,6 +91,8 @@ that governs the work stop describing it.**
 below about who lands what. **Agents have lost git privileges.** Nothing reaches `main` except
 through him.
 
+**Nobody pulls into the demo checkout except `production`.** Paul spent an hour looking for a feature the demo did not have, because a pull from another session had moved its tree past the bundle it was serving — and production's own next pull correctly judged its *own* diff docs-only while the bundle was already stale. The reflog shows four pulls that were not production's; one was planning's, when Paul said restart now and the demo session was not answering. **If a session needs something on the demo, ping `production` and it deploys in a gap.** It is the only session that knows whether a player is mid-level and the only one tracking what was last built; a pull from anywhere else defeats both. Production now checks the filesystem every sweep — any file under `resources` newer than the manifest means the bundle is stale, whoever moved the tree — which is the rule that would actually have caught this.
+
 **No worktrees, no branches, no commits. Edit the real files in your own checkout.** Paul's
 rule, replacing the branch-per-task arrangement entirely. An agent's output is **modified files
 sitting in the working directory** where he can see them, `git add` them and commit them.
