@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Enums\DoorSwing;
+use App\Enums\ThingHinge;
 use App\Enums\ThingKind;
 use App\Enums\ThingRender;
 use App\Enums\ThingUvMode;
@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\Pivot;
 use Illuminate\Support\Carbon;
 
 /**
@@ -31,6 +32,8 @@ use Illuminate\Support\Carbon;
  * @property float $speed
  * @property string|null $texture
  * @property ThingRender $render
+ * @property ThingHinge|null $hinge
+ * @property-read Pivot|null $pivot
  * @property int $plane_count
  * @property ThingUvMode $uv_mode
  * @property string|null $texture_alt
@@ -45,12 +48,6 @@ use Illuminate\Support\Carbon;
  * @property float $height
  * @property float $angle
  * @property bool $is_solid
- * @property bool $is_door
- * @property DoorSwing $swing
- * @property float $open_angle
- * @property float $open_seconds
- * @property bool $is_open
- * @property string|null $opens_flag
  * @property int $sort_order
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -82,13 +79,8 @@ use Illuminate\Support\Carbon;
     'depth',
     'height',
     'angle',
+    'hinge',
     'is_solid',
-    'is_door',
-    'swing',
-    'open_angle',
-    'open_seconds',
-    'is_open',
-    'opens_flag',
     'sort_order',
 ])]
 class LevelThing extends Model
@@ -104,6 +96,7 @@ class LevelThing extends Model
         return [
             'kind' => ThingKind::class,
             'render' => ThingRender::class,
+            'hinge' => ThingHinge::class,
             'uv_mode' => ThingUvMode::class,
             'stats' => 'array',
             'plane_count' => 'integer',
@@ -118,11 +111,6 @@ class LevelThing extends Model
             'height' => 'float',
             'angle' => 'float',
             'is_solid' => 'boolean',
-            'is_door' => 'boolean',
-            'swing' => DoorSwing::class,
-            'open_angle' => 'float',
-            'open_seconds' => 'float',
-            'is_open' => 'boolean',
         ];
     }
 

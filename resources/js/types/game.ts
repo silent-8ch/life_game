@@ -66,7 +66,14 @@ export type ConditionType =
  * Only the effects that mean anything in a level. Moving to a scene, and
  * revealing or hiding a hotspot, belong to the point-and-click game.
  */
-export type EffectTypeName = 'give_item' | 'remove_item' | 'set_flag';
+export type EffectTypeName =
+    | 'give_item'
+    | 'remove_item'
+    | 'set_flag'
+    /** Turn the thing named by `subject` to `value` degrees about its hinge. */
+    | 'rotate_thing'
+    /** Whether the thing named by `subject` stops anybody walking through. */
+    | 'set_blocking';
 
 export type InteractionCondition = {
     type: ConditionType;
@@ -105,6 +112,26 @@ export type VerbOffer = {
     verb: VerbName;
     /** The item that has to be in hand, by slug, or null for none. */
     item: string | null;
+    /**
+     * The two effects the engine has to carry out for itself: turning a thing
+     * about its hinge, and switching its collider.
+     *
+     * Nothing else travels. Those two are the only ones whose result the player
+     * is standing inside — you walk through a door in the same frame it opens —
+     * so waiting for the round trip would make every one of them feel broken.
+     * An item appearing in a pocket or a flag being set can wait, and does.
+     *
+     * Empty for almost every offer in almost every level.
+     */
+    moves: VerbMove[];
+};
+
+/** One thing a verb moves, as the engine is told to move it. */
+export type VerbMove = {
+    does: 'rotate_thing' | 'set_blocking';
+    /** The thing it moves, by slug. */
+    subject: string;
+    value: string | null;
 };
 
 /**
@@ -211,6 +238,14 @@ export type Stats = {
 export type ThingRender = 'box' | 'billboard' | 'cross' | 'flat';
 
 /**
+ * Which edge a flat thing turns about, seen from its front.
+ *
+ * A door hinges at a side, a drawbridge at the bottom, a hatch at the top. None
+ * of those needed a kind of its own; they needed an edge and an angle.
+ */
+export type ThingHinge = 'left' | 'right' | 'top' | 'bottom';
+
+/**
  * Whether a thing's texture repeats or is stretched to fit.
  *
  * Tiling suits a surface that carries on past what you can see. Fitting suits a
@@ -218,15 +253,6 @@ export type ThingRender = 'box' | 'billboard' | 'cross' | 'flat';
  * middle 45% of a door, which looks like bad art rather than bad UVs.
  */
 export type ThingUvMode = 'tile' | 'fit';
-
-/**
- * How a door gets out of the way.
- *
- * Authored rather than guessed from the art, because the art does not say: a
- * bifold and an interior door are both a rectangle with a picture on it, and
- * which way they move is the whole difference between them.
- */
-export type DoorSwing = 'swing' | 'slide' | 'fold';
 
 export type LevelThing = {
     slug: string;
@@ -274,33 +300,16 @@ export type LevelThing = {
     depth: number;
     height: number;
     angle: number;
-    isSolid: boolean;
-    /** Whether it opens. A door drops its collider while it is open. */
-    isDoor: boolean;
-    swing: DoorSwing;
     /**
-     * Degrees a swing door turns through. For a slider, the fraction of its own
-     * width it moves, times ninety — so the number means the same kind of thing
-     * whichever way it goes.
-     */
-    openAngle: number;
-    openSeconds: number;
-    /**
-     * Whether it **starts** open — not where it is now.
+     * Which edge a flat thing turns about, or null for one that does not turn.
      *
-     * Where a door stands while somebody is playing belongs to the engine. You
-     * walk through a door in the same frame it opens, so the collider has to
-     * leave the set immediately, and the interaction round trip returns the
-     * inventory and a message by design. Nothing that involves the server can
-     * keep up with a door.
+     * On the thing rather than on whatever turns it, which is what makes the
+     * `rotate` effect generic: it never has to know that it is holding a door
+     * rather than a drawbridge or a hatch. Named from the front, the face the
+     * thing's own `angle` points at.
      */
-    isOpen: boolean;
-    /**
-     * A flag remembering it was opened, so it is still open next time. Null
-     * forgets. Persistence, not truth: the engine's own state is authoritative
-     * while the level is being walked around.
-     */
-    opensFlag: string | null;
+    hinge: ThingHinge | null;
+    isSolid: boolean;
     /** What the player may try on it. */
     verbs: VerbOffer[];
     /**
@@ -359,6 +368,28 @@ export type StandingAt = {
     pitch: number;
 };
 
+/**
+ * What a save has done to the things in a level, by slug.
+ *
+ * Only things something has acted on are here at all, so absent means *as
+ * authored* — the same reading `Flags` gets, and the reason neither field needs
+ * a value that means nothing.
+ *
+ * The engine does both of these the instant a verb is chosen rather than
+ * waiting for this to arrive, because you walk through a door in the same frame
+ * it opens. This is what confirms it afterwards, and what quietly puts back one
+ * the save refused.
+ */
+export type Moved = Record<
+    string,
+    {
+        /** Degrees about the thing's hinge, or null for as authored. */
+        turned: number | null;
+        /** Whether it stops anybody walking through, or null for as authored. */
+        blocking: boolean | null;
+    }
+>;
+
 export type ExplorePageProps = {
     game: Game;
     level: Level;
@@ -374,6 +405,8 @@ export type ExplorePageProps = {
      * when it is this level they were last standing in.
      */
     standingAt: StandingAt | null;
+    /** Refreshed after every interaction, alongside the flags and inventory. */
+    moved: Moved;
     message: string | null;
 };
 

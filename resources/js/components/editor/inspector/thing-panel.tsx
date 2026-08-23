@@ -4,7 +4,6 @@ import {
     NumberInput,
     Toggle,
 } from '@/components/editor/inspector/controls';
-import DoorPanel from '@/components/editor/inspector/door-panel';
 import DrawingPanel from '@/components/editor/inspector/drawing-panel';
 import StatsPanel from '@/components/editor/inspector/stats-panel';
 import InteractionPanel from '@/components/editor/interaction-panel';
@@ -235,8 +234,6 @@ export default function ThingPanel({
                         props={assets.props}
                         onChangeThing={onChangeThing}
                     />
-
-                    <DoorPanel thing={held} onChangeThing={onChangeThing} />
                 </section>
             )}
 

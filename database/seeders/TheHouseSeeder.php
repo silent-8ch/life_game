@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Enums\EffectType;
+use App\Enums\ThingHinge;
 use App\Enums\Verb;
 use App\Models\Game;
 use App\Models\Level;
@@ -266,43 +267,49 @@ class TheHouseSeeder extends Seeder
     }
 
     /**
-     * The two doors that work.
+     * The two things in the house that open.
+     *
+     * Neither of them is a door as far as anything in the engine is concerned:
+     * each is a flat sprite on a hinge with a `Use` that turns it and stops it
+     * blocking. Paul's design, and the reason there is no door kind to point
+     * at — the same two effects make a drawbridge or a hatch, and none of them
+     * needed a case of its own.
      *
      * Both stand in gaps the walls already leave, which is how a doorway has
-     * always been authored here — the runs either side and a thing in the hole.
-     * What is new is that the thing in the hole is solid, swings on its own
-     * hinge, and takes its collider with it.
+     * always been authored here: the runs either side and a thing in the hole.
      */
     private function doors(Level $house): void
     {
-        // The back door somebody left open, which the level's own description
-        // has been promising since before anything could open.
-        //
-        // No `opensFlag`: it is already open, and the flag remembers openings
-        // rather than closings, so there is nothing for it to remember. Shut it
-        // and it will be open again next time you load, which is the honest
-        // behaviour of a door nobody wrote anything down about.
-        $this->door($house, 'back-door', 'The Back Door',
+        // The back door the level's own description has been promising since
+        // before anything could open. Authored already swung out of the way,
+        // which is what a door somebody left open is: the thing is turned and
+        // its collider is off from the start, with no save involved.
+        $back = $this->hinged($house, 'back-door', 'The Back Door',
             'Standing open onto the yard, the way it always is.',
             x: 6.1, z: 10, width: 1.0, height: 2.05,
-            open: true,
+            hinge: ThingHinge::Left,
             texture: 'door-front',
         );
 
-        // And one that starts shut and remembers being opened. Hung the other
-        // way round — `angle: 180` puts its hinge on the other jamb — so that
-        // the two of them together show the hinge rule doing something.
-        $utility = $this->door($house, 'utility-door', 'The Utility Door',
+        $back->update(['is_solid' => false]);
+
+        $this->interaction($back, Verb::Use, 'You push it to.', effects: [
+            [EffectType::RotateThing, $back->slug, '0'],
+            [EffectType::SetBlocking, $back->slug, '1'],
+        ]);
+
+        // And one that starts shut. Hung the other way round — `angle: 180`
+        // puts its hinge on the other jamb — so the two of them together show
+        // the hinge doing something rather than being a field nobody varies.
+        $utility = $this->hinged($house, 'utility-door', 'The Utility Door',
             'Shut, and not obviously locked.',
             x: 1.3, z: 7, width: 1.0, height: 2.05,
+            hinge: ThingHinge::Left,
             angle: 180,
-            opensFlag: 'utility-door-open',
             texture: 'door-interior',
         );
 
-        $this->interaction($utility, Verb::Use, 'It swings open.', effects: [
-            [EffectType::SetFlag, 'utility-door-open', 'yes'],
-        ]);
+        $this->opens($utility, 'It swings open.');
     }
 
     private function furniture(Level $house): void

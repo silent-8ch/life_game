@@ -64,56 +64,65 @@ export type PropSet = {
      */
     setFlags: (flags: ReadonlySet<string>) => void;
     highlight: (slug: string | null) => void;
-    /** The doors, and how to work them. */
-    doors: DoorSet;
+    /** Everything an interaction can move, and how to move it. */
+    moving: MovedThings;
 };
 
-export type DoorSet = {
-    /** Whether there is a door by this name at all. */
+export type MovedThings = {
+    /** Whether there is a thing by this name that anything can move. */
     has: (slug: string) => boolean;
-    /** Whether it is open — its state, not where the animation has got to. */
-    isOpen: (slug: string) => boolean;
+    /** How far it is turned about its hinge, in degrees. */
+    turnOf: (slug: string) => number;
+    /** Whether it is stopping anybody walking through it. */
+    blocking: (slug: string) => boolean;
     /**
-     * Opens or shuts one, and hands back what it did.
+     * Turns a thing about its hinge, to an angle rather than by one.
      *
-     * The collider goes in or out of the set **on this call**, before the door
-     * has visibly moved at all. Tying it to the animated angle instead means
-     * the player can be caught inside a closing door, which is a far worse
-     * fault than a doorway that is walkable a few frames early. `plan-doors.md`
-     * calls this out and it is the one rule here that is not negotiable.
+     * Absolute so that firing it twice leaves the thing where firing it once
+     * did: a door you Use twice should be open, not open twice. It eases there
+     * rather than snapping, because a door that changes angle between two
+     * frames reads as a glitch and not as a door.
      */
-    set: (slug: string, open: boolean) => boolean;
-    /** Every door standing open, for anything that wants to write it down. */
-    opened: () => string[];
+    turn: (slug: string, degrees: number) => boolean;
+    /**
+     * Puts a thing's collider in or out of the set, **on this call**.
+     *
+     * Never tied to how far the animation has got. A collider that waited for
+     * the swing can close on somebody standing in the doorway and leave them
+     * inside it, which is a far worse fault than a doorway that is walkable a
+     * few frames early. `plan-doors.md` called this out when a door was still a
+     * kind of its own, and it survives the redesign unchanged because it was
+     * never about doors.
+     */
+    block: (slug: string, blocking: boolean) => boolean;
+    /** What a save should be told, for everything anything has moved. */
+    moved: () => Record<string, { turned: number; blocking: boolean }>;
 };
 
 /**
- * How a door is hinged, since nothing in the data says.
+ * A thing something can move, and where it has got to.
  *
- * `level_things` carries `swing`, `open_angle`, `open_seconds`, `is_open` and
- * `opens_flag`, and no hinge column — so this is a decision rather than a
- * reading, and it is written here rather than argued twice.
+ * There is no door here and that is the design. Paul: *a door is just a solid
+ * sprite that has a hinge with an action.* A door is a flat thing hinged on one
+ * side whose `Use` turns it ninety degrees and stops it blocking — authored in
+ * the interaction panel like any other interaction, out of parts that never
+ * have to know they are making a door. A drawbridge hinges at the bottom, a
+ * hatch at the top, a window that swings out is the same with other numbers.
  *
- * **A door turns about its own left edge, seen from its front.** The front is
- * the face its `angle` points, which is already how every other thing in the
- * level is placed and how the prop art is drawn — doors and windows were drawn
- * as front elevations for exactly this.
- *
- * Fixing it to one named edge is what makes the two controls an author does
- * have add up to all four arrangements: turn the door round with `angle` to put
- * the hinge on the other side, flip the sign of `openAngle` to swing it the
- * other way. A hinge column would say the same thing twice and let the two
- * disagree.
+ * It replaced a `Door` with a `swing`, an `openAngle`, an `openSeconds` and an
+ * `isOpen`, which between them could make exactly one thing.
  */
-type Door = {
+type Movable = {
     thing: LevelThing;
     /** The part that moves. The holder stays put; this turns inside it. */
     leaf: THREE.Group;
-    /** Null for a door with `isSolid` off, which is a curtain. */
+    /** Whether the hinge turns it about y or about x. */
+    swings: boolean;
+    /** Null for a thing with `isSolid` off, which has nothing to switch. */
     collider: BoxCollider | null;
-    /** Where it is going: its state. */
-    open: boolean;
-    /** Where it has got to, 0 shut and 1 open. */
+    /** Where it is going, in degrees. */
+    want: number;
+    /** Where it has got to. */
     at: number;
 };
 
@@ -150,6 +159,9 @@ function crossAngles(planes: number, angle: number): number[] {
     );
 }
 
+/** How fast a hinged thing swings, in degrees a second. */
+const TURN_RATE = 220;
+
 export function buildThings(ctx: BuildContext): PropSet {
     const { level, scene, materials, textures } = ctx;
 
@@ -172,7 +184,7 @@ export function buildThings(ctx: BuildContext): PropSet {
         [];
 
     /** Everything that opens, by slug. */
-    const doors = new Map<string, Door>();
+    const movable = new Map<string, Movable>();
 
     let flags: ReadonlySet<string> = new Set<string>();
 
@@ -233,21 +245,53 @@ export function buildThings(ctx: BuildContext): PropSet {
         );
         holder.rotation.y = -THREE.MathUtils.degToRad(thing.angle);
 
-        // A door turns about its edge rather than its middle, or it reads as a
-        // revolving door. The holder stays where the thing is authored and the
-        // leaf hangs inside it, moved out to the hinge and its picture moved
-        // back in by the same half width — so the door is exactly where it was
-        // while it is shut, and turns about the right line when it opens.
+        // A hinged thing turns about an edge rather than about its middle, or
+        // it reads as a revolving door. The holder stays where the thing was
+        // authored and a leaf hangs inside it, moved out to the hinge with its
+        // picture moved back in by the same half — so the thing is exactly
+        // where it was drawn while it is shut, and turns about the right line
+        // when something opens it.
+        //
+        // Four edges, because a hinge is authored rather than assumed. A door
+        // hinges at a side, a drawbridge at the bottom, a hatch at the top; the
+        // engine does not need to know which of those it is holding, which is
+        // the whole point of the hinge being a property of the thing.
+        // Read defensively rather than by type alone, the same way the slope
+        // fields are. The column is new, so a payload written before it existed
+        // carries no value for it — and `undefined !== null` is true, which
+        // would make every thing in every old level hinged on nothing and hang
+        // its picture off a leaf that never turns.
         const leaf = new THREE.Group();
+        const hinge = thing.hinge ?? null;
+        const hinged = hinge !== null;
+        const swings = hinge === 'left' || hinge === 'right';
 
-        if (thing.isDoor) {
-            leaf.position.x = -thing.width / 2;
+        if (hinged) {
+            leaf.position.x =
+                hinge === 'left'
+                    ? -thing.width / 2
+                    : hinge === 'right'
+                      ? thing.width / 2
+                      : 0;
+            leaf.position.y =
+                hinge === 'bottom'
+                    ? -thing.height / 2
+                    : hinge === 'top'
+                      ? thing.height / 2
+                      : 0;
+
             holder.add(leaf);
         }
 
+        /** Where the picture sits inside the leaf: back where it was drawn. */
+        const offset = {
+            x: -leaf.position.x,
+            y: -leaf.position.y,
+        };
+
         // Everything a thing is drawn with goes on the part that moves, which
-        // for anything but a door is the thing itself.
-        const parent = thing.isDoor ? leaf : holder;
+        // for anything unhinged is the thing itself.
+        const parent = hinged ? leaf : holder;
 
         const { map, cut } = pictureFor(thing);
 
@@ -269,7 +313,7 @@ export function buildThings(ctx: BuildContext): PropSet {
             );
             mesh.userData.thingSlug = thing.slug;
 
-            mesh.position.x = thing.isDoor ? thing.width / 2 : 0;
+            mesh.position.set(offset.x, offset.y, 0);
             parent.add(mesh, new THREE.LineSegments(edges, lineMaterial));
             scene.targets.push(mesh);
         } else if (thing.render === 'box') {
@@ -291,7 +335,7 @@ export function buildThings(ctx: BuildContext): PropSet {
 
             const mesh = new THREE.Mesh(box, material);
             mesh.userData.thingSlug = thing.slug;
-            mesh.position.x = thing.isDoor ? thing.width / 2 : 0;
+            mesh.position.set(offset.x, offset.y, 0);
 
             parent.add(mesh);
             scene.targets.push(mesh);
@@ -314,7 +358,7 @@ export function buildThings(ctx: BuildContext): PropSet {
 
                 mesh.rotation.y = turn;
                 mesh.userData.thingSlug = thing.slug;
-                mesh.position.x = thing.isDoor ? thing.width / 2 : 0;
+                mesh.position.set(offset.x, offset.y, 0);
 
                 parent.add(mesh);
                 scene.targets.push(mesh);
@@ -370,83 +414,86 @@ export function buildThings(ctx: BuildContext): PropSet {
             scene.colliders.push(collider);
         }
 
-        if (thing.isDoor) {
-            doors.set(thing.slug, {
+        // Anything with a hinge can be moved, whatever it was drawn as and
+        // whatever the author had in mind for it.
+        if (hinged) {
+            movable.set(thing.slug, {
                 thing,
                 leaf,
+                swings,
                 collider,
-                // Whether it *starts* open, which is the only thing the data
-                // has an opinion about. Where a door stands while somebody is
-                // playing belongs to the engine, for the reason `types/game.ts`
-                // gives: you walk through a door in the same frame it opens,
-                // and nothing that involves the server can keep up with that.
-                open: thing.isOpen,
-                at: thing.isOpen ? 1 : 0,
+                want: 0,
+                at: 0,
             });
         }
     }
 
-    /**
-     * Puts a door where its state says it should be, this frame.
-     *
-     * A swing turns the leaf; a slider moves it along its own width. `fold` is
-     * left swinging on purpose: a bifold is two half-width leaves hinged on
-     * each other wanting half the picture each, nothing in any level is one
-     * yet, and a door that swings when it should fold is a smaller wrong than a
-     * door that does not move.
-     */
-    const placeDoor = (door: Door): void => {
-        if (door.thing.swing === 'slide') {
-            // `openAngle` for a slider is the fraction of its own width it
-            // moves, times ninety — so the number means the same kind of thing
-            // whichever way a door gets out of the way.
-            door.leaf.position.x =
-                -door.thing.width / 2 +
-                door.at * (door.thing.openAngle / 90) * door.thing.width;
+    /** Puts a hinged thing where it has got to, this frame. */
+    const place = (moving: Movable): void => {
+        const turned = THREE.MathUtils.degToRad(moving.at);
 
-            return;
-        }
-
-        door.leaf.rotation.y =
-            door.at * THREE.MathUtils.degToRad(door.thing.openAngle);
+        // A side hinge turns about the upright; a top or bottom one turns about
+        // the edge itself, which is horizontal. The leaf is already sitting on
+        // whichever edge it is, so the axis is the whole of the difference.
+        moving.leaf.rotation.set(
+            moving.swings ? 0 : turned,
+            moving.swings ? turned : 0,
+            0,
+        );
     };
 
-    for (const door of doors.values()) {
-        placeDoor(door);
-
-        if (door.collider !== null) {
-            door.collider.enabled = !door.open;
-        }
+    for (const moving of movable.values()) {
+        place(moving);
     }
 
-    const doorSet: DoorSet = {
-        has: (slug) => doors.has(slug),
+    const moved: MovedThings = {
+        has: (slug) => movable.has(slug),
 
-        isOpen: (slug) => doors.get(slug)?.open ?? false,
+        turnOf: (slug) => movable.get(slug)?.want ?? 0,
 
-        set: (slug, open) => {
-            const door = doors.get(slug);
+        blocking: (slug) => {
+            const collider = movable.get(slug)?.collider;
 
-            if (door === undefined || door.open === open) {
+            return collider !== null && collider !== undefined
+                ? collider.enabled !== false
+                : false;
+        },
+
+        turn: (slug, degrees) => {
+            const moving = movable.get(slug);
+
+            if (moving === undefined || moving.want === degrees) {
                 return false;
             }
 
-            door.open = open;
-
-            // On this call, not when the animation catches up. A collider tied
-            // to the angle closes on somebody standing in the doorway and
-            // leaves them inside the door.
-            if (door.collider !== null) {
-                door.collider.enabled = !open;
-            }
+            moving.want = degrees;
 
             return true;
         },
 
-        opened: () =>
-            [...doors.values()]
-                .filter((door) => door.open)
-                .map((door) => door.thing.slug),
+        block: (slug, blocking) => {
+            const moving = movable.get(slug);
+
+            if (moving === undefined || moving.collider === null) {
+                return false;
+            }
+
+            // On this call, not when the swing catches up.
+            moving.collider.enabled = blocking;
+
+            return true;
+        },
+
+        moved: () =>
+            Object.fromEntries(
+                [...movable.entries()].map(([slug, moving]) => [
+                    slug,
+                    {
+                        turned: moving.want,
+                        blocking: moving.collider?.enabled !== false,
+                    },
+                ]),
+            ),
     };
 
     const faceViewer = (x: number, z: number): void => {
@@ -461,23 +508,24 @@ export function buildThings(ctx: BuildContext): PropSet {
     };
 
     const update = (seconds: number): void => {
-        for (const door of doors.values()) {
-            const want = door.open ? 1 : 0;
-
-            if (door.at === want) {
+        for (const moving of movable.values()) {
+            if (moving.at === moving.want) {
                 continue;
             }
 
-            // `openSeconds` is the whole travel whichever way it is going, so a
-            // door caught half open and told to shut takes half of it.
-            const step = seconds / Math.max(door.thing.openSeconds, 0.01);
+            // A rate rather than a duration, so a thing told to turn ten
+            // degrees takes a tenth as long as one told to turn a hundred, and
+            // one caught halfway and sent back takes half of what it had left.
+            // A duration would make a nudge and a full swing take the same
+            // time, which reads as two different mechanisms.
+            const step = TURN_RATE * seconds;
 
-            door.at =
-                want > door.at
-                    ? Math.min(want, door.at + step)
-                    : Math.max(want, door.at - step);
+            moving.at =
+                moving.want > moving.at
+                    ? Math.min(moving.want, moving.at + step)
+                    : Math.max(moving.want, moving.at - step);
 
-            placeDoor(door);
+            place(moving);
         }
 
         for (const running of animated) {
@@ -531,5 +579,5 @@ export function buildThings(ctx: BuildContext): PropSet {
         }
     };
 
-    return { faceViewer, update, setFlags, highlight, doors: doorSet };
+    return { faceViewer, update, setFlags, highlight, moving: moved };
 }

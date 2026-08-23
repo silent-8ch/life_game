@@ -7,13 +7,14 @@ import InventoryTray from '@/components/game/inventory-tray';
 import LevelViewport from '@/components/game/level-viewport';
 import VerbMenu from '@/components/game/verb-menu';
 import type { VerbChoice } from '@/components/game/verb-menu';
-import type { DoorSet } from '@/lib/engine/build/things';
+import type { MovedThings } from '@/lib/engine/build/things';
 import type { ExplorePageProps, LevelThing } from '@/types';
 
 export default function Explore({
     game,
     level,
     flags,
+    moved,
     inventory,
     message,
 }: ExplorePageProps) {
@@ -31,8 +32,8 @@ export default function Explore({
 
     const close = useCallback(() => setAsking(null), []);
 
-    /** The level's doors, once it is built, so Use can work one at once. */
-    const doors = useRef<DoorSet | null>(null);
+    /** What this level can move, once built, so Use can move it at once. */
+    const moving = useRef<MovedThings | null>(null);
 
     /**
      * A verb, sent off to be settled. Only the inventory and the message come
@@ -61,6 +62,41 @@ export default function Explore({
                 return;
             }
 
+            // Whatever this verb moves, moved now rather than when the server
+            // has finished thinking. You walk through a door in the same frame
+            // it opens, and the round trip returns an inventory and a message
+            // by design, so the engine's own state goes first and the save
+            // confirms it afterwards.
+            //
+            // The engine is told what to do rather than working it out: the
+            // offer carries the two effects that move something, so a door, a
+            // drawbridge and a hatch all arrive here as the same instruction
+            // with different numbers in it.
+            //
+            // Nothing rolls this back and nothing needs to. `moved` comes back
+            // with every interaction and the viewport puts every thing where it
+            // says, so a refused one — a locked door, a missing key — is one
+            // whose turn never arrives and swings shut on its own a moment
+            // later.
+            const offered = thing.verbs.find(
+                (offer) =>
+                    offer.verb === choice.verb &&
+                    (offer.item ?? '') === (choice.item ?? ''),
+            );
+
+            for (const move of offered?.moves ?? []) {
+                if (move.does === 'rotate_thing') {
+                    moving.current?.turn(move.subject, Number(move.value));
+                }
+
+                if (move.does === 'set_blocking') {
+                    moving.current?.block(
+                        move.subject,
+                        move.value === '1' || move.value === 'true',
+                    );
+                }
+            }
+
             router.post(
                 store(game.slug).url,
                 {
@@ -70,7 +106,7 @@ export default function Explore({
                     item: choice.item ?? '',
                 },
                 {
-                    only: ['inventory', 'flags', 'message'],
+                    only: ['inventory', 'flags', 'moved', 'message'],
                     preserveState: true,
                     preserveScroll: true,
                     onSuccess: (page) => {
@@ -120,7 +156,8 @@ export default function Explore({
                     <LevelViewport
                         level={level}
                         flags={flags}
-                        doorsRef={doors}
+                        moved={moved}
+                        movingRef={moving}
                         onFocus={setFocused}
                         onExamine={examine}
                         onLockChange={lockChanged}

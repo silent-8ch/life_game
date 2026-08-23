@@ -4,8 +4,8 @@ namespace Database\Seeders\Concerns;
 
 use App\Enums\ActorBehaviour;
 use App\Enums\ConditionType;
-use App\Enums\DoorSwing;
 use App\Enums\EffectType;
+use App\Enums\ThingHinge;
 use App\Enums\ThingKind;
 use App\Enums\ThingRender;
 use App\Enums\ThingUvMode;
@@ -378,19 +378,18 @@ trait AuthorsGames
     }
 
     /**
-     * A door standing in a doorway, hinged on its own left edge as you look at
-     * its front.
+     * A flat thing on a hinge: a door, a hatch, a drawbridge, a shutter.
      *
-     * The hinge is not a column and cannot be: `level_things` carries `swing`,
-     * `open_angle`, `open_seconds`, `is_open` and `opens_flag` and no hinge, so
-     * the engine fixes it at the left and an author moves it by turning the
-     * door round with `$angle`. See `build/things.ts`.
+     * Paul: *a door is just a solid sprite that has a hinge with an action.* So
+     * this makes the sprite and the hinge, and the action is an ordinary
+     * interaction authored beside it — `Use`, with a `RotateThing` and a
+     * `SetBlocking`. There is no door here and there is not meant to be.
      *
-     * `$opensFlag` is what makes an opening survive a reload, and it only ever
-     * opens: a door authored open stays open whether or not the flag is set.
-     * Null for a door whose state nobody needs to remember.
+     * The hinge is named from the front, which is the face `$angle` points at.
+     * Turning the thing round moves the hinge to the other jamb, so the two
+     * together reach every arrangement without a column for handedness.
      */
-    protected function door(
+    protected function hinged(
         Level $level,
         string $slug,
         string $name,
@@ -399,14 +398,12 @@ trait AuthorsGames
         float $z,
         float $width,
         float $height,
+        ThingHinge $hinge,
         float $angle = 0,
-        bool $open = false,
-        ?string $opensFlag = null,
-        DoorSwing $swing = DoorSwing::Swing,
-        float $openAngle = 90,
         ?string $texture = null,
+        float $depth = 0.08,
     ): LevelThing {
-        $door = $this->thing(
+        $thing = $this->thing(
             $level,
             $slug,
             $name,
@@ -414,28 +411,38 @@ trait AuthorsGames
             $x,
             $z,
             $width,
-            0.08,
+            $depth,
             $height,
             ThingKind::Door,
             angle: $angle,
             texture: $texture,
         );
 
-        $door->update([
-            // One quad at the door's own angle, which is what a door is. It was
-            // a box until `flat` existed: six faces to show one picture, four
-            // of them edge-on slivers and one of them the picture backwards.
+        $thing->update([
+            // One quad at its own angle, which is what a door is. A box would
+            // be six faces to show one picture, four of them edge-on slivers.
             'render' => ThingRender::Flat,
             'uv_mode' => ThingUvMode::Fit,
-            'is_door' => true,
-            'swing' => $swing,
-            'open_angle' => $openAngle,
-            'open_seconds' => 0.45,
-            'is_open' => $open,
-            'opens_flag' => $opensFlag,
+            'hinge' => $hinge,
         ]);
 
-        return $door;
+        return $thing;
+    }
+
+    /**
+     * The interaction that makes a hinged thing open: turn it, and let go of
+     * the doorway.
+     *
+     * Two effects, neither of which knows it is making a door. `$degrees` is
+     * absolute rather than an amount to add, so somebody who Uses it twice gets
+     * a thing that is open rather than one that is open twice.
+     */
+    protected function opens(LevelThing $thing, string $response, float $degrees = 90): Interaction
+    {
+        return $this->interaction($thing, Verb::Use, $response, effects: [
+            [EffectType::RotateThing, $thing->slug, (string) $degrees],
+            [EffectType::SetBlocking, $thing->slug, '0'],
+        ]);
     }
 
     protected function item(Game $game, string $slug, string $name, string $description): Item

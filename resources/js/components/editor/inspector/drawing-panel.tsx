@@ -51,6 +51,41 @@ export default function DrawingPanel({
                 </select>
             </Field>
 
+            {thing.render === 'flat' && (
+                <>
+                    <Field label="Hinged on">
+                        <select
+                            value={thing.hinge ?? ''}
+                            onChange={(event) =>
+                                onChangeThing({
+                                    hinge:
+                                        event.target.value === ''
+                                            ? null
+                                            : (event.target
+                                                  .value as LevelThing['hinge']),
+                                })
+                            }
+                            className={inputClass}
+                        >
+                            <option value="">Nothing — it does not move</option>
+                            <option value="left">Left edge</option>
+                            <option value="right">Right edge</option>
+                            <option value="top">Top edge</option>
+                            <option value="bottom">Bottom edge</option>
+                        </select>
+                    </Field>
+
+                    {thing.hinge !== null && (
+                        <p className="text-xs leading-relaxed text-slate-500">
+                            It turns about that edge, seen from the front. What
+                            turns it is an interaction below: give it Use with a
+                            Rotate and a Blocking effect and you have made a
+                            door. Bottom makes a drawbridge, top a hatch.
+                        </p>
+                    )}
+                </>
+            )}
+
             {thing.render === 'cross' && (
                 <Field label="Planes">
                     <select

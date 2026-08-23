@@ -3,7 +3,7 @@ import type { ReactNode, RefObject } from 'react';
 import * as THREE from 'three';
 import { store } from '@/actions/App/Http/Controllers/DebugSnapshotController';
 import { createActors } from '@/lib/engine/actors';
-import type { DoorSet, PropSet } from '@/lib/engine/build/things';
+import type { MovedThings, PropSet } from '@/lib/engine/build/things';
 import { buildLevel } from '@/lib/engine/build-level';
 import { captureShots } from '@/lib/engine/capture';
 import { MAX_FRAME_SECONDS, REACH } from '@/lib/engine/constants';
@@ -50,7 +50,7 @@ import { postTicket, ticketFromSpot } from '@/lib/engine/ticket';
 import { wantsTouchControls } from '@/lib/engine/touch';
 import { createView } from '@/lib/engine/view';
 import { cn } from '@/lib/utils';
-import type { Flags, Level, LevelThing, Sector } from '@/types';
+import type { Flags, Level, LevelThing, Moved, Sector } from '@/types';
 
 type LevelViewportProps = {
     level: Level;
@@ -74,16 +74,21 @@ type LevelViewportProps = {
     onFocus: (thing: LevelThing | null) => void;
     onExamine: (thing: LevelThing) => void;
     /**
-     * Filled in with the doors once the level is built, so that whatever runs
-     * the verb menu can open one the instant it is asked for.
-     *
-     * A door is the one interaction that cannot wait for the server. You walk
-     * through it in the same frame it opens, and the round trip returns an
-     * inventory and a message by design — so the page reaches *in* here rather
-     * than the level reaching out, which is the only direction that is fast
-     * enough.
+     * What has been done to the things in this level: turned, or stopped
+     * blocking. Absent means as authored, the same reading the flags get.
      */
-    doorsRef?: RefObject<DoorSet | null>;
+    moved?: Moved;
+    /**
+     * Filled in with the level's movable things once it is built, so that
+     * whatever runs the verb menu can turn one the instant it is asked for.
+     *
+     * These are the one kind of interaction that cannot wait for the server.
+     * You walk through a door in the same frame it opens, and the round trip
+     * returns an inventory and a message by design — so the page reaches *in*
+     * here rather than the level reaching out, which is the only direction that
+     * is fast enough.
+     */
+    movingRef?: RefObject<MovedThings | null>;
     onLockChange: (locked: boolean) => void;
     /** Anything the level wants to tell the player, such as a snapshot saving. */
     onMessage?: (text: string) => void;
@@ -124,7 +129,8 @@ export default function LevelViewport({
     flags = {},
     onFocus,
     onExamine,
-    doorsRef,
+    moved = {},
+    movingRef,
     onLockChange,
     onMessage,
     reportTo,
@@ -239,7 +245,7 @@ export default function LevelViewport({
         flagsSet.current = set;
         propSet.current?.setFlags(set);
 
-        // And the doors that remember, put back to what the save says.
+        // And whatever the save has moved, put back to what it says.
         //
         // This is the whole of the rollback a refused interaction needs. `Use`
         // opens a door here and now, because waiting for a round trip makes
@@ -250,21 +256,16 @@ export default function LevelViewport({
         //
         // A door with no `opensFlag` is not in this: it has no answer on the
         // server to disagree with, and where it stands is the engine's alone.
-        for (const thing of level.things) {
-            if (thing.isDoor && thing.opensFlag !== null) {
-                // The flag only ever *opens*, which is what it is called and
-                // what it means: a door remembering it was opened, so it is
-                // still open next time. So a door whose flag has not come back
-                // falls to how it was authored rather than to shut — otherwise
-                // a door somebody left standing open would slam the moment the
-                // first interaction of the game answered.
-                propSet.current?.doors.set(
-                    thing.slug,
-                    set.has(thing.opensFlag) || thing.isOpen,
-                );
+        for (const [slug, was] of Object.entries(moved)) {
+            if (was.turned !== null) {
+                propSet.current?.moving.turn(slug, was.turned);
+            }
+
+            if (was.blocking !== null) {
+                propSet.current?.moving.block(slug, was.blocking);
             }
         }
-    }, [flags, level.things]);
+    }, [flags, moved]);
 
     // Held in a ref so that re-rendering the frame never restarts the level.
     const callbacks = useRef({ onFocus, onExamine, onLockChange, onMessage });
@@ -329,8 +330,8 @@ export default function LevelViewport({
         built.props.setFlags(flagsSet.current);
         propSet.current = built.props;
 
-        if (doorsRef !== undefined) {
-            doorsRef.current = built.props.doors;
+        if (movingRef !== undefined) {
+            movingRef.current = built.props.moving;
         }
 
         scene.add(built.group);
@@ -853,8 +854,8 @@ export default function LevelViewport({
             observer.disconnect();
             propSet.current = null;
 
-            if (doorsRef !== undefined) {
-                doorsRef.current = null;
+            if (movingRef !== undefined) {
+                movingRef.current = null;
             }
 
             input.dispose();
@@ -877,7 +878,7 @@ export default function LevelViewport({
         // identity is stable for the life of whoever made it and listing it is
         // the lint rule being satisfied rather than a dependency being
         // declared.
-    }, [level, touch, reportTo, doorsRef]);
+    }, [level, touch, reportTo, movingRef]);
 
     return (
         <div

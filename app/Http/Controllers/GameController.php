@@ -8,6 +8,7 @@ use App\Models\GameFlag;
 use App\Models\GameState;
 use App\Models\Hotspot;
 use App\Models\Item;
+use App\Models\LevelThing;
 use App\Services\LevelPayload;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -61,8 +62,10 @@ class GameController extends Controller
         $state->load([
             'currentLevel.sectors.edges.vertex',
             'currentLevel.things.interactions.requiredItem',
+            'currentLevel.things.interactions.effects',
             'items',
             'flags',
+            'thingOverrides',
         ]);
 
         // ?level=slug drops the player into one particular level, which is how
@@ -70,12 +73,17 @@ class GameController extends Controller
         // this visit only: the save carries on pointing where it did.
         $level = ($wanted === '' ? null : $game->levels()
             ->where('slug', $wanted)
-            ->with(['sectors.edges.vertex', 'things.interactions.requiredItem'])
+            ->with([
+                'sectors.edges.vertex',
+                'things.interactions.requiredItem',
+                'things.interactions.effects',
+            ])
             ->first())
             ?? $state->currentLevel
             ?? $game->openingLevel()->load([
                 'sectors.edges.vertex',
                 'things.interactions.requiredItem',
+                'things.interactions.effects',
             ]);
 
         return Inertia::render('game/explore', [
@@ -97,6 +105,12 @@ class GameController extends Controller
             // that one exists so a partial reload never rebuilds the geometry,
             // and flags are the small half that does change.
             'flags' => $this->flags($state),
+            // And what has been done to the things in it: turned, or stopped
+            // blocking. Refreshed alongside the flags for the same reason and
+            // by the same partial reload — a door you opened should still be
+            // open when the answer comes back, and one the save refused should
+            // not be.
+            'moved' => $this->moved($state),
             // Where they got to last time, or null to start at the level's
             // spawn. Only offered when it is this level they were standing in:
             // a position is a place in one particular level and means nothing
@@ -122,6 +136,37 @@ class GameController extends Controller
         return $state->flags
             ->mapWithKeys(fn (GameFlag $flag): array => [
                 $flag->key => (string) $flag->value,
+            ])
+            ->all();
+    }
+
+    /**
+     * What has been done to the things in the level, by slug.
+     *
+     * Only things something has actually acted on, so absent means *as
+     * authored* — the same reading the flags get, and the reason neither field
+     * needs a value that means nothing.
+     *
+     * `turned` is degrees about the thing's hinge and `blocking` is whether it
+     * stops anybody walking through. The engine does both of those the instant
+     * a verb is chosen rather than waiting for this, because you walk through a
+     * door in the same frame it opens; this is what confirms it afterwards, and
+     * what quietly puts a refused one back.
+     *
+     * @return array<string, array{turned: float|null, blocking: bool|null}>
+     */
+    private function moved(GameState $state): array
+    {
+        return $state->thingOverrides
+            ->mapWithKeys(fn (LevelThing $thing): array => [
+                $thing->slug => [
+                    'turned' => $thing->pivot?->getAttribute('turned') === null
+                        ? null
+                        : (float) $thing->pivot->getAttribute('turned'),
+                    'blocking' => $thing->pivot?->getAttribute('blocking') === null
+                        ? null
+                        : (bool) $thing->pivot->getAttribute('blocking'),
+                ],
             ])
             ->all();
     }

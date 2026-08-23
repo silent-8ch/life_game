@@ -174,8 +174,8 @@ it('tells the browser which verbs a thing answers to, and nothing more', functio
         ->assertInertia(fn ($page) => $page
             ->where('level.things', fn ($things) => collect($things)
                 ->firstWhere('slug', 'flower-pot')['verbs'] === [
-                    ['verb' => 'look', 'item' => null],
-                    ['verb' => 'use', 'item' => 'shed-key'],
+                    ['verb' => 'look', 'item' => null, 'moves' => []],
+                    ['verb' => 'use', 'item' => 'shed-key', 'moves' => []],
                 ]
             )
         );

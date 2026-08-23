@@ -36,6 +36,8 @@ const EFFECT_LABELS: Record<EffectTypeName, string> = {
     give_item: 'Give item',
     remove_item: 'Take item away',
     set_flag: 'Set flag',
+    rotate_thing: 'Turn thing to (degrees)',
+    set_blocking: 'Thing blocks the way (1 or 0)',
 };
 
 // The label maps are the lists as well, so there is one place to add a verb or

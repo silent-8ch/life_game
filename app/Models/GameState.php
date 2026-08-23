@@ -32,6 +32,7 @@ use Illuminate\Support\Carbon;
  * @property-read Collection<int, Item> $items
  * @property-read Collection<int, GameFlag> $flags
  * @property-read Collection<int, Hotspot> $hotspotOverrides
+ * @property-read Collection<int, LevelThing> $thingOverrides
  */
 #[Fillable([
     'game_id',
@@ -151,6 +152,26 @@ class GameState extends Model
     public function hotspotOverrides(): BelongsToMany
     {
         return $this->belongsToMany(Hotspot::class)->withPivot('is_visible')->withTimestamps();
+    }
+
+    /**
+     * Things an interaction has turned, or stopped blocking.
+     *
+     * The same shape as `hotspotOverrides` and for the same reason: a level
+     * says how a thing was authored and a save says what has happened to it
+     * since, and writing the second onto the first would mean a level could not
+     * be played twice.
+     *
+     * Only things that have been acted on are here, so absent means *as
+     * authored* — the same reading the flags get.
+     *
+     * @return BelongsToMany<LevelThing, $this>
+     */
+    public function thingOverrides(): BelongsToMany
+    {
+        return $this->belongsToMany(LevelThing::class, 'game_state_thing')
+            ->withPivot(['turned', 'blocking'])
+            ->withTimestamps();
     }
 
     public function hasItem(string $slug): bool

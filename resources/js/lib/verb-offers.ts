@@ -20,5 +20,10 @@ export function offersFor(thing: LevelThing, inventory: Item[]): VerbOffer[] {
     // it. A menu with no entries at all would be a dead end.
     return offered.some((offer) => offer.verb === 'look' && offer.item === null)
         ? offered
-        : [{ verb: 'look', item: null }, ...offered];
+        : [
+              // Looking moves nothing, which is why the fallback can name an
+              // empty list without knowing anything about what does.
+              { verb: 'look', item: null, moves: [] },
+              ...offered,
+          ];
 }

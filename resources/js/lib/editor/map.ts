@@ -475,12 +475,6 @@ export function newPerson(
         animationFps: 8,
         // Nothing opens until somebody says so, so a thing placed today is the
         // thing it always was.
-        isDoor: false,
-        swing: 'swing',
-        openAngle: 90,
-        openSeconds: 0.4,
-        isOpen: false,
-        opensFlag: null,
         x: at.x,
         z: at.z,
         elevation: 0,
@@ -488,6 +482,7 @@ export function newPerson(
         depth: 0.9,
         height,
         angle: 0,
+        hinge: null,
         isSolid: false,
         verbs: [],
         interactions: [],
@@ -520,12 +515,6 @@ export function newProp(level: Level, at: Point): LevelThing {
         animationFps: 8,
         // Nothing opens until somebody says so, so a thing placed today is the
         // thing it always was.
-        isDoor: false,
-        swing: 'swing',
-        openAngle: 90,
-        openSeconds: 0.4,
-        isOpen: false,
-        opensFlag: null,
         x: at.x,
         z: at.z,
         elevation: 0,
@@ -533,6 +522,7 @@ export function newProp(level: Level, at: Point): LevelThing {
         depth: 0.8,
         height: 0.8,
         angle: 0,
+        hinge: null,
         isSolid: true,
         verbs: [],
         interactions: [],

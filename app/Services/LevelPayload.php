@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\EffectType;
 use App\Enums\ThingKind;
 use App\Models\Interaction;
 use App\Models\InteractionCondition;
@@ -101,12 +102,7 @@ class LevelPayload
                 'height' => $thing->height,
                 'angle' => $thing->angle,
                 'isSolid' => $thing->is_solid,
-                'isDoor' => $thing->is_door,
-                'swing' => $thing->swing->value,
-                'openAngle' => $thing->open_angle,
-                'openSeconds' => $thing->open_seconds,
-                'isOpen' => $thing->is_open,
-                'opensFlag' => $thing->opens_flag,
+                'hinge' => $thing->hinge?->value,
                 'verbs' => $this->verbsFor($thing),
             ])->all(),
         ];
@@ -180,13 +176,35 @@ class LevelPayload
     }
 
     /**
-     * What the player may try on a thing. Only the shape of the offer travels —
-     * which verb, and what has to be in hand for it — never the conditions or
-     * the effects, which the browser has no business knowing and no way to
-     * enforce. Whether an interaction's conditions actually hold is settled on
-     * the server when the verb is sent.
+     * What the player may try on a thing, and the two things it could do to the
+     * world that the engine has to do for itself.
      *
-     * @return array<int, array{verb: string, item: string|null}>
+     * Only the shape of the offer travels — which verb, what has to be in hand
+     * for it — never the conditions, which the browser has no business knowing
+     * and no way to enforce. Whether an interaction's conditions actually hold
+     * is settled on the server when the verb is sent.
+     *
+     * ## Why two effects and no others
+     *
+     * `moves` carries `rotate_thing` and `set_blocking`, and nothing else ever.
+     * Those two are the only effects whose result the player is inside: **you
+     * walk through a door in the same frame it opens**, and an interaction is a
+     * round trip that also returns an inventory and a message. Nothing that
+     * involves the server can keep up with a door, so the engine does those two
+     * itself and lets the answer confirm it.
+     *
+     * Everything else stays where it was. An item appearing in a pocket, a flag
+     * being set, a scene changing — none of those has to happen before the next
+     * frame, so none of them travels, and this list is a short one on purpose
+     * rather than a first instalment. `.ai/rules/services.md` is explicit that
+     * the engine payload must never widen; this widens it by exactly the amount
+     * that instant response requires and says what the amount is for.
+     *
+     * A refused interaction needs no undoing bespoke to it: the save answers
+     * with what it actually did, and the viewport puts every thing where that
+     * answer says. A locked door is one whose turn never comes back.
+     *
+     * @return array<int, array{verb: string, item: string|null, moves: array<int, array{does: string, subject: string, value: string|null}>}>
      */
     private function verbsFor(LevelThing $thing): array
     {
@@ -194,9 +212,33 @@ class LevelPayload
             ->map(fn (Interaction $interaction): array => [
                 'verb' => $interaction->verb->value,
                 'item' => $interaction->requiredItem?->slug,
+                'moves' => $this->movesOf($interaction),
             ])
             ->unique(fn (array $offer): string => $offer['verb'].'|'.($offer['item'] ?? ''))
             ->sortBy([['verb', 'asc'], ['item', 'asc']])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * The effects of one interaction that move something the player can be
+     * standing in.
+     *
+     * @return array<int, array{does: string, subject: string, value: string|null}>
+     */
+    private function movesOf(Interaction $interaction): array
+    {
+        return $interaction->effects
+            ->filter(fn (InteractionEffect $effect): bool => in_array(
+                $effect->type,
+                [EffectType::RotateThing, EffectType::SetBlocking],
+                strict: true,
+            ))
+            ->map(fn (InteractionEffect $effect): array => [
+                'does' => $effect->type->value,
+                'subject' => $effect->subject,
+                'value' => $effect->value,
+            ])
             ->values()
             ->all();
     }

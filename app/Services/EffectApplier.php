@@ -8,6 +8,7 @@ use App\Models\Hotspot;
 use App\Models\Interaction;
 use App\Models\InteractionEffect;
 use App\Models\Item;
+use App\Models\LevelThing;
 use App\Models\Scene;
 use RuntimeException;
 
@@ -42,6 +43,12 @@ class EffectApplier
             EffectType::MoveToScene => $state->update(['current_scene_id' => $this->scene($state, $effect->subject, $effect)->id]),
             EffectType::RevealHotspot => $this->setHotspotVisibility($state, $interaction, $effect, true),
             EffectType::HideHotspot => $this->setHotspotVisibility($state, $interaction, $effect, false),
+            EffectType::RotateThing => $this->overrideThing($state, $interaction, $effect, [
+                'turned' => (float) $effect->value,
+            ]),
+            EffectType::SetBlocking => $this->overrideThing($state, $interaction, $effect, [
+                'blocking' => filter_var($effect->value, FILTER_VALIDATE_BOOL),
+            ]),
         };
     }
 
@@ -50,6 +57,55 @@ class EffectApplier
         $hotspot = $this->hotspot($state, $interaction, $effect);
 
         $state->hotspotOverrides()->syncWithoutDetaching([$hotspot->id => ['is_visible' => $isVisible]]);
+    }
+
+    /**
+     * Records what has happened to a thing, without touching how it was drawn.
+     *
+     * `syncWithoutDetaching` rather than a replace, because the two effects are
+     * authored separately and a door's Use fires both: turning it must not
+     * forget that it stopped blocking, and stopping it blocking must not forget
+     * the angle. One row per thing per save, each column written by whichever
+     * effect owns it.
+     *
+     * @param  array{turned?: float, blocking?: bool}  $change
+     */
+    private function overrideThing(
+        GameState $state,
+        Interaction $interaction,
+        InteractionEffect $effect,
+        array $change,
+    ): void {
+        $state->thingOverrides()->syncWithoutDetaching([
+            $this->thing($state, $interaction, $effect)->id => $change,
+        ]);
+    }
+
+    /**
+     * The thing an effect names, within the level the interaction belongs to.
+     *
+     * A bare slug means a thing in the same level, which is the only kind
+     * anything has needed: a door's own Use turns the door. Resolved through the
+     * interaction rather than through the save's current level, so an effect
+     * fired on a level somebody has since walked out of still names the right
+     * thing.
+     */
+    private function thing(GameState $state, Interaction $interaction, InteractionEffect $effect): LevelThing
+    {
+        $level = $interaction->levelThing?->level;
+
+        if ($level === null) {
+            throw new RuntimeException(
+                "Effect {$effect->id} targets a thing, but interaction {$interaction->id} does not belong to a level."
+            );
+        }
+
+        return LevelThing::query()
+            ->where('level_id', $level->id)
+            ->where('slug', $effect->subject)
+            ->firstOr(fn () => throw new RuntimeException(
+                "Effect {$effect->id} references unknown thing [{$effect->subject}]."
+            ));
     }
 
     private function item(GameState $state, InteractionEffect $effect): Item
