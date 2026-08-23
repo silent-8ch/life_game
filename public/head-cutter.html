@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Where does the head end?</title>
+        <style>
+            :root {
+                color-scheme: dark;
+                --ink: #e2e8f0;
+                --dim: #94a3b8;
+                --line: #1e293b;
+                --pick: #fbbf24;
+                --ok: #34d399;
+            }
+            * { box-sizing: border-box; }
+            body {
+                margin: 0; padding: 24px; background: #05070a; color: var(--ink);
+                font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, sans-serif;
+            }
+            h1 { font-size: 20px; margin: 0 0 4px; }
+            p.note { color: var(--dim); margin: 0 0 12px; max-width: 72ch; }
+            .bar {
+                position: sticky; top: 0; z-index: 10; background: #05070ae6;
+                backdrop-filter: blur(6px); padding: 12px 24px; margin: -24px -24px 16px;
+                border-bottom: 1px solid var(--line);
+                display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+            }
+            .bar button {
+                background: var(--pick); color: #05070a; border: 0; font-weight: 600;
+                border-radius: 4px; padding: 7px 14px; cursor: pointer; font-size: 13px;
+            }
+            .bar button.ghost {
+                background: transparent; color: var(--dim);
+                border: 1px solid var(--line); font-weight: 400;
+            }
+            .count { color: var(--dim); font-size: 13px; }
+            .grid {
+                display: grid; gap: 12px;
+                grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+            }
+            figure {
+                margin: 0; background: #0f172a; border: 1px solid var(--line);
+                border-radius: 6px; padding: 8px;
+            }
+            figure.done { border-color: var(--ok); }
+            .stage {
+                position: relative; width: 100%; cursor: crosshair;
+                background-color: #1e293b;
+                background-image:
+                    linear-gradient(45deg, #0b1220 25%, transparent 25%),
+                    linear-gradient(-45deg, #0b1220 25%, transparent 25%),
+                    linear-gradient(45deg, transparent 75%, #0b1220 75%),
+                    linear-gradient(-45deg, transparent 75%, #0b1220 75%);
+                background-size: 16px 16px;
+                background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+                border-radius: 4px; overflow: hidden; user-select: none;
+            }
+            .stage img { width: 100%; display: block; pointer-events: none; }
+            .box {
+                position: absolute; border: 1.5px solid var(--pick);
+                background: rgba(251, 191, 36, 0.16); pointer-events: none;
+            }
+            /* The line the head is taken off at, and the point everything is
+               registered to. Drawn separately because it is the output that
+               matters, not the rectangle. */
+            .neck {
+                position: absolute; height: 0; border-top: 1px dashed var(--ok);
+                pointer-events: none;
+            }
+            .neck::after {
+                content: ''; position: absolute; left: 50%; top: -3px;
+                width: 6px; height: 6px; margin-left: -3px; border-radius: 50%;
+                background: var(--ok);
+            }
+            figcaption {
+                font: 11px/1.4 ui-monospace, monospace; color: var(--dim);
+                margin-top: 6px; word-break: break-all;
+            }
+            .anchor { color: var(--ok); }
+            textarea {
+                width: 100%; height: 200px; margin-top: 12px; background: #020408;
+                color: var(--ok); border: 1px solid var(--line); border-radius: 6px;
+                padding: 12px; font: 12px/1.5 ui-monospace, monospace;
+            }
+            .missing { color: #f87171; }
+        </style>
+    </head>
+    <body>
+        <div class="bar">
+            <button id="copy">Copy cuts as JSON</button>
+            <button class="ghost" id="clear">Clear</button>
+            <span class="count" id="count"></span>
+        </div>
+
+        <h1>Where does the head end?</h1>
+        <p class="note">
+            The generator draws whole people, because a headless figure is an unnatural thing
+            to ask for and comes back wrong. Drag a box round each head. The bottom centre of
+            the box — the green dot — is the <strong>neck anchor</strong>, and it is the real
+            output: it is what puts a head back on a body in the same place across every pose,
+            so heads do not jump about as somebody walks. Drag again to redo one.
+            Then copy the JSON and run
+            <code>python3 docs/tools/cut_heads.py cuts.json</code>.
+        </p>
+
+        <div id="out"></div>
+        <textarea id="json" readonly hidden></textarea>
+
+        <script>
+            const STORE = 'head-cutter-cuts';
+            const cuts = JSON.parse(localStorage.getItem(STORE) || '{}');
+            const out = document.getElementById('out');
+            const count = document.getElementById('count');
+
+            function tally() {
+                const all = document.querySelectorAll('figure').length;
+                count.textContent = `${Object.keys(cuts).length} of ${all} cut`;
+            }
+
+            function save() {
+                localStorage.setItem(STORE, JSON.stringify(cuts));
+                tally();
+            }
+
+            // Boxes are stored in image pixels, never in screen pixels — the
+            // grid reflows and the page zooms, and a cut recorded against a
+            // layout is a cut that moves when the window does.
+            function paint(figure, sprite) {
+                const box = figure.querySelector('.box');
+                const neck = figure.querySelector('.neck');
+                const at = cuts[sprite.path];
+
+                if (!at) {
+                    box.style.display = 'none';
+                    neck.style.display = 'none';
+                    figure.classList.remove('done');
+                    figure.querySelector('.anchor').textContent = '';
+                    return;
+                }
+
+                const [x, y, w, h] = at;
+                const asPercent = (v, of) => `${(v / of) * 100}%`;
+
+                box.style.display = 'block';
+                box.style.left = asPercent(x, sprite.w);
+                box.style.top = asPercent(y, sprite.h);
+                box.style.width = asPercent(w, sprite.w);
+                box.style.height = asPercent(h, sprite.h);
+
+                neck.style.display = 'block';
+                neck.style.left = asPercent(x, sprite.w);
+                neck.style.width = asPercent(w, sprite.w);
+                neck.style.top = asPercent(y + h, sprite.h);
+
+                figure.classList.add('done');
+                figure.querySelector('.anchor').textContent =
+                    `neck ${Math.round(x + w / 2)}, ${Math.round(y + h)}`;
+            }
+
+            function card(sprite) {
+                const figure = document.createElement('figure');
+
+                const stage = document.createElement('div');
+                stage.className = 'stage';
+                stage.innerHTML =
+                    `<img src="${sprite.url}" alt="${sprite.name}">` +
+                    '<div class="box"></div><div class="neck"></div>';
+
+                const caption = document.createElement('figcaption');
+                caption.innerHTML =
+                    `${sprite.name}<br><span class="anchor"></span>`;
+
+                figure.append(stage, caption);
+
+                let from = null;
+
+                const toImage = (event) => {
+                    const rect = stage.getBoundingClientRect();
+                    return [
+                        ((event.clientX - rect.left) / rect.width) * sprite.w,
+                        ((event.clientY - rect.top) / rect.height) * sprite.h,
+                    ];
+                };
+
+                const drag = (event) => {
+                    if (!from) {
+                        return;
+                    }
+
+                    const [x, y] = toImage(event);
+                    cuts[sprite.path] = [
+                        Math.min(from[0], x),
+                        Math.min(from[1], y),
+                        Math.abs(x - from[0]),
+                        Math.abs(y - from[1]),
+                    ].map(Math.round);
+
+                    paint(figure, sprite);
+                };
+
+                stage.addEventListener('pointerdown', (event) => {
+                    from = toImage(event);
+                    stage.setPointerCapture(event.pointerId);
+                    event.preventDefault();
+                });
+
+                stage.addEventListener('pointermove', drag);
+
+                stage.addEventListener('pointerup', (event) => {
+                    drag(event);
+                    from = null;
+
+                    // A click rather than a drag is somebody changing their
+                    // mind, not a zero-sized head.
+                    const at = cuts[sprite.path];
+                    if (at && (at[2] < 4 || at[3] < 4)) {
+                        delete cuts[sprite.path];
+                        paint(figure, sprite);
+                    }
+
+                    save();
+                });
+
+                paint(figure, sprite);
+
+                return figure;
+            }
+
+            fetch('/sprites/manifest.json')
+                .then((response) => response.json())
+                .then((manifest) => {
+                    // Whole figures only. A file already cut is not a
+                    // candidate, or its head gets taken off twice.
+                    const people = manifest.sprites.filter(
+                        (s) =>
+                            s.folder === 'people' &&
+                            !s.name.endsWith('-head') &&
+                            !s.name.endsWith('-body'),
+                    );
+
+                    if (!people.length) {
+                        out.innerHTML =
+                            '<p class="missing">No whole figures under ' +
+                            '<code>public/sprites/people/</code> yet. Run ' +
+                            '<code>python3 docs/tools/sprite_manifest.py</code> ' +
+                            'once the art lands.</p>';
+                        return;
+                    }
+
+                    const grid = document.createElement('div');
+                    grid.className = 'grid';
+
+                    for (const sprite of people) {
+                        // The path the cutting script will be handed, rather
+                        // than the URL the browser fetched.
+                        sprite.path = `public${sprite.url}`;
+                        grid.append(card(sprite));
+                    }
+
+                    out.append(grid);
+                    tally();
+                })
+                .catch(() => {
+                    out.innerHTML =
+                        '<p class="missing">No <code>/sprites/manifest.json</code>. Run ' +
+                        '<code>python3 docs/tools/sprite_manifest.py</code> and reload.</p>';
+                });
+
+            document.getElementById('copy').addEventListener('click', () => {
+                const box = document.getElementById('json');
+                box.value = JSON.stringify(cuts, null, 1);
+                box.hidden = false;
+                box.select();
+
+                try {
+                    navigator.clipboard.writeText(box.value);
+                } catch {
+                    // Selected either way, so it can be copied by hand.
+                }
+            });
+
+            document.getElementById('clear').addEventListener('click', () => {
+                if (!confirm('Throw away every cut?')) {
+                    return;
+                }
+
+                localStorage.removeItem(STORE);
+                location.reload();
+            });
+        </script>
+    </body>
+</html>
