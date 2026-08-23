@@ -226,7 +226,6 @@ function buildPortalPane(
                 yaw: from.rotation.y + turn,
             };
         },
-        readByFarCamera: false,
         exitPoint: far.centre,
         exitNormal: far.normal,
         // The pane's own middle, not the mouth's point on the floor plan.

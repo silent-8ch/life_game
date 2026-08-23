@@ -79,7 +79,6 @@ export function buildMirrorPane(
                 yaw: Math.atan2(-ahead.x, -ahead.z),
             };
         },
-        readByFarCamera: true,
         exitPoint: centre,
         exitNormal: normal,
         textureWidth: MIRROR_TEXTURE_WIDTH,

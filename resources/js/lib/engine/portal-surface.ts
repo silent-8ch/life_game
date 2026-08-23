@@ -55,18 +55,15 @@ const VERTEX_SHADER = `
     #include <common>
     #include <logdepthbuf_pars_vertex>
 
-    uniform mat4 textureMatrix;
     uniform vec2 paneTexels;
     uniform float edgeBias;
     uniform float shrink;
     varying vec4 vPane;
+    varying vec3 vMiddle;
 
     void main() {
         vec4 clip = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
 
-        #ifdef READ_BY_FAR_CAMERA
-            vPane = textureMatrix * vec4(position, 1.0);
-        #else
             // Read a hair towards the middle of the pane rather than at its
             // very edge. The pane and the mouth it fills line up to within a
             // pixel, and on the far side of that pixel is the sky the tilted
@@ -74,24 +71,23 @@ const VERTEX_SHADER = `
             // the portal — there whenever the edge falls the wrong side of a
             // pixel, gone again a step later, which is what makes it flicker
             // as the player walks.
+            // Carried linear in clip space, so the hardware interpolates and
+            // near-plane-clips it like any other attribute, and the divide
+            // happens per fragment where w is the depth of a pixel that is
+            // genuinely on screen.
+            //
+            // Dividing here instead would poison the whole quad: a wall long
+            // enough to run past the viewer has corners with a negative w, and
+            // the clipped edge takes its value from that corner.
+            vPane = vec4(clip.xy * 0.5 + clip.w * 0.5, clip.z, clip.w);
+
+            // The pane's own middle, for the fragment shader to pull the read
+            // in towards. The same for every vertex, so nothing interpolates.
             vec4 middle = projectionMatrix * modelViewMatrix * vec4(0.0, 0.0, 0.0, 1.0);
-            vec2 at = clip.xy / clip.w;
 
-            if (middle.w > 0.0) {
-                vec2 centre = middle.xy / middle.w;
-                float reach = length((at - centre) * paneTexels);
-
-                // Pulled in by a set number of texels, whatever the pane's size
-                // on screen; capped so a pane seen edge on cannot fold up.
-                at = mix(at, centre, clamp(edgeBias / max(reach, 0.0001), 0.0, 0.25));
-
-                // Reading wider than the pane is means the picture arrives
-                // smaller, which is what makes it read as further off.
-                at = centre + (at - centre) * shrink;
-            }
-
-            vPane = vec4((at * 0.5 + 0.5) * clip.w, clip.z, clip.w);
-        #endif
+            vMiddle = middle.w > 0.0
+                ? vec3(middle.xy / middle.w * 0.5 + 0.5, 1.0)
+                : vec3(0.5, 0.5, 0.0);
 
         gl_Position = clip;
 
@@ -104,12 +100,38 @@ const FRAGMENT_SHADER = `
     #include <logdepthbuf_pars_fragment>
 
     uniform sampler2D pane;
+    uniform vec2 paneTexels;
+    uniform float edgeBias;
+    uniform float shrink;
     varying vec4 vPane;
+    varying vec3 vMiddle;
 
     void main() {
         #include <logdepthbuf_fragment>
 
-        gl_FragColor = vec4(texture2DProj(pane, vPane).rgb, 1.0);
+            // Where this pixel is on the screen. Safe because it is this
+            // camera's w, and a fragment that reached here is in front of this
+            // camera by definition.
+            vec2 at = vPane.xy / vPane.w;
+
+            // Read a hair towards the middle of the pane rather than at its
+            // very edge. The pane and the mouth it fills line up to within a
+            // pixel, and on the far side of that pixel is the sky the tilted
+            // near plane left behind, which shows as a bright hairline round
+            // the portal.
+            if (vMiddle.z > 0.0) {
+                vec2 centre = vMiddle.xy;
+
+                // In texels, so a pane across the room is pulled in by as much
+                // as one in front of you. paneTexels is half the target and at
+                // runs 0..1, so the full width is twice it.
+                float reach = length((at - centre) * paneTexels * 2.0);
+
+                at = mix(at, centre, clamp(edgeBias / max(reach, 0.0001), 0.0, 0.25));
+                at = centre + (at - centre) * shrink;
+            }
+
+            gl_FragColor = vec4(texture2D(pane, at).rgb, 1.0);
 
         #include <tonemapping_fragment>
         #include <colorspace_fragment>
@@ -389,7 +411,6 @@ export type PortalSurfaceOptions = {
         yaw: number;
     };
     /** True for a mirror: read the far view through the far camera, not the screen. */
-    readByFarCamera: boolean;
     /** Multiplied into what the surface shows; a mirror gives back less light. */
     /**
      * The plane the camera's near plane is tilted onto, so nothing between it
@@ -538,8 +559,6 @@ export function createPortalSurface(
         return at;
     };
 
-    const textureMatrix = new THREE.Matrix4();
-
     /** The pane's own across and up, once it is turned into place. */
     const sideways = new THREE.Vector3(1, 0, 0);
     const vertical = new THREE.Vector3(0, 1, 0);
@@ -548,10 +567,8 @@ export function createPortalSurface(
 
     const material = new THREE.ShaderMaterial({
         name: 'ViewPane',
-        defines: options.readByFarCamera ? { READ_BY_FAR_CAMERA: '' } : {},
         uniforms: {
             pane: { value: targetAt(0).texture },
-            textureMatrix: { value: textureMatrix },
             shrink: { value: 1 },
             // Half the target's size: NDC spans two, so this turns the reach
             // from the pane's middle into a count of texels.
@@ -637,30 +654,6 @@ export function createPortalSurface(
                 .copy(beyond.projectionMatrix)
                 .invert();
             beyond.far = camera.far;
-
-            // Worked out before the near plane is tilted, since the tilt only
-            // moves things along z and this reads x, y and w.
-            textureMatrix.set(
-                0.5,
-                0.0,
-                0.0,
-                0.5,
-                0.0,
-                0.5,
-                0.0,
-                0.5,
-                0.0,
-                0.0,
-                0.5,
-                0.5,
-                0.0,
-                0.0,
-                0.0,
-                1.0,
-            );
-            textureMatrix.multiply(beyond.projectionMatrix);
-            textureMatrix.multiply(beyond.matrixWorldInverse);
-            textureMatrix.multiply(mesh.matrixWorld);
 
             exitPlane.setFromNormalAndCoplanarPoint(
                 options.exitNormal,
