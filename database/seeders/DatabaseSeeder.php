@@ -28,6 +28,7 @@ class DatabaseSeeder extends Seeder
             LifeSeeder::class,
             TheHouseSeeder::class,
             PortalDemoSeeder::class,
+            HallOfMirrorsSeeder::class,
             LevelEightSeeder::class,
             ImportedLevelsSeeder::class,
             ExportedLevelsSeeder::class,

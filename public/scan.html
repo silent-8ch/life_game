@@ -174,6 +174,18 @@
                     why: 'Sixty centimetres out from the hub’s north-west corner, looking straight into it along the bisector. Every wall is nudged into its own room, which pulls a corner apart and leaves a notch of about a centimetre with nothing behind it — the whole reason buildWall draws each wall past its ends. WallOverhangTest pins the geometry; this is the only thing that looks at the picture, which is where the daylight would be.',
                 },
                 {
+                    label: 'mirrors-four-walls',
+                    level: 'hall-of-mirrors',
+                    at: '-0.2137,0.9522,316.77',
+                    why: "Paul's own room: eight metres square with a mirror on every wall, and the exact spot he reported it from. Four mutually visible panes is the worst case the pane budget has — each recurses into the other three, so the tree is 3^depth and eight bounces ask for 6561 draws against a budget of 40. Spent as one counter in array order the first pane took all of it, and his five words for the result were that some mirrors are black and some are super stretched. Kept because it is the only spot in any level where panes compete for the budget at all.",
+                },
+                {
+                    label: 'mirrors-into-a-corner',
+                    level: 'hall-of-mirrors',
+                    at: '0,0,45',
+                    why: 'The middle of the same room, looking into a corner along the bisector, so two mirrors fill the view in equal measure and a difference between them has nowhere to hide. The companion to the spot above: that one is where it was reported, this one is where an unfair share shows most.',
+                },
+                {
                     label: 'portals-boundary-not-in-the-opening',
                     level: 'portals',
                     at: '7.9,4,-90',

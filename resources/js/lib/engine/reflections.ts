@@ -101,6 +101,42 @@ export function prepareReflections(
             portal.release();
         }
 
+        /**
+         * How much of the frame's budget this top-level pane has left.
+         *
+         * Per pane rather than per frame, and that is the fix for a room with
+         * four mirrored walls. Paul drew one — an eight-metre square with every
+         * side a mirror — and reported *some mirrors are black, some are super
+         * stretched*.
+         *
+         * Four mutually visible panes means each recurses into the other three,
+         * so the tree is 3^depth and `PORTAL_BOUNCES` of 8 asks for 6561 draws
+         * against a budget of 40. Shared as one counter spent depth-first in
+         * array order, the first pane in the list took the whole thing and the
+         * other three got a single shallow draw each. That is both of his
+         * words: **black** where a depth was never drawn at all, and
+         * **stretched** because `readable()` falls back to the nearest depth
+         * that *was* drawn — a target this pane holds from some other camera
+         * this frame — and a pane samples by screen position, so a picture
+         * taken from somewhere else smears across it.
+         *
+         * A share each cannot starve anybody. It does not make the deep case
+         * cheap, and it is not meant to: what it guarantees is that every pane
+         * the player can see is drawn from the player's own camera every frame,
+         * and that no pane's depth depends on where it happens to sit in an
+         * array.
+         *
+         * The corridor cases are untouched. A portal pair skips its own partner
+         * two lines down, so its branching is nearly nothing and eight bounces
+         * cost eight draws — well inside any share.
+         */
+        const inView = panes.filter((pane) => inViewOf(pane, camera));
+
+        const share = Math.max(
+            1,
+            Math.floor(PORTAL_RENDER_BUDGET / Math.max(inView.length, 1)),
+        );
+
         let spent = 0;
 
         /**
@@ -116,7 +152,7 @@ export function prepareReflections(
             depth: number,
             allowed: number,
         ): void => {
-            if (depth < allowed && spent < PORTAL_RENDER_BUDGET) {
+            if (depth < allowed && spent < share) {
                 const inner = pane.aim(from);
 
                 for (const other of panes) {
@@ -146,6 +182,19 @@ export function prepareReflections(
                 }
             }
 
+            // Running out of `allowed` is the end of the tunnel; running out
+            // of budget is not, and they must not share this branch. Tried, and
+            // it looked worse: the tunnel-end fallback hands a pane the view
+            // from one level out, which down a corridor of portals is very
+            // nearly the same picture and reads as distance. Between two
+            // mirrors at right angles it is a completely different view of the
+            // room, stretched across a surface it was never taken for — which
+            // is the smear this commit exists to remove, put back by the fix
+            // for the black.
+            //
+            // So a pane the budget could not reach keeps an undrawn target and
+            // shows black. Black is confusing; smeared is worse, because it
+            // looks like a fault in the geometry rather than a missing draw.
             const deepest = depth >= allowed;
 
             for (const other of panes) {
@@ -187,13 +236,14 @@ export function prepareReflections(
         for (const pane of panes) {
             // A pane the player cannot see still needs its own view drawn, in
             // case another pane is looking at it, but it is not worth spending
-            // the frame's depth on. What is in front of them gets that.
-            deepen(
-                pane,
-                camera,
-                0,
-                inViewOf(pane, camera) ? PORTAL_BOUNCES : 0,
-            );
+            // the frame's depth on. What is in front of them gets that — and it
+            // costs one draw, outside anybody's share, which is why the share is
+            // divided among the panes in view rather than among all of them.
+            const seen = inView.includes(pane);
+
+            spent = 0;
+
+            deepen(pane, camera, 0, seen ? PORTAL_BOUNCES : 0);
         }
 
         // Back around the player, for the view they actually get.
