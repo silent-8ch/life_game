@@ -87,6 +87,29 @@ export function wantsScan(search: string): boolean {
 }
 
 /**
+ * Whether the address asks the level to photograph itself and file the result.
+ *
+ * `?scan` cannot answer questions about light. It needs a drawing buffer that
+ * survives being read, which is only on in debug mode — and debug mode builds
+ * no sky dome and paints every wall a flat legend colour. So a fault reported
+ * as *black*, or as *a mirror full of sky*, is invisible to the one view that
+ * can be driven without a person at the keyboard. A whole day went into
+ * reasoning around that.
+ *
+ * This draws the ordinary picture, textures and sky and all, then takes the
+ * same three views `F` takes — read back offscreen into a render target, so no
+ * `preserveDrawingBuffer` and no debug mode — and posts them to where a
+ * snapshot lands. The point is that it needs nobody at the keyboard: an address
+ * is enough, so a spot somebody reports can be stood on and *seen* rather than
+ * reconstructed.
+ *
+ * Local only, because that is where snapshots are written at all.
+ */
+export function wantsShots(search: string): boolean {
+    return new URLSearchParams(search).has('shots');
+}
+
+/**
  * Which rows to read, in canvas pixels.
  *
  * `?scan` alone reads three rows across the height. `?scan=0.5` reads one, and

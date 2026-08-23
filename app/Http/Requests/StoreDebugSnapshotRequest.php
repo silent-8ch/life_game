@@ -67,6 +67,13 @@ class StoreDebugSnapshotRequest extends FormRequest
             // hands out colours by walking the scene with a running counter, so
             // which colour is which wall belongs to that build of that level.
             'legend' => ['nullable', 'array', 'max:512'],
+            // Why there are none, when there are none. A note that arrives
+            // looking complete teaches whoever reads it that the feature is
+            // broken, rather than that this one frame could not be read.
+            'trouble' => ['nullable', 'string', 'max:500'],
+            // Only ever sent by a machine standing on a spot; a person pressing
+            // F sends none.
+            'panes' => ['nullable', 'array', 'max:64'],
         ];
     }
 }

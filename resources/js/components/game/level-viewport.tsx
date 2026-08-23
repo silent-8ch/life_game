@@ -41,6 +41,7 @@ import {
     readPane,
     scanRowsOf,
     wantsScan,
+    wantsShots,
 } from '@/lib/engine/scan';
 import { floorAt, sectorAt } from '@/lib/engine/sectors';
 import { createSky } from '@/lib/engine/sky';
@@ -326,6 +327,11 @@ export default function LevelViewport({
         // surfaces by, and a drawing buffer that survives being read — so it
         // turns debug on rather than asking for both in the address.
         const scanning = wantsScan(window.location.search);
+
+        // Draws the ordinary picture and photographs it. Deliberately does NOT
+        // turn debug on: the whole point is to see the light and the textures a
+        // scan throws away. See `wantsShots`.
+        const shooting = wantsShots(window.location.search);
 
         // `?debug` swaps the backdrop for a magenta and green check, so that
         // anything showing through a seam is a colour the art never uses.
@@ -788,7 +794,10 @@ export default function LevelViewport({
          * that looks wrong instead of guessing at it. Numbers only — nothing
          * here needs the renderer.
          */
-        const takeSnapshot = (): void => {
+        const takeSnapshot = (
+            /** Only ever filled in by `?shots`; a person pressing F sends none. */
+            panes: unknown[] | null = null,
+        ): void => {
             const spot = describeSpot({
                 level,
                 x: player.x,
@@ -837,12 +846,29 @@ export default function LevelViewport({
             // debug mode. A snapshot that carries only a position is a
             // position somebody else has to go and stand on before they can
             // see anything, which is most of a day's round trip.
-            const sending = captureShots(renderer, scene, camera, built.group)
-                .then((taken) => taken)
-                .catch(() => null);
+            let trouble: string | undefined;
+
+            const sending = captureShots(
+                renderer,
+                scene,
+                camera,
+                built.group,
+            ).catch((why: unknown) => {
+                trouble = why instanceof Error ? why.message : String(why);
+
+                console.error('[snapshot] the pictures failed', why);
+
+                return null;
+            });
 
             void sending
-                .then((taken) => postSnapshot(spot, store().url, taken))
+                .then((taken) =>
+                    postSnapshot(
+                        { ...spot, trouble, panes },
+                        store().url,
+                        taken,
+                    ),
+                )
                 .then((what) => {
                     if ('failed' in what) {
                         failed(what.failed);
@@ -952,10 +978,88 @@ export default function LevelViewport({
 
         resize();
 
+        /**
+         * Draws the level as it really looks and files a snapshot of it.
+         *
+         * Its own frames rather than the render loop's, for the same reason a
+         * scan draws its own: `requestAnimationFrame` never fires in a tab
+         * nobody is looking at, so anything driving a browser rather than
+         * playing in one gets a level that builds and then never draws.
+         */
+        const shoot = async (): Promise<void> => {
+            resize();
+
+            // Same reason as the scan: a frame read back with half its
+            // textures still in flight is a picture of the loading, not of the
+            // level. Here it matters more, since textures are the thing this
+            // mode exists to show.
+            await textures.settled();
+
+            for (let drawn = 0; drawn < SCAN_FRAMES; drawn++) {
+                drawFrame(SCAN_STEP_SECONDS);
+            }
+
+            // What each pane is actually holding, level by level, in the real
+            // picture rather than the debug one. `drawn` says a target has been
+            // written at some point in its life and says nothing about what is
+            // in it — the whole fault being chased here is panes that are drawn
+            // and black — so this reads the pixels and counts them.
+            const paneReport = [...built.mirrors, ...built.portals].map(
+                (pane, index) => ({
+                    pane: index,
+                    home: pane.home,
+                    black: Array.from(
+                        { length: PORTAL_BOUNCES + 1 },
+                        (_, depth) => {
+                            const target = pane.peek(depth);
+
+                            if (target === null) {
+                                return '-';
+                            }
+
+                            const row = Math.floor(target.height / 2);
+                            const pixels = new Uint8Array(target.width * 4);
+
+                            renderer.readRenderTargetPixels(
+                                target,
+                                0,
+                                row,
+                                target.width,
+                                1,
+                                pixels,
+                            );
+
+                            let dark = 0;
+
+                            for (let at = 0; at < pixels.length; at += 4) {
+                                if (
+                                    pixels[at] < 8 &&
+                                    pixels[at + 1] < 8 &&
+                                    pixels[at + 2] < 8
+                                ) {
+                                    dark++;
+                                }
+                            }
+
+                            return String(
+                                Math.round((100 * dark) / target.width),
+                            );
+                        },
+                    ).join(' '),
+                }),
+            );
+
+            console.log('[panes]', JSON.stringify(paneReport));
+
+            takeSnapshot(paneReport);
+        };
+
         // A scan is a measurement, not a game: it draws its own frames, reads
         // them back and stops. Nothing else runs.
         if (scanning) {
             void scan();
+        } else if (shooting) {
+            void shoot();
         } else {
             frame = requestAnimationFrame(tick);
         }

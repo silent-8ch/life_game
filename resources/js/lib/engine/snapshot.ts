@@ -69,6 +69,27 @@ export type Snapshot = {
         touch: boolean;
     };
     note: string;
+    /**
+     * Why this note has no pictures, when it has none.
+     *
+     * A capture that fails silently is the worst of the outcomes: the note
+     * arrives looking complete, and whoever reads it concludes the feature is
+     * broken rather than that this one frame could not be read. It also cannot
+     * be chased from the console, because the sessions that most need these are
+     * the ones nobody is sitting in front of.
+     *
+     * So the reason travels in the note, where it can be read without a
+     * browser. Absent when the pictures came through.
+     */
+    trouble?: string;
+    /**
+     * What each pane is holding at each level, when a machine took this.
+     *
+     * `peek` only says whether a target has ever been written, and a pane that
+     * is drawn and black passes that test — which is the whole of the fault
+     * this was added to chase.
+     */
+    panes?: unknown[] | null;
 };
 
 function round(value: number, places = 4): number {
