@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Which one got it right?</title>
+        <style>
+            :root {
+                color-scheme: dark;
+                --ink: #e2e8f0; --dim: #94a3b8; --line: #1e293b;
+                --pick: #fbbf24; --ok: #34d399;
+                --neck: #f472b6; --hand: #60a5fa; --foot: #fb923c;
+            }
+            * { box-sizing: border-box; }
+            body {
+                margin: 0; padding: 24px; background: #05070a; color: var(--ink);
+                font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, sans-serif;
+            }
+            h1 { font-size: 20px; margin: 0 0 4px; }
+            h2 { font-size: 15px; margin: 28px 0 6px; }
+            p.note { color: var(--dim); margin: 0 0 12px; max-width: 74ch; }
+            .bar {
+                position: sticky; top: 0; z-index: 10; background: #05070ae6;
+                backdrop-filter: blur(6px); padding: 12px 24px; margin: -24px -24px 16px;
+                border-bottom: 1px solid var(--line);
+                display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+            }
+            .bar button, .bar label.load {
+                background: var(--pick); color: #05070a; border: 0; font-weight: 600;
+                border-radius: 4px; padding: 7px 14px; cursor: pointer; font-size: 13px;
+            }
+            .bar button.ghost {
+                background: transparent; color: var(--dim);
+                border: 1px solid var(--line); font-weight: 400;
+            }
+            .bar input[type=file] { display: none; }
+            .count { color: var(--dim); font-size: 13px; }
+
+            /* Phase one: the sheet, with a box dragged round the good cell. */
+            .sheet { position: relative; display: inline-block; max-width: 100%;
+                     cursor: crosshair; user-select: none; border: 1px solid var(--line); }
+            .sheet img { display: block; max-width: 100%; pointer-events: none; }
+            .box {
+                position: absolute; border: 2px solid var(--pick);
+                background: rgba(251, 191, 36, 0.14); pointer-events: none;
+            }
+
+            /* Phase two: the chosen cell blown up, with landmarks placed. */
+            .cell { display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start; }
+            .stage {
+                position: relative; display: inline-block; cursor: crosshair;
+                user-select: none; border: 1px solid var(--line);
+                background-color: #1e293b;
+                background-image:
+                    linear-gradient(45deg, #0b1220 25%, transparent 25%),
+                    linear-gradient(-45deg, #0b1220 25%, transparent 25%),
+                    linear-gradient(45deg, transparent 75%, #0b1220 75%),
+                    linear-gradient(-45deg, transparent 75%, #0b1220 75%);
+                background-size: 16px 16px;
+                background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+            }
+            .stage canvas { display: block; pointer-events: none; }
+            .mark {
+                position: absolute; width: 12px; height: 12px; margin: -6px 0 0 -6px;
+                border-radius: 50%; border: 2px solid #000; pointer-events: none;
+            }
+            .mark.neck-left, .mark.neck-right { background: var(--neck); }
+            .mark.hand-left, .mark.hand-right { background: var(--hand); }
+            .mark.foot-left, .mark.foot-right { background: var(--foot); }
+            .mark::after {
+                content: attr(data-label); position: absolute; left: 14px; top: -3px;
+                font: 10px/1 ui-monospace, monospace; color: #fff; white-space: nowrap;
+                text-shadow: 0 0 3px #000, 0 0 3px #000;
+            }
+            .neckline {
+                position: absolute; height: 0; border-top: 1.5px dashed var(--neck);
+                pointer-events: none;
+            }
+            .steps { min-width: 220px; }
+            .step {
+                padding: 8px 10px; border: 1px solid var(--line); border-radius: 4px;
+                margin-bottom: 6px; color: var(--dim); font-size: 13px;
+            }
+            .step.now { border-color: var(--pick); color: var(--ink); }
+            .step.done { border-color: var(--ok); }
+            .step b { font-family: ui-monospace, monospace; font-weight: 500; }
+            .step .dot {
+                display: inline-block; width: 10px; height: 10px; border-radius: 50%;
+                margin-right: 8px; vertical-align: middle;
+            }
+            .name { margin-top: 10px; }
+            .name input {
+                width: 100%; background: #020408; color: var(--ink); border: 1px solid var(--line);
+                border-radius: 4px; padding: 6px 8px; font: 12px ui-monospace, monospace;
+            }
+            textarea {
+                width: 100%; height: 220px; margin-top: 12px; background: #020408;
+                color: var(--ok); border: 1px solid var(--line); border-radius: 6px;
+                padding: 12px; font: 12px/1.5 ui-monospace, monospace;
+            }
+            .picks { margin-top: 24px; display: grid; gap: 10px;
+                     grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+            .pick { background: #0f172a; border: 1px solid var(--ok); border-radius: 6px;
+                    padding: 6px; font: 11px/1.4 ui-monospace, monospace; color: var(--dim); }
+            .pick canvas { width: 100%; display: block; border-radius: 3px; margin-bottom: 4px; }
+            .hint { color: var(--dim); font-size: 12px; }
+        </style>
+    </head>
+    <body>
+        <div class="bar">
+            <label class="load">Load a sheet <input type="file" id="file" accept="image/png,image/jpeg,image/webp" multiple></label>
+            <button id="copy">Copy picks as JSON</button>
+            <button class="ghost" id="clear">Clear all</button>
+            <span class="count" id="count"></span>
+        </div>
+
+        <h1>Which one got it right?</h1>
+        <p class="note">
+            The generator makes a sheet of candidates. <strong>Phase one:</strong> drag a box round
+            the cell that got the pose right. <strong>Phase two:</strong> on that cell, click the
+            six landmarks in order — neck left, neck right, hand left, hand right, foot left, foot
+            right. Those six points are what lets the sprite land on a real sheet at the right size
+            and place. Name the pose, then move to the next sheet. Copy the JSON and run
+            <code>python3 docs/tools/cut_cells.py picks.json</code>.
+        </p>
+        <p class="hint">Nothing leaves this browser. Sheets are read from your disk and never uploaded.</p>
+
+        <div id="one"></div>
+        <div id="two"></div>
+        <div id="done" class="picks"></div>
+        <textarea id="json" readonly hidden></textarea>
+
+        <script>
+            const LANDMARKS = [
+                ['neck-left',  'Neck, left side',  'var(--neck)'],
+                ['neck-right', 'Neck, right side', 'var(--neck)'],
+                ['hand-left',  'Left hand',        'var(--hand)'],
+                ['hand-right', 'Right hand',       'var(--hand)'],
+                ['foot-left',  'Left foot',        'var(--foot)'],
+                ['foot-right', 'Right foot',       'var(--foot)'],
+            ];
+
+            const STORE = 'sheet-picker-picks';
+            const picks = JSON.parse(localStorage.getItem(STORE) || '[]');
+
+            const one = document.getElementById('one');
+            const two = document.getElementById('two');
+            const done = document.getElementById('done');
+            const count = document.getElementById('count');
+
+            // A loaded sheet lives only in memory. Picks store the sheet's
+            // filename and box so the cutting script can find the same file
+            // on disk; the pixels are never persisted from here.
+            let sheet = null;
+            let current = null;
+
+            function save() {
+                localStorage.setItem(STORE, JSON.stringify(picks));
+                count.textContent = `${picks.length} picked`;
+                renderDone();
+            }
+
+            // -- phase one -------------------------------------------------
+
+            function showSheet(file, image) {
+                sheet = { file: file.name, image };
+                current = null;
+                two.innerHTML = '';
+
+                one.innerHTML = `<h2>1 — ${file.name}: drag a box round the good cell</h2>`;
+
+                const wrap = document.createElement('div');
+                wrap.className = 'sheet';
+                wrap.append(image);
+                const box = document.createElement('div');
+                box.className = 'box';
+                box.style.display = 'none';
+                wrap.append(box);
+                one.append(wrap);
+
+                let from = null;
+
+                // Box in image pixels, never screen pixels — the sheet is
+                // scaled to fit and a box recorded against the layout would
+                // move when the window did.
+                const toImage = (event) => {
+                    const rect = wrap.getBoundingClientRect();
+                    return [
+                        ((event.clientX - rect.left) / rect.width) * image.naturalWidth,
+                        ((event.clientY - rect.top) / rect.height) * image.naturalHeight,
+                    ];
+                };
+
+                let drawn = null;
+
+                const paint = () => {
+                    if (!drawn) { box.style.display = 'none'; return; }
+                    const [x, y, w, h] = drawn;
+                    box.style.display = 'block';
+                    box.style.left = `${(x / image.naturalWidth) * 100}%`;
+                    box.style.top = `${(y / image.naturalHeight) * 100}%`;
+                    box.style.width = `${(w / image.naturalWidth) * 100}%`;
+                    box.style.height = `${(h / image.naturalHeight) * 100}%`;
+                };
+
+                wrap.addEventListener('pointerdown', (event) => {
+                    from = toImage(event);
+                    wrap.setPointerCapture(event.pointerId);
+                    event.preventDefault();
+                });
+                wrap.addEventListener('pointermove', (event) => {
+                    if (!from) return;
+                    const [x, y] = toImage(event);
+                    drawn = [
+                        Math.min(from[0], x), Math.min(from[1], y),
+                        Math.abs(x - from[0]), Math.abs(y - from[1]),
+                    ].map(Math.round);
+                    paint();
+                });
+                wrap.addEventListener('pointerup', () => {
+                    from = null;
+                    if (drawn && drawn[2] > 8 && drawn[3] > 8) {
+                        startPhaseTwo(drawn);
+                    }
+                });
+            }
+
+            // -- phase two -------------------------------------------------
+
+            function startPhaseTwo(box) {
+                const [x, y, w, h] = box;
+
+                // Blow the cell up to a comfortable size for clicking.
+                const scale = Math.min(3, Math.max(1, 480 / Math.max(w, h)));
+                const canvas = document.createElement('canvas');
+                canvas.width = Math.round(w * scale);
+                canvas.height = Math.round(h * scale);
+                const ctx = canvas.getContext('2d');
+                ctx.imageSmoothingEnabled = false;
+                ctx.drawImage(sheet.image, x, y, w, h, 0, 0, canvas.width, canvas.height);
+
+                current = { sheet: sheet.file, box, marks: {}, name: '' };
+
+                two.innerHTML = '<h2>2 — click the six landmarks, in order</h2>';
+
+                const row = document.createElement('div');
+                row.className = 'cell';
+
+                const stage = document.createElement('div');
+                stage.className = 'stage';
+                stage.append(canvas);
+                row.append(stage);
+
+                const steps = document.createElement('div');
+                steps.className = 'steps';
+
+                for (const [key, label, colour] of LANDMARKS) {
+                    const step = document.createElement('div');
+                    step.className = 'step';
+                    step.dataset.key = key;
+                    step.innerHTML =
+                        `<span class="dot" style="background:${colour}"></span>` +
+                        `${label} <b></b>`;
+                    steps.append(step);
+                }
+
+                const name = document.createElement('div');
+                name.className = 'name';
+                name.innerHTML =
+                    '<input placeholder="name this pose — paul-090-stride-a" spellcheck="false">' +
+                    '<p class="hint">Enter to keep it and load the next sheet</p>';
+                steps.append(name);
+                row.append(steps);
+                two.append(row);
+
+                const input = name.querySelector('input');
+
+                const refresh = () => {
+                    let next = null;
+                    for (const step of steps.querySelectorAll('.step')) {
+                        const key = step.dataset.key;
+                        const at = current.marks[key];
+                        step.classList.toggle('done', !!at);
+                        step.classList.toggle('now', !at && !next);
+                        step.querySelector('b').textContent = at ? `${at[0]}, ${at[1]}` : '';
+                        if (!at && !next) next = key;
+                    }
+
+                    for (const mark of stage.querySelectorAll('.mark, .neckline')) mark.remove();
+
+                    for (const [key, at] of Object.entries(current.marks)) {
+                        const mark = document.createElement('div');
+                        mark.className = `mark ${key}`;
+                        mark.dataset.label = key;
+                        mark.style.left = `${(at[0] / w) * 100}%`;
+                        mark.style.top = `${(at[1] / h) * 100}%`;
+                        stage.append(mark);
+                    }
+
+                    // The neck line is what the head registers to. Draw it
+                    // the moment both ends exist so a crooked one is obvious.
+                    const l = current.marks['neck-left'], r = current.marks['neck-right'];
+                    if (l && r) {
+                        const line = document.createElement('div');
+                        line.className = 'neckline';
+                        line.style.left = `${(Math.min(l[0], r[0]) / w) * 100}%`;
+                        line.style.width = `${(Math.abs(r[0] - l[0]) / w) * 100}%`;
+                        line.style.top = `${(((l[1] + r[1]) / 2) / h) * 100}%`;
+                        stage.append(line);
+                    }
+
+                    if (!next) input.focus();
+                };
+
+                stage.addEventListener('pointerdown', (event) => {
+                    const rect = stage.getBoundingClientRect();
+                    const px = Math.round(((event.clientX - rect.left) / rect.width) * w);
+                    const py = Math.round(((event.clientY - rect.top) / rect.height) * h);
+
+                    // Marks are in the cell's own pixels, so the cut sprite
+                    // and its landmarks agree without any further arithmetic.
+                    const next = LANDMARKS.find(([key]) => !current.marks[key]);
+                    if (next) {
+                        current.marks[next[0]] = [px, py];
+                        refresh();
+                    }
+                });
+
+                // Right-click undoes the last landmark.
+                stage.addEventListener('contextmenu', (event) => {
+                    event.preventDefault();
+                    const placed = LANDMARKS.map(([k]) => k).filter((k) => current.marks[k]);
+                    if (placed.length) {
+                        delete current.marks[placed[placed.length - 1]];
+                        refresh();
+                    }
+                });
+
+                input.addEventListener('keydown', (event) => {
+                    if (event.key !== 'Enter') return;
+                    const all = LANDMARKS.every(([k]) => current.marks[k]);
+                    if (!all || !input.value.trim()) return;
+
+                    current.name = input.value.trim();
+                    current.thumb = canvas.toDataURL('image/png');
+                    picks.push(current);
+                    save();
+                    current = null;
+                    two.innerHTML = '';
+                    one.innerHTML = '<h2>1 — load the next sheet</h2>';
+                    document.getElementById('file').click();
+                });
+
+                refresh();
+            }
+
+            // -- what has been kept --------------------------------------
+
+            function renderDone() {
+                done.innerHTML = '';
+                for (const pick of picks) {
+                    const card = document.createElement('div');
+                    card.className = 'pick';
+                    const img = document.createElement('img');
+                    img.src = pick.thumb;
+                    img.style.width = '100%';
+                    img.style.display = 'block';
+                    img.style.borderRadius = '3px';
+                    img.style.marginBottom = '4px';
+                    card.append(img);
+                    card.append(document.createTextNode(pick.name));
+                    done.append(card);
+                }
+            }
+
+            // -- i/o ------------------------------------------------------
+
+            document.getElementById('file').addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+                const image = new Image();
+                image.onload = () => showSheet(file, image);
+                image.src = URL.createObjectURL(file);
+                event.target.value = '';
+            });
+
+            document.getElementById('copy').addEventListener('click', () => {
+                const out = picks.map(({ thumb, ...rest }) => rest);
+                const box = document.getElementById('json');
+                box.value = JSON.stringify(out, null, 1);
+                box.hidden = false;
+                box.select();
+                try { navigator.clipboard.writeText(box.value); } catch {}
+            });
+
+            document.getElementById('clear').addEventListener('click', () => {
+                if (!confirm('Throw away every pick?')) return;
+                localStorage.removeItem(STORE);
+                location.reload();
+            });
+
+            save();
+        </script>
+    </body>
+</html>
