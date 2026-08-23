@@ -50,14 +50,31 @@ body is turned — those are opposites and the old sheets got it wrong in both d
 The engine handles this by offsetting the mirrored frame by half a cycle. **Nothing is required
 of you for it** — it is here so nobody "fixes" a mirrored figure that looks out of step.
 
-### Heads are separate files
+### Draw whole people. The heads come off here.
+
+**Do not try to draw a headless body.** It is an unnatural thing to depict and comes back
+wrong — that was tried and it is why this section changed. **Draw the whole person**, and the
+head is taken off afterwards by somebody who can see where the neck is: `public/head-cutter.html`
+to draw the boxes, `docs/tools/cut_heads.py` to make the cuts. Each figure becomes a
+`-body.png` with the head cleared and a `-head.png`, plus a **neck anchor** recorded in
+`heads.json` — which is the real output, because it is what puts a head back in the same place
+across all fifteen poses so heads do not jump about as somebody walks.
+
+**So the fifteen bodies are fifteen whole figures.** Nothing extra to deliver for the split.
+
+### Why the head comes off at all
 
 **Not mainly for emotion — for consistency.** A body whose jacket shifts slightly still reads
 as the same person; a face that shifts reads as somebody else. Taking the head out removes the
 hardest constraint from the images generated most often.
 
-**Five expressions:** `neutral`, `happy`, `sad`, `angry`, `surprised`. Each in all five drawn
-directions. A head at 45° is not a head at 0°.
+**Cutting gives you the neutral head for free** — it is the one already drawn on the figure,
+and one per direction is enough since the head does not change between poses. **The other four
+expressions are a separate delivery and are not part of the first batch:** `happy`, `sad`,
+`angry`, `surprised`, each in all five drawn directions. A head at 45° is not a head at 0°.
+
+**They are generated to match a cut head, not invented.** The neutral head from the cut is the
+reference for size and framing, or the expressions will not sit on the same neck.
 
 ---
 
