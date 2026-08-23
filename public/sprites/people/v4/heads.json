@@ -1,0 +1,332 @@
+{
+ "debug-heads-000": {
+  "anchorX": 118,
+  "box": [
+   7,
+   6,
+   240,
+   280
+  ],
+  "chin": [
+   117,
+   265
+  ],
+  "file": "debug-heads-000.png",
+  "h": 280,
+  "height": 251,
+  "sheet": "debug-heads-all-angles-options.png",
+  "top": [
+   118,
+   14
+  ],
+  "w": 240
+ },
+ "debug-heads-045": {
+  "anchorX": 133,
+  "box": [
+   15,
+   303,
+   225,
+   298
+  ],
+  "chin": [
+   160,
+   268
+  ],
+  "file": "debug-heads-045.png",
+  "h": 298,
+  "height": 250,
+  "sheet": "debug-heads-all-angles-options.png",
+  "top": [
+   106,
+   18
+  ],
+  "w": 225
+ },
+ "debug-heads-090": {
+  "anchorX": 155,
+  "box": [
+   11,
+   609,
+   249,
+   290
+  ],
+  "chin": [
+   200,
+   261
+  ],
+  "file": "debug-heads-090.png",
+  "h": 290,
+  "height": 242,
+  "sheet": "debug-heads-all-angles-options.png",
+  "top": [
+   110,
+   19
+  ],
+  "w": 249
+ },
+ "debug-heads-135": {
+  "anchorX": 148,
+  "box": [
+   13,
+   911,
+   241,
+   293
+  ],
+  "chin": [
+   187,
+   257
+  ],
+  "file": "debug-heads-135.png",
+  "h": 293,
+  "height": 239,
+  "sheet": "debug-heads-all-angles-options.png",
+  "top": [
+   108,
+   18
+  ],
+  "w": 241
+ },
+ "debug-heads-180": {
+  "anchorX": 116,
+  "box": [
+   10,
+   1214,
+   237,
+   295
+  ],
+  "chin": [
+   118,
+   261
+  ],
+  "file": "debug-heads-180.png",
+  "h": 295,
+  "height": 247,
+  "sheet": "debug-heads-all-angles-options.png",
+  "top": [
+   114,
+   14
+  ],
+  "w": 237
+ },
+ "krystal-heads-000": {
+  "anchorX": 110,
+  "box": [
+   22,
+   7,
+   223,
+   304
+  ],
+  "chin": [
+   110,
+   175
+  ],
+  "file": "krystal-heads-000.png",
+  "h": 304,
+  "height": 148,
+  "sheet": "krystal-heads-all-angles-options.png",
+  "top": [
+   110,
+   27
+  ],
+  "w": 223
+ },
+ "krystal-heads-045": {
+  "anchorX": 114,
+  "box": [
+   25,
+   314,
+   238,
+   287
+  ],
+  "chin": [
+   120,
+   167
+  ],
+  "file": "krystal-heads-045.png",
+  "h": 287,
+  "height": 139,
+  "sheet": "krystal-heads-all-angles-options.png",
+  "top": [
+   108,
+   28
+  ],
+  "w": 238
+ },
+ "krystal-heads-090": {
+  "anchorX": 132,
+  "box": [
+   31,
+   605,
+   200,
+   292
+  ],
+  "chin": [
+   157,
+   164
+  ],
+  "file": "krystal-heads-090.png",
+  "h": 292,
+  "height": 136,
+  "sheet": "krystal-heads-all-angles-options.png",
+  "top": [
+   107,
+   28
+  ],
+  "w": 200
+ },
+ "krystal-heads-135": {
+  "anchorX": 136,
+  "box": [
+   22,
+   897,
+   219,
+   295
+  ],
+  "chin": [
+   165,
+   161
+  ],
+  "file": "krystal-heads-135.png",
+  "h": 295,
+  "height": 142,
+  "sheet": "krystal-heads-all-angles-options.png",
+  "top": [
+   107,
+   19
+  ],
+  "w": 219
+ },
+ "krystal-heads-180": {
+  "anchorX": 98,
+  "box": [
+   29,
+   1193,
+   202,
+   317
+  ],
+  "chin": [
+   99,
+   143
+  ],
+  "file": "krystal-heads-180.png",
+  "h": 317,
+  "height": 129,
+  "sheet": "krystal-heads-all-angles-options.png",
+  "top": [
+   96,
+   14
+  ],
+  "w": 202
+ },
+ "paul-heads-000": {
+  "anchorX": 114,
+  "box": [
+   22,
+   14,
+   220,
+   314
+  ],
+  "chin": [
+   114,
+   294
+  ],
+  "file": "paul-heads-000.png",
+  "h": 314,
+  "height": 239,
+  "sheet": "paul-heads-all-angles-options.png",
+  "top": [
+   115,
+   55
+  ],
+  "w": 220
+ },
+ "paul-heads-045": {
+  "anchorX": 136,
+  "box": [
+   16,
+   326,
+   240,
+   312
+  ],
+  "chin": [
+   156,
+   290
+  ],
+  "file": "paul-heads-045.png",
+  "h": 312,
+  "height": 243,
+  "sheet": "paul-heads-all-angles-options.png",
+  "top": [
+   117,
+   47
+  ],
+  "w": 240
+ },
+ "paul-heads-090": {
+  "anchorX": 145,
+  "box": [
+   17,
+   635,
+   234,
+   315
+  ],
+  "chin": [
+   196,
+   284
+  ],
+  "file": "paul-heads-090.png",
+  "h": 315,
+  "height": 242,
+  "sheet": "paul-heads-all-angles-options.png",
+  "top": [
+   94,
+   42
+  ],
+  "w": 234
+ },
+ "paul-heads-135": {
+  "anchorX": 135,
+  "box": [
+   22,
+   951,
+   229,
+   294
+  ],
+  "chin": [
+   186,
+   267
+  ],
+  "file": "paul-heads-135.png",
+  "h": 294,
+  "height": 227,
+  "sheet": "paul-heads-all-angles-options.png",
+  "top": [
+   84,
+   40
+  ],
+  "w": 229
+ },
+ "paul-heads-180": {
+  "anchorX": 108,
+  "box": [
+   21,
+   1247,
+   223,
+   296
+  ],
+  "chin": [
+   109,
+   255
+  ],
+  "file": "paul-heads-180.png",
+  "h": 296,
+  "height": 228,
+  "sheet": "paul-heads-all-angles-options.png",
+  "top": [
+   107,
+   27
+  ],
+  "w": 223
+ }
+}

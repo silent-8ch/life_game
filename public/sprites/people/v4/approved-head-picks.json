@@ -1,0 +1,137 @@
+[
+  {
+    "sheet": "debug-heads-all-angles-options.png",
+    "box": [7, 6, 240, 280],
+    "marks": {
+      "head-top": [118, 14],
+      "chin": [117, 265]
+    },
+    "name": "debug-heads-000"
+  },
+  {
+    "sheet": "debug-heads-all-angles-options.png",
+    "box": [15, 303, 225, 298],
+    "marks": {
+      "head-top": [106, 18],
+      "chin": [160, 268]
+    },
+    "name": "debug-heads-045"
+  },
+  {
+    "sheet": "debug-heads-all-angles-options.png",
+    "box": [11, 609, 249, 290],
+    "marks": {
+      "head-top": [110, 19],
+      "chin": [200, 261]
+    },
+    "name": "debug-heads-090"
+  },
+  {
+    "sheet": "debug-heads-all-angles-options.png",
+    "box": [13, 911, 241, 293],
+    "marks": {
+      "head-top": [108, 18],
+      "chin": [187, 257]
+    },
+    "name": "debug-heads-135"
+  },
+  {
+    "sheet": "debug-heads-all-angles-options.png",
+    "box": [10, 1214, 237, 295],
+    "marks": {
+      "head-top": [114, 14],
+      "chin": [118, 261]
+    },
+    "name": "debug-heads-180"
+  },
+  {
+    "sheet": "paul-heads-all-angles-options.png",
+    "box": [22, 14, 220, 314],
+    "marks": {
+      "head-top": [115, 55],
+      "chin": [114, 294]
+    },
+    "name": "paul-heads-000"
+  },
+  {
+    "sheet": "paul-heads-all-angles-options.png",
+    "box": [16, 326, 240, 312],
+    "marks": {
+      "head-top": [117, 47],
+      "chin": [156, 290]
+    },
+    "name": "paul-heads-045"
+  },
+  {
+    "sheet": "paul-heads-all-angles-options.png",
+    "box": [17, 635, 234, 315],
+    "marks": {
+      "head-top": [94, 42],
+      "chin": [196, 284]
+    },
+    "name": "paul-heads-090"
+  },
+  {
+    "sheet": "paul-heads-all-angles-options.png",
+    "box": [22, 951, 229, 294],
+    "marks": {
+      "head-top": [84, 40],
+      "chin": [186, 267]
+    },
+    "name": "paul-heads-135"
+  },
+  {
+    "sheet": "paul-heads-all-angles-options.png",
+    "box": [21, 1247, 223, 296],
+    "marks": {
+      "head-top": [107, 27],
+      "chin": [109, 255]
+    },
+    "name": "paul-heads-180"
+  },
+  {
+    "sheet": "krystal-heads-all-angles-options.png",
+    "box": [22, 7, 223, 304],
+    "marks": {
+      "head-top": [110, 27],
+      "chin": [110, 175]
+    },
+    "name": "krystal-heads-000"
+  },
+  {
+    "sheet": "krystal-heads-all-angles-options.png",
+    "box": [25, 314, 238, 287],
+    "marks": {
+      "head-top": [108, 28],
+      "chin": [120, 167]
+    },
+    "name": "krystal-heads-045"
+  },
+  {
+    "sheet": "krystal-heads-all-angles-options.png",
+    "box": [31, 605, 200, 292],
+    "marks": {
+      "head-top": [107, 28],
+      "chin": [157, 164]
+    },
+    "name": "krystal-heads-090"
+  },
+  {
+    "sheet": "krystal-heads-all-angles-options.png",
+    "box": [22, 897, 219, 295],
+    "marks": {
+      "head-top": [107, 19],
+      "chin": [165, 161]
+    },
+    "name": "krystal-heads-135"
+  },
+  {
+    "sheet": "krystal-heads-all-angles-options.png",
+    "box": [29, 1193, 202, 317],
+    "marks": {
+      "head-top": [96, 14],
+      "chin": [99, 143]
+    },
+    "name": "krystal-heads-180"
+  }
+]

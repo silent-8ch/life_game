@@ -10,6 +10,7 @@
                 --ink: #e2e8f0; --dim: #94a3b8; --line: #1e293b;
                 --pick: #fbbf24; --ok: #34d399;
                 --neck: #f472b6; --hand: #60a5fa; --foot: #fb923c;
+                --head: #a78bfa;
             }
             * { box-sizing: border-box; }
             body {
@@ -37,6 +38,10 @@
             .bar input[type=url] {
                 width: min(520px, 70vw); padding: 6px 9px;
                 border: 1px solid var(--line); border-radius: 4px;
+                background: #020408; color: var(--ink); font: 12px ui-monospace, monospace;
+            }
+            .bar select {
+                padding: 6px 9px; border: 1px solid var(--line); border-radius: 4px;
                 background: #020408; color: var(--ink); font: 12px ui-monospace, monospace;
             }
             .count { color: var(--dim); font-size: 13px; }
@@ -72,6 +77,7 @@
             .mark.neck-left, .mark.neck-right { background: var(--neck); }
             .mark.hand-left, .mark.hand-right { background: var(--hand); }
             .mark.foot-left, .mark.foot-right { background: var(--foot); }
+            .mark.head-top, .mark.chin { background: var(--head); }
             .mark::after {
                 content: attr(data-label); position: absolute; left: 14px; top: -3px;
                 font: 10px/1 ui-monospace, monospace; color: #fff; white-space: nowrap;
@@ -124,6 +130,10 @@
                 <button type="submit">Load URL</button>
             </form>
             <button id="copy">Copy picks as JSON</button>
+            <select id="landmark-mode" aria-label="Landmark mode">
+                <option value="body">Body landmarks</option>
+                <option value="head">Head: crown and chin</option>
+            </select>
             <button class="ghost" id="clear">Clear all</button>
             <span class="count" id="count"></span>
         </div>
@@ -132,9 +142,8 @@
         <p class="note">
             The generator makes a sheet of candidates. <strong>Phase one:</strong> drag a box round
             the cell that got the pose right. <strong>Phase two:</strong> on that cell, click the
-            six landmarks in order — neck left, neck right, hand left, hand right, foot left, foot
-            right. Those six points are what lets the sprite land on a real sheet at the right size
-            and place. Name the pose, then move to the next sheet. Copy the JSON and run
+            landmarks in order. Body mode records neck, hands, and feet. Head mode records the
+            crown and chin. Name the pose, then move to the next sheet. Copy the JSON and run
             <code>python3 docs/tools/cut_cells.py picks.json</code>.
         </p>
         <p class="hint">Nothing leaves this browser. Sheets are read from your disk and never uploaded.</p>
@@ -145,14 +154,20 @@
         <textarea id="json" readonly hidden></textarea>
 
         <script>
-            const LANDMARKS = [
-                ['neck-left',  'Neck, left side',  'var(--neck)'],
-                ['neck-right', 'Neck, right side', 'var(--neck)'],
-                ['hand-left',  'Left hand',        'var(--hand)'],
-                ['hand-right', 'Right hand',       'var(--hand)'],
-                ['foot-left',  'Left foot',        'var(--foot)'],
-                ['foot-right', 'Right foot',       'var(--foot)'],
-            ];
+            const LANDMARK_SETS = {
+                body: [
+                    ['neck-left',  'Neck, left side',  'var(--neck)'],
+                    ['neck-right', 'Neck, right side', 'var(--neck)'],
+                    ['hand-left',  'Left hand',        'var(--hand)'],
+                    ['hand-right', 'Right hand',       'var(--hand)'],
+                    ['foot-left',  'Left foot',        'var(--foot)'],
+                    ['foot-right', 'Right foot',       'var(--foot)'],
+                ],
+                head: [
+                    ['head-top', 'Top of head', 'var(--head)'],
+                    ['chin', 'Bottom of chin', 'var(--head)'],
+                ],
+            };
 
             const STORE = 'sheet-picker-picks';
             const picks = JSON.parse(localStorage.getItem(STORE) || '[]');
@@ -246,6 +261,8 @@
 
             function startPhaseTwo(box) {
                 const [x, y, w, h] = box;
+                const mode = document.getElementById('landmark-mode').value;
+                const landmarks = LANDMARK_SETS[mode];
 
                 // Blow the cell up to a comfortable size for clicking.
                 const scale = Math.min(3, Math.max(1, 480 / Math.max(w, h)));
@@ -258,7 +275,7 @@
 
                 current = { sheet: sheet.file, box, marks: {}, name: '' };
 
-                two.innerHTML = '<h2>2 — click the six landmarks, in order</h2>';
+                two.innerHTML = `<h2>2 — click the ${mode} landmarks, in order</h2>`;
 
                 const row = document.createElement('div');
                 row.className = 'cell';
@@ -271,7 +288,7 @@
                 const steps = document.createElement('div');
                 steps.className = 'steps';
 
-                for (const [key, label, colour] of LANDMARKS) {
+                for (const [key, label, colour] of landmarks) {
                     const step = document.createElement('div');
                     step.className = 'step';
                     step.dataset.key = key;
@@ -337,7 +354,7 @@
 
                     // Marks are in the cell's own pixels, so the cut sprite
                     // and its landmarks agree without any further arithmetic.
-                    const next = LANDMARKS.find(([key]) => !current.marks[key]);
+                    const next = landmarks.find(([key]) => !current.marks[key]);
                     if (next) {
                         current.marks[next[0]] = [px, py];
                         refresh();
@@ -347,7 +364,7 @@
                 // Right-click undoes the last landmark.
                 stage.addEventListener('contextmenu', (event) => {
                     event.preventDefault();
-                    const placed = LANDMARKS.map(([k]) => k).filter((k) => current.marks[k]);
+                    const placed = landmarks.map(([k]) => k).filter((k) => current.marks[k]);
                     if (placed.length) {
                         delete current.marks[placed[placed.length - 1]];
                         refresh();
@@ -356,7 +373,7 @@
 
                 input.addEventListener('keydown', (event) => {
                     if (event.key !== 'Enter') return;
-                    const all = LANDMARKS.every(([k]) => current.marks[k]);
+                    const all = landmarks.every(([k]) => current.marks[k]);
                     if (!all || !input.value.trim()) return;
 
                     current.name = input.value.trim();
