@@ -324,3 +324,83 @@ it('has no band of angles where the pane behaves differently', function (): void
     expect(collect($answer['across'])->pluck('held')->all())
         ->toBe([true, true, true, true, true]);
 });
+
+it('lifts the pane camera by exactly what the walk is lifted by', function (): void {
+    $answer = hugAnswer(<<<'JS'
+        const { createPortals } = await import('@/lib/engine/portals.ts');
+
+        // Two rooms joined only by a portal, the far one three metres up.
+        const square = (x) => [
+            corner(x, 0), corner(x + 4, 0), corner(x + 4, 4), corner(x, 4),
+        ];
+
+        const stepped = {
+            slug: 'test', name: 'Test', description: '',
+            spawn: { x: 2, z: 2, angle: 0 }, ceilingHeight: 3,
+            spriteStyle: 'realistic', playerSprite: 'paul',
+            wallColor: '#ffffff', floorColor: '#888888', accentColor: '#ffcc00',
+            sky: null, things: [],
+            sectors: [
+                {
+                    slug: 'here', name: 'here', floorHeight: 0, ceilingHeight: 3,
+                    floorTexture: null, ceilingTexture: null, wallTexture: null,
+                    isSky: false, isWater: false, isInvisible: false,
+                    points: [
+                        corner(0, 0), corner(4, 0),
+                        corner(4, 4, { portalLink: 'gap' }), corner(0, 4),
+                    ],
+                },
+                {
+                    slug: 'there', name: 'there', floorHeight: 3, ceilingHeight: 6,
+                    floorTexture: null, ceilingTexture: null, wallTexture: null,
+                    isSky: false, isWater: false, isInvisible: false,
+                    points: [
+                        corner(20, 0), corner(24, 0), corner(24, 4),
+                        corner(20, 4, { portalLink: 'gap' }),
+                    ],
+                },
+            ],
+        };
+
+        const madeUp = buildLevel(stepped, createTextureLibrary());
+        madeUp.group.updateMatrixWorld(true);
+
+        for (const pane of madeUp.portals) {
+            pane.settle();
+        }
+
+        // Standing in `here`, looking at the mouth.
+        camera.position.set(2, 1.5, 3);
+        camera.rotation.y = THREE.MathUtils.degToRad(180);
+        camera.rotation.x = 0;
+        camera.updateMatrixWorld(true);
+
+        // The pane whose mouth is in `here`, so its camera stands in `there`.
+        const outward = madeUp.portals.find(
+            (pane) => pane.home === 'here',
+        );
+
+        const beyond = outward.aim(camera);
+
+        process.stdout.write(JSON.stringify({
+            eyeAt: Number(camera.position.y.toFixed(4)),
+            cameraAt: Number(beyond.position.y.toFixed(4)),
+            walkRise: Number(
+                createPortals(stepped.sectors)
+                    .find((portal) => portal.entry.sector.slug === 'here')
+                    .rise.toFixed(4),
+            ),
+        }));
+        JS);
+
+    // The camera that draws the far side stands three metres higher than the
+    // eye, because the room it stands in is three metres higher. That is the
+    // same three metres the walk is lifted by, and the two coming from one
+    // number is the whole point.
+    //
+    // A pane showing one thing while the walk arrives at another is the one way
+    // a portal can look wrong — this file's own words about the turn, and the
+    // rise had to be held to them.
+    expect($answer['walkRise'])->toEqual(3)
+        ->and($answer['cameraAt'] - $answer['eyeAt'])->toEqual($answer['walkRise']);
+});

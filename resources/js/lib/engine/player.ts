@@ -253,6 +253,17 @@ export function walkPlayer(
 
     if (next === through) {
         player.yaw = through.yaw;
+
+        // Lifted so the two floors meet, which is what makes a portal between
+        // rooms at different heights read as one continuous space rather than
+        // a hole into a room three metres beneath you.
+        //
+        // The eye is left to catch up rather than moved with it. `settleEye`
+        // smooths a change of floor by design and a crossing is a change of
+        // floor — a stride's worth arriving over a tenth of a second, which is
+        // what a step up looks like. Moving it here as well would double the
+        // change and put the camera through the ceiling for a frame.
+        player.y += through.rise;
     }
 }
 

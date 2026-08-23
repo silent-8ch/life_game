@@ -1,6 +1,6 @@
 import type { Sector, SectorPoint } from '@/types';
 import type { Edge } from './sectors';
-import { boundaryKey, edgesOf, inwardNormal } from './sectors';
+import { boundaryKey, edgesOf, floorAt, inwardNormal } from './sectors';
 
 /**
  * A portal is two walls that name the same link. Walking into one puts the
@@ -41,6 +41,30 @@ export type Portal = {
     exit: PortalMouth;
     /** How far the player is turned on the way through, in radians of yaw. */
     turn: number;
+    /**
+     * How far the player is lifted on the way through, in metres.
+     *
+     * The difference between the two mouths' floors, so **you step out level
+     * with the floor you stepped in from**. Paul, having walked a slope up to a
+     * portal: *I expect the floor at the other end to be level with my end of
+     * the portal, currently it is showing it below me perspectively.*
+     *
+     * It used to be nothing at all — the transform was a translation in x and z
+     * and a turn about y, with a hard zero where this is. That preserved
+     * absolute height, so a mouth at the top of his slope looked into a room
+     * three metres beneath him and walking in would have dropped him into it.
+     *
+     * Measured at the middle of each mouth rather than at the point crossed.
+     * A mouth is a straight edge and a floor is a plane, so where the two rooms
+     * are sloped differently the floors can only be made level along one line;
+     * the middle is the one that is stable, is the same number for the walk and
+     * for the pane's camera, and does not change depending on which end of the
+     * opening somebody walks through.
+     *
+     * Zero for every portal in every level in this repo, which is what made it
+     * safe to add: all of their mouths already sit at matching heights.
+     */
+    rise: number;
 };
 
 /** Nudge past the far wall, so arriving does not read as crossing back. */
@@ -162,11 +186,23 @@ export function createPortals(sectors: Sector[]): Portal[] {
                 entry,
                 exit,
                 turn: turnBetween(entry.normal, exit.normal),
+                rise: floorMiddleOf(exit) - floorMiddleOf(entry),
             });
         }
     }
 
     return portals;
+}
+
+/**
+ * How high the floor is halfway along a mouth.
+ *
+ * The middle rather than either end, because under a slope a mouth's floor is a
+ * range and not a number, and the middle is the one point that is the same
+ * whichever way somebody is walking.
+ */
+function floorMiddleOf(mouth: PortalMouth): number {
+    return floorAt(mouth.sector, mouth.centre.x, mouth.centre.z);
 }
 
 /** Where two segments cross, as a fraction along the first, or null. */
@@ -201,7 +237,14 @@ function crossingAlong(
     return alongPath;
 }
 
-export type Crossing = { x: number; z: number; yaw: number; portal: Portal };
+export type Crossing = {
+    x: number;
+    z: number;
+    yaw: number;
+    /** How far up to carry whoever is crossing, so the two floors meet. */
+    rise: number;
+    portal: Portal;
+};
 
 /**
  * Whether a step across the floor walks into a portal, and where it comes out.
@@ -248,6 +291,7 @@ export function crossPortal(
         x: exit.centre.x + offset.x + exit.normal.x * CLEARANCE,
         z: exit.centre.z + offset.z + exit.normal.z * CLEARANCE,
         yaw: yaw + turn,
+        rise: nearest.portal.rise,
         portal: nearest.portal,
     };
 }

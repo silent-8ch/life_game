@@ -9,7 +9,7 @@ import {
 import { createPortalSurface } from '@/lib/engine/portal-surface';
 import type { PortalSurface } from '@/lib/engine/portal-surface';
 import { portalLinkOf, turnBetween } from '@/lib/engine/portals';
-import { heightsAlong, inwardNormal } from '@/lib/engine/sectors';
+import { floorAt, heightsAlong, inwardNormal } from '@/lib/engine/sectors';
 import type { Edge } from '@/lib/engine/sectors';
 
 /**
@@ -109,8 +109,16 @@ function buildPortalPane(
     // shows exactly what they arrive in.
     const turn = turnBetween(near.normal, far.normal);
 
+    // How far the far room sits above this one, at the middle of each mouth.
+    // The camera is lifted by it for the same reason the walk is: a pane
+    // showing one thing while the walk arrives at another is the one way a
+    // portal can look wrong, and this file already says so about the turn.
+    const rise =
+        floorAt(exit.sector, far.centre.x, far.centre.z) -
+        floorAt(entry.sector, near.centre.x, near.centre.z);
+
     const through = new THREE.Matrix4()
-        .makeTranslation(far.centre.x, 0, far.centre.z)
+        .makeTranslation(far.centre.x, rise, far.centre.z)
         .multiply(new THREE.Matrix4().makeRotationY(turn))
         .multiply(
             new THREE.Matrix4().makeTranslation(

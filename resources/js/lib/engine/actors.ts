@@ -279,6 +279,12 @@ export function createActors(level: Level): Actors {
                     }
 
                     if (landed === through) {
+                        // People are placed on the floor under them every
+                        // frame, so a portal's rise needs nothing carried for
+                        // them — but the floor plan test above is the reason
+                        // this is not simply free: `floorUnder` is asked at the
+                        // spot they arrive in, which is the far room, and that
+                        // is already the far room's own floor.
                         // Three things go through together, and leaving any one
                         // of them behind is its own bug.
                         //

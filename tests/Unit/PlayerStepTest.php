@@ -685,3 +685,84 @@ it('stops a jump dead against the ceiling and does not stick there', function ()
     expect($answer['squashedAt'])->toEqual(0)
         ->and($answer['squashedFooting'])->toBeTrue();
 });
+
+it('steps out of a portal level with the floor it stepped in from', function (): void {
+    $answer = playerStep(<<<'JS'
+        // Two rooms that do not touch, joined only by a portal, with the far
+        // one three metres up. Paul's case: a slope climbed to a mouth, and a
+        // room on the other side that used to sit beneath him.
+        const here = room('here', [
+            corner(0, 0), corner(4, 0), corner(4, 4, { portalLink: 'gap' }), corner(0, 4),
+        ]);
+        const there = room('there', [
+            corner(20, 0), corner(24, 0), corner(24, 4), corner(20, 4, { portalLink: 'gap' }),
+        ], { floorHeight: 3, ceilingHeight: 6 });
+
+        const built = level([here, there], { x: 2, z: 2, angle: 0 });
+        const portals = createPortals(built.sectors);
+        const world = { sectors: built.sectors, colliders: [], portals };
+
+        const player = spawnPlayer(built, { x: 2, z: 3.8, yaw: 180, pitch: 0 });
+
+        const before = { y: round(player.y), footing: player.footing };
+
+        for (let step = 0; step < 6; step++) {
+            walkPlayer(player, { forward: 1, strafe: 0, running: false }, world, 0.05);
+        }
+
+        const arrived = round(player.y);
+
+        // And settled, to show that arriving level means no fall and no climb.
+        for (let step = 0; step < 40; step++) {
+            fallPlayer(player, sectorAt(built.sectors, player.x, player.z), 0.05);
+        }
+
+        process.stdout.write(JSON.stringify({
+            before,
+            arrived,
+            settled: round(player.y),
+            rises: portals.map((portal) => round(portal.rise)),
+            room: sectorAt(built.sectors, player.x, player.z)?.slug ?? null,
+        }));
+        JS);
+
+    // Three metres up on the way through, so the feet land on the far floor
+    // rather than three metres under it.
+    expect($answer['before']['y'])->toEqual(0)
+        ->and($answer['room'])->toBe('there')
+        ->and($answer['arrived'])->toEqual(3);
+
+    // Nothing to fall and nothing to climb once there, which is the whole
+    // point: it reads as one continuous space rather than a hole into a room
+    // beneath you. Before this, `arrived` was 0 and the next frame of gravity
+    // was the start of a three-metre drop.
+    expect($answer['settled'])->toEqual(3);
+
+    // And the pair carries the rise both ways round, so walking back down is
+    // the same journey in reverse rather than a one-way lift.
+    expect($answer['rises'])->toEqual([3, -3]);
+});
+
+it('lifts nobody where the two mouths already sit at the same height', function (): void {
+    $answer = playerStep(<<<'JS'
+        const here = room('here', [
+            corner(0, 0), corner(4, 0), corner(4, 4, { portalLink: 'gap' }), corner(0, 4),
+        ]);
+        const there = room('there', [
+            corner(20, 0), corner(24, 0), corner(24, 4), corner(20, 4, { portalLink: 'gap' }),
+        ]);
+
+        const built = level([here, there], { x: 2, z: 2, angle: 0 });
+
+        process.stdout.write(JSON.stringify({
+            rises: createPortals(built.sectors).map((portal) => round(portal.rise)),
+        }));
+        JS);
+
+    // Zero, which is every portal in every level in this repo — level 8's
+    // stairs portal joins two rooms both based at 4.8, and the portal demo's
+    // three pairs are all at zero. That is what made this safe to add: it
+    // changes nothing that already exists and only decides what happens in the
+    // case nobody had built yet.
+    expect($answer['rises'])->toEqual([0, 0]);
+});
