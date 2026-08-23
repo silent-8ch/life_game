@@ -3,7 +3,6 @@ import type { BuildContext } from '@/lib/engine/build/context';
 import {
     MIRROR_TEXTURE_HEIGHT,
     MIRROR_TEXTURE_WIDTH,
-    MIRROR_TINT,
     PORTAL_BOUNCES,
 } from '@/lib/engine/constants';
 import { createPortalSurface } from '@/lib/engine/portal-surface';
@@ -81,7 +80,6 @@ export function buildMirrorPane(
             };
         },
         readByFarCamera: true,
-        tint: new THREE.Color(MIRROR_TINT),
         exitPoint: centre,
         exitNormal: normal,
         textureWidth: MIRROR_TEXTURE_WIDTH,

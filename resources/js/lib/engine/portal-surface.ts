@@ -104,13 +104,12 @@ const FRAGMENT_SHADER = `
     #include <logdepthbuf_pars_fragment>
 
     uniform sampler2D pane;
-    uniform vec3 tint;
     varying vec4 vPane;
 
     void main() {
         #include <logdepthbuf_fragment>
 
-        gl_FragColor = vec4(texture2DProj(pane, vPane).rgb * tint, 1.0);
+        gl_FragColor = vec4(texture2DProj(pane, vPane).rgb, 1.0);
 
         #include <tonemapping_fragment>
         #include <colorspace_fragment>
@@ -392,7 +391,6 @@ export type PortalSurfaceOptions = {
     /** True for a mirror: read the far view through the far camera, not the screen. */
     readByFarCamera: boolean;
     /** Multiplied into what the surface shows; a mirror gives back less light. */
-    tint: THREE.Color;
     /**
      * The plane the camera's near plane is tilted onto, so nothing between it
      * and the surface is drawn. A portal's is its far mouth; a mirror's is
@@ -554,7 +552,6 @@ export function createPortalSurface(
         uniforms: {
             pane: { value: targetAt(0).texture },
             textureMatrix: { value: textureMatrix },
-            tint: { value: options.tint },
             shrink: { value: 1 },
             // Half the target's size: NDC spans two, so this turns the reach
             // from the pane's middle into a count of texels.

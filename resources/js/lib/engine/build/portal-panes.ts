@@ -227,7 +227,6 @@ function buildPortalPane(
             };
         },
         readByFarCamera: false,
-        tint: new THREE.Color('#ffffff'),
         exitPoint: far.centre,
         exitNormal: far.normal,
         // The pane's own middle, not the mouth's point on the floor plan.

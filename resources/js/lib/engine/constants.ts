@@ -125,9 +125,6 @@ export const MIRROR_TEXTURE_HEIGHT = 288;
 export const PANE_TEXELS_ACROSS = 2048;
 export const PANE_TEXELS_DOWN = 1152;
 
-/** Mirrors give back less light than they take. */
-export const MIRROR_TINT = '#8a9aa4';
-
 /**
  * How many times a portal may be seen through another portal. Each bounce is a
  * render target per pane and a pass per frame, so a portal hung to face itself
