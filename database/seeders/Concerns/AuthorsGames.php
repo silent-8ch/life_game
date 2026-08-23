@@ -10,6 +10,7 @@ use App\Enums\ThingKind;
 use App\Enums\ThingRender;
 use App\Enums\ThingUvMode;
 use App\Enums\Verb;
+use App\Exceptions\LevelAlreadyDrawn;
 use App\Models\Game;
 use App\Models\Hotspot;
 use App\Models\Interaction;
@@ -68,6 +69,18 @@ trait AuthorsGames
         string $floorColor = '#2f6f5e',
         string $accentColor = '#fbbf24',
     ): Level {
+        // Refused rather than reused, and the difference matters. A seeder does
+        // not stop at the level — it goes on to add rooms, walls and things to
+        // whatever it was handed, so handing it one somebody has been playing
+        // would draw a second copy of every room straight through the first.
+        //
+        // `levels:install` catches this and moves on, which is what lets new
+        // levels reach a database that must never be reseeded. Everywhere else
+        // it turns a unique-index violation into a sentence.
+        if ($game->levels()->where('slug', $slug)->exists()) {
+            throw new LevelAlreadyDrawn($slug);
+        }
+
         return $game->levels()->create([
             'slug' => $slug,
             'name' => $name,
