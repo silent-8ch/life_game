@@ -1,5 +1,5 @@
 {
- "generated": "2026-08-23T14:45:53+00:00",
+ "generated": "2026-08-23T15:09:01+00:00",
  "sprites": [
   {
    "folder": "bg",
@@ -782,7 +782,7 @@
    "name": "william-illustrated-diagonal-aligned-4step",
    "url": "/sprites/illustrated/william-illustrated-diagonal-aligned-4step.png",
    "w": 1024,
-   "h": 1024
+  "h": 1024
   },
   {
    "folder": "people",
@@ -1444,6 +1444,15 @@
   {
    "folder": "people",
    "sub": "v4",
+   "file": "debug-heads-all-angles-options.png",
+   "name": "debug-heads-all-angles-options",
+   "url": "/sprites/people/v4/debug-heads-all-angles-options.png",
+   "w": 1024,
+   "h": 1536
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
    "file": "debug-ordered-angles-frames-options.png",
    "name": "debug-ordered-angles-frames-options",
    "url": "/sprites/people/v4/debug-ordered-angles-frames-options.png",
@@ -1458,6 +1467,15 @@
    "url": "/sprites/people/v4/sheet.png",
    "w": 864,
    "h": 1730
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "paul-heads-all-angles-options.png",
+   "name": "paul-heads-all-angles-options",
+   "url": "/sprites/people/v4/paul-heads-all-angles-options.png",
+   "w": 992,
+   "h": 1586
   },
   {
    "folder": "props",
