@@ -163,6 +163,9 @@ export function prepareReflections(
          */
         const inView = panes.filter((pane) => inViewOf(pane, camera));
 
+        /** Draws this frame's panes have left between them. */
+        let spent = 0;
+
         // Never less than the depth one pane's own chain needs.
         //
         // Dividing the budget among the panes in view stops any one of them
@@ -203,10 +206,8 @@ export function prepareReflections(
             from: THREE.PerspectiveCamera,
             depth: number,
             allowed: number,
-            /** Draws this branch may spend, itself included. */
-            purse: number,
         ): void => {
-            if (depth < allowed && purse > 1) {
+            if (depth < allowed && spent < share) {
                 const inner = pane.aim(from);
 
                 // This pane's own continuation first — see `tunnelFirst`.
@@ -225,38 +226,52 @@ export function prepareReflections(
                 // symmetrically: every mirror gets the same depth, and a
                 // shallower one is shallower everywhere at once rather than
                 // being the unlucky one.
-                const kids = tunnelFirst(panes, pane).filter(
-                    (other) =>
-                        other.mesh !== pane.partner &&
-                        pane.onto.includes(other.home) &&
-                        inViewOf(other, inner),
-                );
-
-                // Half down the chain, half shared among the rest.
+                // Down the corridor before sideways.
                 //
-                // An even split would be fair and shallow: three siblings each
-                // taking a third means the corridor gets a third of the depth
-                // it would otherwise reach, and depth is the whole of what a
-                // tunnel is. `tunnelFirst` has already put the pane that
-                // continues this one at the front, so the front branch takes
-                // half and the others divide the remainder evenly between them
-                // — deep where depth is the picture, and even where it is not,
-                // with no branch favoured by where it happens to sit.
-                const left = purse - 1;
-                const ahead = kids.length > 1 ? Math.ceil(left / 2) : left;
-                const rest = Math.floor(
-                    (left - ahead) / Math.max(kids.length - 1, 1),
-                );
-
-                kids.forEach((other, at) => {
-                    deepen(
-                        other,
-                        inner,
-                        depth + 1,
-                        allowed,
-                        at === 0 ? ahead : rest,
+                // `tunnelFirst` puts a pane that can see itself at the front,
+                // which is what a loop portal is. **A mirror never can** — it
+                // is taken out of its own pass — so for a room of mirrors that
+                // ordering does nothing and the depth went to whichever wall
+                // happened to be first in the array. That is one wall with a
+                // corridor in it and three without, which is what Paul saw when
+                // he took four captures ninety degrees apart.
+                //
+                // What continues a mirror is the wall **facing** it. So after
+                // the self case, the most opposed normal goes first: two panes
+                // looking at each other are a corridor, and the depth belongs
+                // to them rather than to a wall off to one side.
+                const kids = tunnelFirst(panes, pane)
+                    .slice()
+                    .sort(
+                        (a, b) =>
+                            a.facing.dot(pane.facing) -
+                            b.facing.dot(pane.facing),
+                    )
+                    .filter(
+                        (other) =>
+                            other.mesh !== pane.partner &&
+                            pane.onto.includes(other.home) &&
+                            inViewOf(other, inner),
                     );
-                });
+
+                // Deepest branch first, and spent from one counter.
+                //
+                // Dividing the purse evenly down the levels was tried and is
+                // what Paul saw as **exactly one reflection per mirror**: eight
+                // draws halve to four, then two, then one, and the corridor is
+                // over by the third level. Depth cannot be rationed per level,
+                // because depth is the one thing a tunnel is made of.
+                //
+                // So one counter, spent depth-first, with `tunnelFirst` putting
+                // the branch that continues this pane at the front — it takes
+                // the depth it needs and the siblings get what is left. The
+                // fairness that matters is between the panes the player can
+                // see, and that is kept by resetting the counter for each of
+                // them below, so no mirror is shallow because of where it sits
+                // in an array.
+                for (const other of kids) {
+                    deepen(other, inner, depth + 1, allowed);
+                }
             }
 
             // Running out of `allowed` is the end of the tunnel; running out
@@ -320,6 +335,8 @@ export function prepareReflections(
                 }
             }
 
+            spent++;
+
             drawPane(pane, renderer, scene, from, depth);
 
             for (const other of panes) {
@@ -335,7 +352,9 @@ export function prepareReflections(
             // divided among the panes in view rather than among all of them.
             const seen = inView.includes(pane);
 
-            deepen(pane, camera, 0, seen ? PORTAL_BOUNCES : 0, share);
+            spent = 0;
+
+            deepen(pane, camera, 0, seen ? PORTAL_BOUNCES : 0);
         }
 
         // Back around the player, for the view they actually get.

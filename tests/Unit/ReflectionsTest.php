@@ -40,6 +40,10 @@ function reflectionFrame(string $scene, string $body): array
             home,
             onto,
             bounds: new THREE.Sphere(new THREE.Vector3(...at), 1),
+            // Which way it faces. The recursion sorts by this to send depth
+            // down a corridor rather than sideways, so a stub without one is a
+            // stub that cannot stand in for a pane.
+            facing: new THREE.Vector3(0, 0, 1),
             mesh: { visible: true, name },
             partner: null,
             viewerAt: () => ({ x: name.length, z: -name.length, yaw: 0 }),

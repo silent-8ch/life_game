@@ -354,6 +354,14 @@ export type PortalSurface = {
      */
     onto: string[];
     /**
+     * Which way this surface faces.
+     *
+     * For working out which pane *continues* another one. Two panes facing each
+     * other are a corridor; the depth a tunnel needs should go down that pair
+     * rather than sideways into a wall beside it.
+     */
+    facing: THREE.Vector3;
+    /**
      * Sets up the camera that draws the far side, without drawing anything, and
      * hands it back so the caller can see what that camera would see.
      */
@@ -641,6 +649,7 @@ export function createPortalSurface(
         bounds: new THREE.Sphere(),
         home: options.home,
         onto: options.onto,
+        facing: options.exitNormal.clone(),
 
         viewerAt: options.viewerAt,
 
