@@ -107,6 +107,7 @@ export const assets = {
     skies: ['sky-day', 'sky-night'],
     backdrops: { hills: [1, 2, 3] },
     sprites: ['paul', 'krystal'],
+    styles: ['realistic', 'stylized'],
     items: [{ slug: 'key', name: 'Key' }],
 } as unknown as LevelAssets;
 

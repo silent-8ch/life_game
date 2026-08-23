@@ -501,6 +501,8 @@ export type LevelAssets = {
     backdrops: Record<string, number[]>;
     /** The people who can be placed in a level, tallest first. */
     sprites: string[];
+    /** The art styles a level can be drawn in, one per sprites/<style> folder. */
+    styles: string[];
     /** The game's items, for what a verb needs and what an effect hands over. */
     items: { slug: string; name: string }[];
 };

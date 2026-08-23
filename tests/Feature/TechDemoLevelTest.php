@@ -196,15 +196,18 @@ it('draws every person, the player included, from sheets that exist', function (
         ->push('paul')
         ->unique();
 
+    // Tech Demo's own cast, and every one of them is a real drawable person.
     expect($people)->toHaveCount(6)
-        ->and($assets->sprites())->toEqualCanonicalizing($people->all());
+        ->and($assets->sprites())->toContain(...$people->all());
 
-    $people->each(function (string $sprite) use ($assets): void {
+    // And every person the game can draw has both of their sheets on disk,
+    // the stylised newcomers included.
+    foreach ($assets->sprites() as $sprite) {
         foreach (['cardinal', 'diagonal'] as $sheet) {
             expect(public_path($assets->sheetPath($sprite, $sheet)))
                 ->toBeFile("Missing {$sheet} sheet for {$sprite}.");
         }
-    });
+    }
 });
 
 it('spawns the player inside a sector and clear of the furniture', function (): void {

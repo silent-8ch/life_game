@@ -141,8 +141,9 @@ def process(src, dst, key, tolerance, spill):
     if colour not in (2, 6):
         raise SystemExit(f'{src}: colour type {colour}, needs RGB or RGBA')
 
-    if colour == 2:
-        rows = [[(r, g, b, 255) for (r, g, b) in row] for row in rows]
+    # decode may hand back RGB or RGBA tuples regardless of the declared colour
+    # type, so normalise on the pixel's own length rather than on `colour`.
+    rows = [[(px[0], px[1], px[2], px[3] if len(px) > 3 else 255) for px in row] for row in rows]
 
     out, keyed, edge = unkey(rows, width, height, key, tolerance, spill)
     write_png(dst, out, width, height)

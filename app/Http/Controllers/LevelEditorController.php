@@ -36,6 +36,7 @@ class LevelEditorController extends Controller
                 'skies' => $assets->skies(),
                 'backdrops' => $assets->backdrops(),
                 'sprites' => $assets->household(),
+                'styles' => $assets->styles(),
                 // The game's items, for the interaction panel's pickers: what a
                 // verb may require, and what an effect may give or take away.
                 'items' => $level->game->items

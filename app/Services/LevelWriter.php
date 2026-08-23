@@ -31,6 +31,7 @@ class LevelWriter
                 'name' => $map['name'],
                 'description' => $map['description'],
                 'player_sprite' => $map['playerSprite'],
+                'sprite_style' => $map['spriteStyle'],
                 'spawn_x' => $map['spawn']['x'],
                 'spawn_z' => $map['spawn']['z'],
                 'spawn_angle' => $map['spawn']['angle'],

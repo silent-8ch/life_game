@@ -54,6 +54,7 @@ function mapWithInteractions(array $interactions): array
         'name' => 'Drawn',
         'description' => 'One room and one pot.',
         'playerSprite' => 'paul',
+        'spriteStyle' => 'realistic',
         'spawn' => ['x' => 1.0, 'z' => 1.0, 'angle' => 0],
         'ceilingHeight' => 3.0,
         'sky' => null,

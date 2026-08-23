@@ -1,0 +1,682 @@
+[
+ {
+  "file": "paul-stylized-fullbody-r0c0.png",
+  "url": "/sprites/people/v4/cut/paul-stylized-fullbody-r0c0.png",
+  "sheet": "paul-stylized-fullbody-options.png",
+  "row": 0,
+  "col": 0,
+  "w": 109,
+  "h": 314,
+  "feet": [
+   54,
+   314
+  ],
+  "crown": [
+   54,
+   0
+  ]
+ },
+ {
+  "file": "paul-stylized-fullbody-r0c1.png",
+  "url": "/sprites/people/v4/cut/paul-stylized-fullbody-r0c1.png",
+  "sheet": "paul-stylized-fullbody-options.png",
+  "row": 0,
+  "col": 1,
+  "w": 102,
+  "h": 314,
+  "feet": [
+   51,
+   314
+  ],
+  "crown": [
+   51,
+   0
+  ]
+ },
+ {
+  "file": "paul-stylized-fullbody-r0c2.png",
+  "url": "/sprites/people/v4/cut/paul-stylized-fullbody-r0c2.png",
+  "sheet": "paul-stylized-fullbody-options.png",
+  "row": 0,
+  "col": 2,
+  "w": 66,
+  "h": 313,
+  "feet": [
+   33,
+   313
+  ],
+  "crown": [
+   33,
+   0
+  ]
+ },
+ {
+  "file": "paul-stylized-fullbody-r0c3.png",
+  "url": "/sprites/people/v4/cut/paul-stylized-fullbody-r0c3.png",
+  "sheet": "paul-stylized-fullbody-options.png",
+  "row": 0,
+  "col": 3,
+  "w": 97,
+  "h": 312,
+  "feet": [
+   48,
+   312
+  ],
+  "crown": [
+   48,
+   0
+  ]
+ },
+ {
+  "file": "paul-stylized-fullbody-r0c4.png",
+  "url": "/sprites/people/v4/cut/paul-stylized-fullbody-r0c4.png",
+  "sheet": "paul-stylized-fullbody-options.png",
+  "row": 0,
+  "col": 4,
+  "w": 106,
+  "h": 313,
+  "feet": [
+   53,
+   313
+  ],
+  "crown": [
+   53,
+   0
+  ]
+ },
+ {
+  "file": "paul-stylized-fullbody-r1c0.png",
+  "url": "/sprites/people/v4/cut/paul-stylized-fullbody-r1c0.png",
+  "sheet": "paul-stylized-fullbody-options.png",
+  "row": 1,
+  "col": 0,
+  "w": 114,
+  "h": 296,
+  "feet": [
+   57,
+   296
+  ],
+  "crown": [
+   57,
+   0
+  ]
+ },
+ {
+  "file": "paul-stylized-fullbody-r1c1.png",
+  "url": "/sprites/people/v4/cut/paul-stylized-fullbody-r1c1.png",
+  "sheet": "paul-stylized-fullbody-options.png",
+  "row": 1,
+  "col": 1,
+  "w": 142,
+  "h": 295,
+  "feet": [
+   71,
+   295
+  ],
+  "crown": [
+   71,
+   0
+  ]
+ },
+ {
+  "file": "paul-stylized-fullbody-r1c2.png",
+  "url": "/sprites/people/v4/cut/paul-stylized-fullbody-r1c2.png",
+  "sheet": "paul-stylized-fullbody-options.png",
+  "row": 1,
+  "col": 2,
+  "w": 144,
+  "h": 294,
+  "feet": [
+   72,
+   294
+  ],
+  "crown": [
+   72,
+   0
+  ]
+ },
+ {
+  "file": "paul-stylized-fullbody-r1c3.png",
+  "url": "/sprites/people/v4/cut/paul-stylized-fullbody-r1c3.png",
+  "sheet": "paul-stylized-fullbody-options.png",
+  "row": 1,
+  "col": 3,
+  "w": 134,
+  "h": 294,
+  "feet": [
+   67,
+   294
+  ],
+  "crown": [
+   67,
+   0
+  ]
+ },
+ {
+  "file": "paul-stylized-fullbody-r1c4.png",
+  "url": "/sprites/people/v4/cut/paul-stylized-fullbody-r1c4.png",
+  "sheet": "paul-stylized-fullbody-options.png",
+  "row": 1,
+  "col": 4,
+  "w": 110,
+  "h": 295,
+  "feet": [
+   55,
+   295
+  ],
+  "crown": [
+   55,
+   0
+  ]
+ },
+ {
+  "file": "paul-stylized-fullbody-r2c0.png",
+  "url": "/sprites/people/v4/cut/paul-stylized-fullbody-r2c0.png",
+  "sheet": "paul-stylized-fullbody-options.png",
+  "row": 2,
+  "col": 0,
+  "w": 112,
+  "h": 293,
+  "feet": [
+   56,
+   293
+  ],
+  "crown": [
+   56,
+   0
+  ]
+ },
+ {
+  "file": "paul-stylized-fullbody-r2c1.png",
+  "url": "/sprites/people/v4/cut/paul-stylized-fullbody-r2c1.png",
+  "sheet": "paul-stylized-fullbody-options.png",
+  "row": 2,
+  "col": 1,
+  "w": 137,
+  "h": 292,
+  "feet": [
+   68,
+   292
+  ],
+  "crown": [
+   68,
+   0
+  ]
+ },
+ {
+  "file": "paul-stylized-fullbody-r2c2.png",
+  "url": "/sprites/people/v4/cut/paul-stylized-fullbody-r2c2.png",
+  "sheet": "paul-stylized-fullbody-options.png",
+  "row": 2,
+  "col": 2,
+  "w": 146,
+  "h": 291,
+  "feet": [
+   73,
+   291
+  ],
+  "crown": [
+   73,
+   0
+  ]
+ },
+ {
+  "file": "paul-stylized-fullbody-r2c3.png",
+  "url": "/sprites/people/v4/cut/paul-stylized-fullbody-r2c3.png",
+  "sheet": "paul-stylized-fullbody-options.png",
+  "row": 2,
+  "col": 3,
+  "w": 136,
+  "h": 292,
+  "feet": [
+   68,
+   292
+  ],
+  "crown": [
+   68,
+   0
+  ]
+ },
+ {
+  "file": "paul-stylized-fullbody-r2c4.png",
+  "url": "/sprites/people/v4/cut/paul-stylized-fullbody-r2c4.png",
+  "sheet": "paul-stylized-fullbody-options.png",
+  "row": 2,
+  "col": 4,
+  "w": 110,
+  "h": 293,
+  "feet": [
+   55,
+   293
+  ],
+  "crown": [
+   55,
+   0
+  ]
+ },
+ {
+  "file": "paul-stylized-fullbody-r3c0.png",
+  "url": "/sprites/people/v4/cut/paul-stylized-fullbody-r3c0.png",
+  "sheet": "paul-stylized-fullbody-options.png",
+  "row": 3,
+  "col": 0,
+  "w": 120,
+  "h": 281,
+  "feet": [
+   60,
+   281
+  ],
+  "crown": [
+   60,
+   0
+  ]
+ },
+ {
+  "file": "paul-stylized-fullbody-r3c1.png",
+  "url": "/sprites/people/v4/cut/paul-stylized-fullbody-r3c1.png",
+  "sheet": "paul-stylized-fullbody-options.png",
+  "row": 3,
+  "col": 1,
+  "w": 169,
+  "h": 281,
+  "feet": [
+   84,
+   281
+  ],
+  "crown": [
+   84,
+   0
+  ]
+ },
+ {
+  "file": "paul-stylized-fullbody-r3c2.png",
+  "url": "/sprites/people/v4/cut/paul-stylized-fullbody-r3c2.png",
+  "sheet": "paul-stylized-fullbody-options.png",
+  "row": 3,
+  "col": 2,
+  "w": 103,
+  "h": 278,
+  "feet": [
+   51,
+   278
+  ],
+  "crown": [
+   51,
+   0
+  ]
+ },
+ {
+  "file": "paul-stylized-fullbody-r3c3.png",
+  "url": "/sprites/people/v4/cut/paul-stylized-fullbody-r3c3.png",
+  "sheet": "paul-stylized-fullbody-options.png",
+  "row": 3,
+  "col": 3,
+  "w": 163,
+  "h": 281,
+  "feet": [
+   81,
+   281
+  ],
+  "crown": [
+   81,
+   0
+  ]
+ },
+ {
+  "file": "paul-stylized-fullbody-r3c4.png",
+  "url": "/sprites/people/v4/cut/paul-stylized-fullbody-r3c4.png",
+  "sheet": "paul-stylized-fullbody-options.png",
+  "row": 3,
+  "col": 4,
+  "w": 105,
+  "h": 282,
+  "feet": [
+   52,
+   282
+  ],
+  "crown": [
+   52,
+   0
+  ]
+ },
+ {
+  "file": "krystal-stylized-fullbody-r0c0.png",
+  "url": "/sprites/people/v4/cut/krystal-stylized-fullbody-r0c0.png",
+  "sheet": "krystal-stylized-fullbody-options.png",
+  "row": 0,
+  "col": 0,
+  "w": 84,
+  "h": 273,
+  "feet": [
+   42,
+   273
+  ],
+  "crown": [
+   42,
+   0
+  ]
+ },
+ {
+  "file": "krystal-stylized-fullbody-r0c1.png",
+  "url": "/sprites/people/v4/cut/krystal-stylized-fullbody-r0c1.png",
+  "sheet": "krystal-stylized-fullbody-options.png",
+  "row": 0,
+  "col": 1,
+  "w": 83,
+  "h": 274,
+  "feet": [
+   41,
+   274
+  ],
+  "crown": [
+   41,
+   0
+  ]
+ },
+ {
+  "file": "krystal-stylized-fullbody-r0c2.png",
+  "url": "/sprites/people/v4/cut/krystal-stylized-fullbody-r0c2.png",
+  "sheet": "krystal-stylized-fullbody-options.png",
+  "row": 0,
+  "col": 2,
+  "w": 63,
+  "h": 271,
+  "feet": [
+   31,
+   271
+  ],
+  "crown": [
+   31,
+   0
+  ]
+ },
+ {
+  "file": "krystal-stylized-fullbody-r0c3.png",
+  "url": "/sprites/people/v4/cut/krystal-stylized-fullbody-r0c3.png",
+  "sheet": "krystal-stylized-fullbody-options.png",
+  "row": 0,
+  "col": 3,
+  "w": 76,
+  "h": 272,
+  "feet": [
+   38,
+   272
+  ],
+  "crown": [
+   38,
+   0
+  ]
+ },
+ {
+  "file": "krystal-stylized-fullbody-r0c4.png",
+  "url": "/sprites/people/v4/cut/krystal-stylized-fullbody-r0c4.png",
+  "sheet": "krystal-stylized-fullbody-options.png",
+  "row": 0,
+  "col": 4,
+  "w": 82,
+  "h": 271,
+  "feet": [
+   41,
+   271
+  ],
+  "crown": [
+   41,
+   0
+  ]
+ },
+ {
+  "file": "krystal-stylized-fullbody-r1c0.png",
+  "url": "/sprites/people/v4/cut/krystal-stylized-fullbody-r1c0.png",
+  "sheet": "krystal-stylized-fullbody-options.png",
+  "row": 1,
+  "col": 0,
+  "w": 87,
+  "h": 235,
+  "feet": [
+   43,
+   235
+  ],
+  "crown": [
+   43,
+   0
+  ]
+ },
+ {
+  "file": "krystal-stylized-fullbody-r1c1.png",
+  "url": "/sprites/people/v4/cut/krystal-stylized-fullbody-r1c1.png",
+  "sheet": "krystal-stylized-fullbody-options.png",
+  "row": 1,
+  "col": 1,
+  "w": 109,
+  "h": 233,
+  "feet": [
+   54,
+   233
+  ],
+  "crown": [
+   54,
+   0
+  ]
+ },
+ {
+  "file": "krystal-stylized-fullbody-r1c2.png",
+  "url": "/sprites/people/v4/cut/krystal-stylized-fullbody-r1c2.png",
+  "sheet": "krystal-stylized-fullbody-options.png",
+  "row": 1,
+  "col": 2,
+  "w": 133,
+  "h": 230,
+  "feet": [
+   66,
+   230
+  ],
+  "crown": [
+   66,
+   0
+  ]
+ },
+ {
+  "file": "krystal-stylized-fullbody-r1c3.png",
+  "url": "/sprites/people/v4/cut/krystal-stylized-fullbody-r1c3.png",
+  "sheet": "krystal-stylized-fullbody-options.png",
+  "row": 1,
+  "col": 3,
+  "w": 111,
+  "h": 233,
+  "feet": [
+   55,
+   233
+  ],
+  "crown": [
+   55,
+   0
+  ]
+ },
+ {
+  "file": "krystal-stylized-fullbody-r1c4.png",
+  "url": "/sprites/people/v4/cut/krystal-stylized-fullbody-r1c4.png",
+  "sheet": "krystal-stylized-fullbody-options.png",
+  "row": 1,
+  "col": 4,
+  "w": 87,
+  "h": 234,
+  "feet": [
+   43,
+   234
+  ],
+  "crown": [
+   43,
+   0
+  ]
+ },
+ {
+  "file": "krystal-stylized-fullbody-r2c0.png",
+  "url": "/sprites/people/v4/cut/krystal-stylized-fullbody-r2c0.png",
+  "sheet": "krystal-stylized-fullbody-options.png",
+  "row": 2,
+  "col": 0,
+  "w": 85,
+  "h": 217,
+  "feet": [
+   42,
+   217
+  ],
+  "crown": [
+   42,
+   0
+  ]
+ },
+ {
+  "file": "krystal-stylized-fullbody-r2c1.png",
+  "url": "/sprites/people/v4/cut/krystal-stylized-fullbody-r2c1.png",
+  "sheet": "krystal-stylized-fullbody-options.png",
+  "row": 2,
+  "col": 1,
+  "w": 112,
+  "h": 216,
+  "feet": [
+   56,
+   216
+  ],
+  "crown": [
+   56,
+   0
+  ]
+ },
+ {
+  "file": "krystal-stylized-fullbody-r2c2.png",
+  "url": "/sprites/people/v4/cut/krystal-stylized-fullbody-r2c2.png",
+  "sheet": "krystal-stylized-fullbody-options.png",
+  "row": 2,
+  "col": 2,
+  "w": 124,
+  "h": 213,
+  "feet": [
+   62,
+   213
+  ],
+  "crown": [
+   62,
+   0
+  ]
+ },
+ {
+  "file": "krystal-stylized-fullbody-r2c3.png",
+  "url": "/sprites/people/v4/cut/krystal-stylized-fullbody-r2c3.png",
+  "sheet": "krystal-stylized-fullbody-options.png",
+  "row": 2,
+  "col": 3,
+  "w": 110,
+  "h": 216,
+  "feet": [
+   55,
+   216
+  ],
+  "crown": [
+   55,
+   0
+  ]
+ },
+ {
+  "file": "krystal-stylized-fullbody-r2c4.png",
+  "url": "/sprites/people/v4/cut/krystal-stylized-fullbody-r2c4.png",
+  "sheet": "krystal-stylized-fullbody-options.png",
+  "row": 2,
+  "col": 4,
+  "w": 81,
+  "h": 217,
+  "feet": [
+   40,
+   217
+  ],
+  "crown": [
+   40,
+   0
+  ]
+ },
+ {
+  "file": "krystal-stylized-fullbody-r3c0.png",
+  "url": "/sprites/people/v4/cut/krystal-stylized-fullbody-r3c0.png",
+  "sheet": "krystal-stylized-fullbody-options.png",
+  "row": 3,
+  "col": 0,
+  "w": 100,
+  "h": 242,
+  "feet": [
+   50,
+   242
+  ],
+  "crown": [
+   50,
+   0
+  ]
+ },
+ {
+  "file": "krystal-stylized-fullbody-r3c1.png",
+  "url": "/sprites/people/v4/cut/krystal-stylized-fullbody-r3c1.png",
+  "sheet": "krystal-stylized-fullbody-options.png",
+  "row": 3,
+  "col": 1,
+  "w": 132,
+  "h": 242,
+  "feet": [
+   66,
+   242
+  ],
+  "crown": [
+   66,
+   0
+  ]
+ },
+ {
+  "file": "krystal-stylized-fullbody-r3c2.png",
+  "url": "/sprites/people/v4/cut/krystal-stylized-fullbody-r3c2.png",
+  "sheet": "krystal-stylized-fullbody-options.png",
+  "row": 3,
+  "col": 2,
+  "w": 84,
+  "h": 242,
+  "feet": [
+   42,
+   242
+  ],
+  "crown": [
+   42,
+   0
+  ]
+ },
+ {
+  "file": "krystal-stylized-fullbody-r3c3.png",
+  "url": "/sprites/people/v4/cut/krystal-stylized-fullbody-r3c3.png",
+  "sheet": "krystal-stylized-fullbody-options.png",
+  "row": 3,
+  "col": 3,
+  "w": 115,
+  "h": 242,
+  "feet": [
+   57,
+   242
+  ],
+  "crown": [
+   57,
+   0
+  ]
+ },
+ {
+  "file": "krystal-stylized-fullbody-r3c4.png",
+  "url": "/sprites/people/v4/cut/krystal-stylized-fullbody-r3c4.png",
+  "sheet": "krystal-stylized-fullbody-options.png",
+  "row": 3,
+  "col": 4,
+  "w": 84,
+  "h": 242,
+  "feet": [
+   42,
+   242
+  ],
+  "crown": [
+   42,
+   0
+  ]
+ }
+]

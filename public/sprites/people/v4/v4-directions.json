@@ -1,0 +1,76 @@
+[
+ {
+  "sprite": "krystal-toon",
+  "directions": {
+   "0": {
+    "kind": "cell",
+    "file": "krystal-stylized-fullbody-r0c0.png"
+   },
+   "45": {
+    "kind": "mirror",
+    "from": "315"
+   },
+   "90": {
+    "kind": "cell",
+    "file": "krystal-stylized-fullbody-r0c2.png"
+   },
+   "135": {
+    "kind": "mirror",
+    "from": "225"
+   },
+   "180": {
+    "kind": "cell",
+    "file": "krystal-stylized-fullbody-r0c4.png"
+   },
+   "225": {
+    "kind": "cell",
+    "file": "krystal-stylized-fullbody-r0c3.png"
+   },
+   "270": {
+    "kind": "mirror",
+    "from": "90"
+   },
+   "315": {
+    "kind": "cell",
+    "file": "krystal-stylized-fullbody-r0c1.png"
+   }
+  }
+ },
+ {
+  "sprite": "paul-toon",
+  "directions": {
+   "0": {
+    "kind": "cell",
+    "file": "paul-stylized-fullbody-r0c0.png"
+   },
+   "45": {
+    "kind": "cell",
+    "file": "paul-stylized-fullbody-r0c1.png"
+   },
+   "90": {
+    "kind": "cell",
+    "file": "paul-stylized-fullbody-r0c2.png"
+   },
+   "135": {
+    "kind": "mirror",
+    "from": "225"
+   },
+   "180": {
+    "kind": "cell",
+    "file": "paul-stylized-fullbody-r0c4.png"
+   },
+   "225": {
+    "kind": "cell",
+    "file": "paul-stylized-fullbody-r0c3.png"
+   },
+   "270": {
+    "kind": "mirror",
+    "from": "90"
+   },
+   "315": {
+    "kind": "mirror",
+    "from": "45"
+   }
+  }
+ }
+]

@@ -55,6 +55,15 @@ class PersonStats
             'agility' => 5,
             'luck' => 5,
         ],
+        'paul-toon' => [
+            'strength' => 5,
+            'perception' => 5,
+            'endurance' => 5,
+            'charisma' => 5,
+            'intelligence' => 5,
+            'agility' => 5,
+            'luck' => 5,
+        ],
         'wade' => [
             'strength' => 5,
             'perception' => 5,
@@ -65,6 +74,15 @@ class PersonStats
             'luck' => 5,
         ],
         'krystal' => [
+            'strength' => 5,
+            'perception' => 5,
+            'endurance' => 5,
+            'charisma' => 5,
+            'intelligence' => 5,
+            'agility' => 5,
+            'luck' => 5,
+        ],
+        'krystal-toon' => [
             'strength' => 5,
             'perception' => 5,
             'endurance' => 5,

@@ -44,7 +44,7 @@ class LevelPayload
                 'angle' => $level->spawn_angle,
             ],
             'ceilingHeight' => $level->ceiling_height,
-            'spriteStyle' => LevelAssets::STYLE,
+            'spriteStyle' => $level->sprite_style ?? LevelAssets::STYLE,
             'playerSprite' => $level->player_sprite,
             'playerStats' => $stats->for($level->player_sprite),
             'wallColor' => $level->wall_color,

@@ -27,8 +27,10 @@ class LevelAssets
      */
     public const HEIGHTS = [
         'paul' => 1.85,
+        'paul-toon' => 1.85,
         'wade' => 1.80,
         'krystal' => 1.70,
+        'krystal-toon' => 1.70,
         'luna' => 1.66,
         'luke' => 1.62,
         'william' => 1.55,
@@ -149,6 +151,33 @@ class LevelAssets
         sort($sprites);
 
         return $sprites;
+    }
+
+    /**
+     * The styles a level may be drawn in: every `sprites/<style>` folder that
+     * holds at least one person's sheets. `realistic` has always been there;
+     * dropping a `stylized` folder of `-stylized-cardinal-aligned-4step` sheets
+     * in beside it makes it an option with nothing else to register.
+     *
+     * @return list<string>
+     */
+    public function styles(): array
+    {
+        $styles = [];
+
+        foreach (File::directories(public_path('sprites')) as $directory) {
+            $style = basename($directory);
+            foreach ($this->pngNamesIn('sprites/'.$style) as $name) {
+                if (str_ends_with($name, '-'.$style.'-cardinal-aligned-4step')) {
+                    $styles[] = $style;
+                    break;
+                }
+            }
+        }
+
+        sort($styles);
+
+        return $styles;
     }
 
     /**

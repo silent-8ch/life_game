@@ -125,6 +125,30 @@ export default function LevelPanel({
                     and meeting yourself.
                 </p>
 
+                <Field label="Art style">
+                    <select
+                        value={level.spriteStyle}
+                        onChange={(event) =>
+                            onChangeLevel({
+                                spriteStyle: event.target.value,
+                            })
+                        }
+                        className={inputClass}
+                    >
+                        {assets.styles.map((name) => (
+                            <option key={name} value={name}>
+                                {name}
+                            </option>
+                        ))}
+                    </select>
+                </Field>
+
+                <p className="text-xs leading-relaxed text-slate-500">
+                    Which set of sheets the people are drawn from. Only people
+                    with sheets in the chosen style appear — a style is a whole
+                    cast, not one character.
+                </p>
+
                 <Field label="Default ceiling height">
                     <NumberInput
                         step="0.1"

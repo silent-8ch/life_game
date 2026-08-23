@@ -1,5 +1,5 @@
 {
- "generated": "2026-08-23T15:37:04+00:00",
+ "generated": "2026-08-23T18:43:25+00:00",
  "sprites": [
   {
    "folder": "bg",
@@ -1507,6 +1507,24 @@
   {
    "folder": "people",
    "sub": "v4",
+   "file": "debug-stylized-fullbody-options.png",
+   "name": "debug-stylized-fullbody-options",
+   "url": "/sprites/people/v4/debug-stylized-fullbody-options.png",
+   "w": 1122,
+   "h": 1402
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "krystal-fullbody-movement-emotions-options.png",
+   "name": "krystal-fullbody-movement-emotions-options",
+   "url": "/sprites/people/v4/krystal-fullbody-movement-emotions-options.png",
+   "w": 1086,
+   "h": 1448
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
    "file": "krystal-heads-000.png",
    "name": "krystal-heads-000",
    "url": "/sprites/people/v4/krystal-heads-000.png",
@@ -1557,6 +1575,42 @@
    "url": "/sprites/people/v4/krystal-heads-all-angles-options.png",
    "w": 1024,
    "h": 1536
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "krystal-stylized-fullbody-options.png",
+   "name": "krystal-stylized-fullbody-options",
+   "url": "/sprites/people/v4/krystal-stylized-fullbody-options.png",
+   "w": 1536,
+   "h": 1024
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "luke-stylized-fullbody-options.png",
+   "name": "luke-stylized-fullbody-options",
+   "url": "/sprites/people/v4/luke-stylized-fullbody-options.png",
+   "w": 1122,
+   "h": 1402
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "luna-stylized-fullbody-options.png",
+   "name": "luna-stylized-fullbody-options",
+   "url": "/sprites/people/v4/luna-stylized-fullbody-options.png",
+   "w": 1122,
+   "h": 1402
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "paul-fullbody-movement-emotions-options.png",
+   "name": "paul-fullbody-movement-emotions-options",
+   "url": "/sprites/people/v4/paul-fullbody-movement-emotions-options.png",
+   "w": 1122,
+   "h": 1402
   },
   {
    "folder": "people",
@@ -1615,11 +1669,47 @@
   {
    "folder": "people",
    "sub": "v4",
+   "file": "paul-stylized-fullbody-options.png",
+   "name": "paul-stylized-fullbody-options",
+   "url": "/sprites/people/v4/paul-stylized-fullbody-options.png",
+   "w": 1254,
+   "h": 1254
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
    "file": "sheet.png",
    "name": "sheet",
    "url": "/sprites/people/v4/sheet.png",
    "w": 864,
    "h": 1730
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "wade-stylized-fullbody-options.png",
+   "name": "wade-stylized-fullbody-options",
+   "url": "/sprites/people/v4/wade-stylized-fullbody-options.png",
+   "w": 1122,
+   "h": 1402
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "william-stylized-fullbody-options.png",
+   "name": "william-stylized-fullbody-options",
+   "url": "/sprites/people/v4/william-stylized-fullbody-options.png",
+   "w": 1122,
+   "h": 1402
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "young-paul-stylized-fullbody-options.png",
+   "name": "young-paul-stylized-fullbody-options",
+   "url": "/sprites/people/v4/young-paul-stylized-fullbody-options.png",
+   "w": 1122,
+   "h": 1402
   },
   {
    "folder": "props",

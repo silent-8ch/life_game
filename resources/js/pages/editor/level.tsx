@@ -343,6 +343,7 @@ export default function LevelEditor({
                 name: draft.name,
                 description: draft.description,
                 playerSprite: draft.playerSprite,
+                spriteStyle: draft.spriteStyle,
                 spawn: draft.spawn,
                 ceilingHeight: draft.ceilingHeight,
                 sky: draft.sky,

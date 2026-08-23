@@ -73,6 +73,7 @@ class UpdateLevelMapRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'description' => ['required', 'string'],
             'playerSprite' => ['required', 'string', Rule::in($assets->sprites())],
+            'spriteStyle' => ['required', 'string', Rule::in($assets->styles())],
             'spawn' => ['required', 'array'],
             'spawn.x' => ['required', 'numeric'],
             'spawn.z' => ['required', 'numeric'],

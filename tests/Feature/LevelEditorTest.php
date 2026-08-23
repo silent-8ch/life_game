@@ -37,6 +37,7 @@ function drawnMap(): array
         'name' => 'Drawn',
         'description' => 'Two rooms and a way between them.',
         'playerSprite' => 'krystal',
+        'spriteStyle' => 'realistic',
         'spawn' => ['x' => 1.0, 'z' => 1.0, 'angle' => 90],
         'ceilingHeight' => 3.0,
         'sky' => [
@@ -632,4 +633,36 @@ it('turns away a line to a thing the map does not carry', function (): void {
     $this->actingAs($this->editor)
         ->put(route('levels.editor.update', $this->level), $map)
         ->assertSessionHasErrors('lines.0.to');
+});
+
+it('saves the art style the level is drawn in', function (): void {
+    $map = drawnMap();
+    $map['spriteStyle'] = 'illustrated';
+
+    $this->actingAs($this->editor)
+        ->put(route('levels.editor.update', $this->level), $map)
+        ->assertRedirect();
+
+    expect($this->level->fresh()->sprite_style)->toBe('illustrated');
+});
+
+it('turns away an art style that has no folder', function (): void {
+    $map = drawnMap();
+    $map['spriteStyle'] = 'nonesuch';
+
+    $this->actingAs($this->editor)
+        ->put(route('levels.editor.update', $this->level), $map)
+        ->assertSessionHasErrors('spriteStyle');
+});
+
+it('offers the styles a level can be drawn in, more than one', function (): void {
+    $this->actingAs($this->editor)
+        ->get(route('levels.editor', $this->level))
+        ->assertInertia(function (AssertableInertia $page): void {
+            /** @var list<string> $styles */
+            $styles = $page->toArray()['props']['assets']['styles'];
+
+            expect($styles)->toContain('realistic')
+                ->and($styles)->toContain('illustrated');
+        });
 });

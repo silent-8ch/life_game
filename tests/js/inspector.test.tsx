@@ -97,6 +97,7 @@ const assets: LevelAssets = {
     skies: [],
     backdrops: {},
     sprites: ['paul'],
+    styles: ['realistic'],
     items: [],
 } as unknown as LevelAssets;
 

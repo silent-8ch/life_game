@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>v4 gap finder — eight directions</title>
+        <style>
+            :root {
+                color-scheme: dark;
+                --ink: #e2e8f0; --dim: #94a3b8; --line: #1e293b;
+                --panel: #0f172a; --bg: #05070a;
+                --pick: #fbbf24; --mir: #38bdf8; --copy: #a78bfa; --gap: #f87171; --ok: #34d399;
+            }
+            * { box-sizing: border-box; }
+            body {
+                margin: 0; background: var(--bg); color: var(--ink);
+                font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, sans-serif;
+            }
+            header { padding: 14px 22px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+            h1 { font-size: 16px; margin: 0; }
+            .who button { font: inherit; padding: 5px 12px; margin-right: 6px; border: 1px solid #334155; border-radius: 5px; background: #1b2432; color: var(--ink); cursor: pointer; }
+            .who button.on { background: #1d4ed8; border-color: #1d4ed8; }
+            .count { color: var(--dim); font-size: 13px; }
+            .count b.gap { color: var(--gap); }
+            .count b.ok { color: var(--ok); }
+            main { display: grid; grid-template-columns: 300px 1fr; gap: 22px; padding: 18px 22px; }
+            h2 { font-size: 13px; color: var(--dim); font-weight: 500; margin: 0 0 10px; text-transform: uppercase; letter-spacing: .06em; }
+
+            .checker {
+                background-color: #0b1220;
+                background-image:
+                    linear-gradient(45deg, #131c2b 25%, transparent 25%),
+                    linear-gradient(-45deg, #131c2b 25%, transparent 25%),
+                    linear-gradient(45deg, transparent 75%, #131c2b 75%),
+                    linear-gradient(-45deg, transparent 75%, #131c2b 75%);
+                background-size: 16px 16px; background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+            }
+
+            .palette { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+            .cell { border: 2px solid var(--line); border-radius: 6px; padding: 4px; cursor: pointer; }
+            .cell.held { border-color: var(--pick); }
+            .cell .thumb { width: 100%; aspect-ratio: 3/4; border-radius: 4px; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; }
+            .cell img { max-width: 100%; max-height: 100%; object-fit: contain; image-rendering: pixelated; }
+            .cell .tag { font: 10px/1.3 ui-monospace, monospace; color: var(--dim); text-align: center; margin-top: 2px; }
+            .held-hint { color: var(--pick); font-size: 12px; margin: 8px 0 0; min-height: 18px; }
+
+            .slots { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+            .slot { border: 2px solid var(--line); border-radius: 8px; padding: 8px; }
+            .slot.gap { border-color: var(--gap); }
+            .slot.cell-src { border-color: var(--ok); }
+            .slot.mir-src { border-color: var(--mir); }
+            .slot.copy-src { border-color: var(--copy); }
+            .slot .dir { font: 12px ui-monospace, monospace; color: var(--ink); display: flex; justify-content: space-between; }
+            .slot .dir .face { color: var(--dim); }
+            .slot .view { width: 100%; aspect-ratio: 3/4; border-radius: 5px; margin: 6px 0; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; }
+            .slot .view img { max-width: 100%; max-height: 100%; object-fit: contain; image-rendering: pixelated; }
+            .slot .view .empty { color: var(--gap); font: 11px ui-monospace, monospace; align-self: center; }
+            .slot select { font: 12px ui-monospace, monospace; width: 100%; padding: 4px; background: #0b1220; color: var(--ink); border: 1px solid #334155; border-radius: 5px; }
+            .slot .badge { font: 10px/1.4 ui-monospace, monospace; }
+            .slot.cell-src .badge { color: var(--ok); }
+            .slot.mir-src .badge { color: var(--mir); }
+            .slot.copy-src .badge { color: var(--copy); }
+
+            .result { grid-column: 1 / -1; }
+            textarea { width: 100%; height: 160px; background: #0b1220; color: var(--dim); border: 1px solid var(--line); border-radius: 6px; font: 12px/1.5 ui-monospace, monospace; padding: 10px; }
+            button.act { font: inherit; padding: 6px 12px; margin-right: 8px; border: 1px solid #334155; border-radius: 5px; background: #1b2432; color: var(--ink); cursor: pointer; }
+            .hint { color: var(--dim); font-size: 12px; max-width: 80ch; }
+        </style>
+    </head>
+    <body>
+        <header>
+            <h1>v4 gap finder</h1>
+            <span class="who" id="who"></span>
+            <span class="count" id="count"></span>
+        </header>
+
+        <main>
+            <section>
+                <h2>Cut poses — click one to hold, then click a direction</h2>
+                <div class="palette" id="palette"></div>
+                <p class="held-hint" id="heldHint"></p>
+            </section>
+
+            <section>
+                <h2>The eight directions — green = drawn · blue = mirror · purple = copy · red = gap</h2>
+                <div class="slots" id="slots"></div>
+            </section>
+
+            <section class="result">
+                <h2>Result</h2>
+                <p class="hint">
+                    Per character: each of the 8 compass angles is a drawn cut pose, a mirror of another angle,
+                    a copy of another, or a gap. This feeds both the assembled sheet and the direction table.
+                    Fill both paul and krystal, then copy.
+                </p>
+                <button class="act" id="copy">Copy JSON</button>
+                <button class="act" id="download">Download v4-directions.json</button>
+                <textarea id="json" readonly></textarea>
+            </section>
+        </main>
+
+        <script>
+            // 0° is the body seen from the front, turning towards its right —
+            // the same order sprite-direction.ts reads angles in.
+            const DIRS = ['0', '45', '90', '135', '180', '225', '270', '315'];
+            const FACE = {
+                '0': 'front', '45': 'front-right', '90': 'right', '135': 'back-right',
+                '180': 'back', '225': 'back-left', '270': 'left', '315': 'front-left',
+            };
+
+            const whoEl = document.getElementById('who');
+            const countEl = document.getElementById('count');
+            const paletteEl = document.getElementById('palette');
+            const slotsEl = document.getElementById('slots');
+            const heldHintEl = document.getElementById('heldHint');
+            const jsonEl = document.getElementById('json');
+
+            let cells = [];              // all cut cells, from cut/index.json
+            let people = [];             // sprite names present
+            let active = null;           // current sprite
+            let held = null;             // held palette cell {file,url,label}
+            const plan = {};             // sprite -> { dir -> {kind:'cell',file,url} | {kind:'mirror'|'copy', from} }
+
+            const spriteOf = (file) => file.replace(/-stylized-fullbody-r\d+c\d+\.png$/, '');
+
+            // Resolve a direction to a concrete image + net horizontal flip,
+            // following copy/mirror references and refusing to loop.
+            const resolve = (sprite, dir, seen = new Set()) => {
+                const node = plan[sprite]?.[dir];
+                if (!node || seen.has(dir)) return null;
+                seen.add(dir);
+                if (node.kind === 'cell') return { url: node.url, flip: false };
+                const base = resolve(sprite, node.from, seen);
+                if (!base) return null;
+                return { url: base.url, flip: node.kind === 'mirror' ? !base.flip : base.flip };
+            };
+
+            const renderWho = () => {
+                whoEl.replaceChildren();
+                for (const p of people) {
+                    const b = document.createElement('button');
+                    b.textContent = p;
+                    if (p === active) b.className = 'on';
+                    b.addEventListener('click', () => { active = p; held = null; renderAll(); });
+                    whoEl.append(b);
+                }
+            };
+
+            const renderCount = () => {
+                const filled = DIRS.filter((d) => resolve(active, d)).length;
+                const gaps = 8 - filled;
+                countEl.innerHTML = `${active}: <b class="ok">${filled}</b> filled · <b class="gap">${gaps}</b> gaps`;
+            };
+
+            const renderPalette = () => {
+                paletteEl.replaceChildren();
+                for (const c of cells.filter((c) => c.sprite === active)) {
+                    const div = document.createElement('div');
+                    div.className = 'cell' + (held && held.file === c.file ? ' held' : '');
+                    div.innerHTML =
+                        `<div class="thumb checker"><img src="${c.url}" alt=""></div>` +
+                        `<div class="tag">r${c.row}c${c.col}</div>`;
+                    div.addEventListener('click', () => {
+                        held = { file: c.file, url: c.url, label: `r${c.row}c${c.col}` };
+                        renderPalette();
+                        heldHintEl.textContent = `holding ${held.label} — click a direction to place it`;
+                    });
+                    paletteEl.append(div);
+                }
+            };
+
+            const optionsFor = (dir) => {
+                const other = DIRS.filter((d) => d !== dir);
+                return [
+                    '<option value="">— gap —</option>',
+                    '<optgroup label="mirror of">' +
+                        other.map((d) => `<option value="mirror:${d}">mirror of ${d}° (${FACE[d]})</option>`).join('') +
+                        '</optgroup>',
+                    '<optgroup label="copy of">' +
+                        other.map((d) => `<option value="copy:${d}">copy of ${d}° (${FACE[d]})</option>`).join('') +
+                        '</optgroup>',
+                ].join('');
+            };
+
+            const renderSlots = () => {
+                slotsEl.replaceChildren();
+                for (const dir of DIRS) {
+                    const node = plan[active]?.[dir];
+                    const view = resolve(active, dir);
+                    const slot = document.createElement('div');
+                    let cls = 'slot';
+                    if (!view) cls += ' gap';
+                    else if (node.kind === 'cell') cls += ' cell-src';
+                    else if (node.kind === 'mirror') cls += ' mir-src';
+                    else if (node.kind === 'copy') cls += ' copy-src';
+                    slot.className = cls;
+
+                    const badge = node
+                        ? (node.kind === 'cell' ? 'drawn' : `${node.kind} ← ${node.from}°`)
+                        : 'gap';
+
+                    slot.innerHTML =
+                        `<div class="dir"><span>${dir}°</span><span class="face">${FACE[dir]}</span></div>` +
+                        `<div class="view checker">${
+                            view
+                                ? `<img src="${view.url}" style="transform:scaleX(${view.flip ? -1 : 1})">`
+                                : '<span class="empty">gap</span>'
+                        }</div>` +
+                        `<div class="badge">${badge}</div>` +
+                        `<select>${optionsFor(dir)}</select>`;
+
+                    // Click the picture with a held pose to make this a drawn direction.
+                    slot.querySelector('.view').addEventListener('click', () => {
+                        if (!held) { heldHintEl.textContent = 'hold a pose from the left first'; return; }
+                        plan[active] = plan[active] || {};
+                        plan[active][dir] = { kind: 'cell', file: held.file, url: held.url };
+                        renderAll();
+                    });
+
+                    const sel = slot.querySelector('select');
+                    sel.value = node && node.kind !== 'cell' ? `${node.kind}:${node.from}` : '';
+                    sel.addEventListener('change', () => {
+                        plan[active] = plan[active] || {};
+                        if (!sel.value) { delete plan[active][dir]; }
+                        else {
+                            const [kind, from] = sel.value.split(':');
+                            plan[active][dir] = { kind, from };
+                        }
+                        renderAll();
+                    });
+
+                    slotsEl.append(slot);
+                }
+            };
+
+            const emit = () => {
+                const out = people.map((sprite) => ({
+                    sprite,
+                    directions: Object.fromEntries(DIRS.map((d) => {
+                        const n = plan[sprite]?.[d];
+                        if (!n) return [d, null];
+                        return [d, n.kind === 'cell' ? { kind: 'cell', file: n.file } : { kind: n.kind, from: n.from }];
+                    })),
+                }));
+                jsonEl.value = JSON.stringify(out, null, 1);
+            };
+
+            const renderAll = () => {
+                renderWho(); renderCount(); renderPalette(); renderSlots(); emit();
+            };
+
+            document.getElementById('copy').addEventListener('click', () => { jsonEl.select(); document.execCommand('copy'); });
+            document.getElementById('download').addEventListener('click', () => {
+                const blob = new Blob([jsonEl.value || '[]'], { type: 'application/json' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob); a.download = 'v4-directions.json'; a.click();
+                URL.revokeObjectURL(a.href);
+            });
+
+            fetch('/sprites/people/v4/cut/index.json')
+                .then((r) => r.json())
+                .then((idx) => {
+                    cells = idx.map((c) => ({ ...c, sprite: spriteOf(c.file) }));
+                    people = [...new Set(cells.map((c) => c.sprite))].sort();
+                    active = people[0] || null;
+                    renderAll();
+                })
+                .catch(() => { countEl.textContent = 'could not read cut/index.json — run docs/tools/cut_grid.py'; });
+        </script>
+    </body>
+</html>

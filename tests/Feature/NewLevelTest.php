@@ -173,10 +173,11 @@ it('puts the household in the room a new level starts with', function (): void {
         fn ($thing): bool => $thing->kind === ThingKind::Actor
     );
 
-    // Everybody, the player included: which of the six is being played is a
-    // matter for the level, and nothing stops you meeting yourself.
+    // Everybody, the player included: which of them is being played is a
+    // matter for the level, and nothing stops you meeting yourself. The
+    // stylised newcomers are household members too.
     expect($people->pluck('sprite')->all())
-        ->toEqualCanonicalizing(['paul', 'krystal', 'luke', 'luna', 'wade', 'william']);
+        ->toEqualCanonicalizing(['paul', 'paul-toon', 'krystal', 'krystal-toon', 'luke', 'luna', 'wade', 'william']);
 
     $room = $level->sectors->sole();
 
@@ -202,6 +203,6 @@ it('stands the household at their own heights', function (): void {
         ->all();
 
     expect(collect($heights)->sortDesc()->keys()->all())
-        ->toBe(['paul', 'wade', 'krystal', 'luna', 'luke', 'william'])
+        ->toBe(['paul', 'paul-toon', 'wade', 'krystal', 'krystal-toon', 'luna', 'luke', 'william'])
         ->and(max($heights))->toBe(1.85, 'Nobody stands taller than Paul.');
 });

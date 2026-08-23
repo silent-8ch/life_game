@@ -22,6 +22,7 @@ use Illuminate\Support\Carbon;
  * @property string $name
  * @property string $description
  * @property string $player_sprite
+ * @property string $sprite_style
  * @property float $spawn_x
  * @property float $spawn_z
  * @property float $spawn_angle
@@ -46,6 +47,7 @@ use Illuminate\Support\Carbon;
     'name',
     'description',
     'player_sprite',
+    'sprite_style',
     'spawn_x',
     'spawn_z',
     'spawn_angle',

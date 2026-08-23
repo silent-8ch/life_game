@@ -144,6 +144,7 @@ function aSlopedMap(array $sectorChanges = []): array
         'description' => 'A room on a slant.',
         'spawn' => ['x' => 1.0, 'z' => 1.0, 'angle' => 0.0],
         'playerSprite' => 'paul',
+        'spriteStyle' => 'realistic',
         'ceilingHeight' => 3.0,
         'sky' => null,
         'things' => [],

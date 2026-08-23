@@ -31,6 +31,11 @@ const ORDERS: Record<string, string> = {
     krystal: 'c0 d0 c3 d2 c2 d1 c1 d3',
     luna: 'c0 d0 c3 d2 c2 d1 c1 d3',
 
+    // The stylised newcomers, whose sheets were built to the base person's row
+    // order in assemble_style_sheet.py, so they read off the same table.
+    'paul-toon': 'c0 d3 c1 d2 c2 d1 c3 d0',
+    'krystal-toon': 'c0 d0 c3 d2 c2 d1 c1 d3',
+
     // Wade's and Luke's diagonal row 0 was drawn facing the same way as row 3,
     // so neither sheet has a 45°. It is flipped from their 315° instead.
     wade: 'c0 ~d3 c1 d1 c2 d2 c3 d3',

@@ -21,8 +21,10 @@ const SPRITE_PATH = '/sprites';
  */
 export const HEIGHTS: Record<string, number> = {
     paul: 1.85,
+    'paul-toon': 1.85,
     wade: 1.8,
     krystal: 1.7,
+    'krystal-toon': 1.7,
     luna: 1.66,
     luke: 1.62,
     william: 1.55,
