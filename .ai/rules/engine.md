@@ -247,3 +247,9 @@ For regenerated `-edge-open` cards, the unmirrored side is Paul/Wade/Luke = left
 
 ## Open edge orientation is per person
 For regenerated `-edge-open` cards, the in-game checked unmirrored side is Paul/Wade/William = left (`walk: -1`) and Krystal/Luna/Luke = right (`walk: 1`). All regenerated edge fists currently use left (`run: -1`). Do not infer these values from prompt handedness.
+
+## Judge renders with ?scan, not browser screenshots
+requestAnimationFrame does not fire in a browser tab that is not foregrounded — and automation (Chrome MCP, headless) tabs usually are not. A screenshot of a level then shows a frame whose render loop never ran, which reads as every mirror/portal black for a reason unrelated to any bug. This cost real time and produced a false F-08 reproduction that had to be retracted. To verify a rendering change, use ?scan: it draws its own frames on a fixed timestep (SCAN_FRAMES via drawFrame in level-viewport.tsx) and reads the buffer back, so it is immune to the tab-focus trap. Add &panes to read what each portal/mirror pane drew at every recursion depth. Screenshots are fine only as confirmation when they show real content; a black result from one proves nothing.
+
+## A ?scan cannot judge whether a mirror looks right
+?scan forces the probe backdrop, and in a fully mirrored room every ray legitimately ends in backdrop — so ?scan reads a WORKING infinity mirror as sky and cannot tell it from a broken one. And &panes drawn:1 / drawnTo:N means a target HAS a picture, not that the picture is correct. ?scan is sound for portals and for proving geometry did not move; it is NOT evidence a mirror is fixed. Mirror correctness is judged by a human looking at the real (non-debug) render, with the tab foregrounded. Do not close a mirror bug on scan evidence.
