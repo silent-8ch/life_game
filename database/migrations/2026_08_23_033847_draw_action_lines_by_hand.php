@@ -69,11 +69,26 @@ return new class extends Migration
                 ->comment('A listener: this flag is set while its input is on. The only way a flag is written from the browser.');
         });
 
-        Schema::table('level_thing_bindings', function (Blueprint $table): void {
-            // The index goes first. SQLite will not drop a column an index
-            // still names, and it says so only when it has already begun.
-            $table->dropIndex(['level_thing_id', 'line']);
+        // The index over `(level_thing_id, line)` has to go before the column
+        // does, and the two databases disagree about how.
+        //
+        // **SQLite** will not drop a column an index still names, and says so
+        // only once it has begun. **MySQL** will not drop that index at all —
+        // the foreign key on `level_thing_id` is leaning on it, and it refuses
+        // rather than silently leaving the key unindexed. It does not need to
+        // be asked: dropping the column rewrites the index down to the columns
+        // that are left, which is the one the foreign key wanted.
+        //
+        // So the drop is asked for where it is required and not where it is
+        // refused. This is the shape of difference the move to MySQL was
+        // expected to turn up, and it turned this one up on the first run.
+        if (Schema::getConnection()->getDriverName() === 'sqlite') {
+            Schema::table('level_thing_bindings', function (Blueprint $table): void {
+                $table->dropIndex(['level_thing_id', 'line']);
+            });
+        }
 
+        Schema::table('level_thing_bindings', function (Blueprint $table): void {
             // A binding answers the thing's own input now, so there is nothing
             // left for it to name.
             $table->dropColumn('line');

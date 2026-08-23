@@ -504,7 +504,14 @@ it('keeps a person their own stats when they are given some', function (): void 
 
     $krystal = $this->level->fresh('things')->things->firstWhere('slug', 'krystal');
 
-    expect($krystal->stats)->toBe([...drawnStats(), 'luck' => 9, 'strength' => 2])
+    // `toEqual` rather than `toBe`, and the difference is a database. MySQL's
+    // `json` column normalises the order of an object's keys on the way in;
+    // SQLite keeps the text it was handed. Neither is wrong — key order is not
+    // part of what a JSON object means — so the assertion must not be, either.
+    // This is the one place the gap between testing on SQLite and running on
+    // MySQL has actually shown, and it showed the first time the suite was run
+    // against MySQL rather than in production.
+    expect($krystal->stats)->toEqual([...drawnStats(), 'luck' => 9, 'strength' => 2])
         ->and($krystal->stats()['luck'])->toBe(9);
 
     $this->actingAs($this->editor)

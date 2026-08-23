@@ -43,6 +43,7 @@
             "composer install",
             "@php -r \"file_exists('.env') || copy('.env.example', '.env');\"",
             "@php artisan key:generate",
+            "@php -r \"passthru('mysql -u '.(getenv('DB_USERNAME') ?: 'root').' -e \\\"create database if not exists life_game\\\"');\"",
             "@php artisan migrate --force",
             "npm install",
             "npm run build"
@@ -72,6 +73,12 @@
             "@php artisan config:clear --ansi",
             "@lint:check",
             "@types:check",
+            "@php artisan test"
+        ],
+        "test:mysql": [
+            "@php -r \"passthru('mysql -u '.(getenv('DB_USERNAME') ?: 'root').' -e \\\"create database if not exists life_game_testing\\\"');\"",
+            "@putenv DB_CONNECTION=mysql",
+            "@putenv DB_DATABASE=life_game_testing",
             "@php artisan test"
         ],
         "post-autoload-dump": [
