@@ -395,6 +395,42 @@
   "sheet": "debug-135-stride-a-options.png",
   "w": 241
  },
+ "debug-135-stride-b": {
+  "box": [
+   338,
+   14,
+   241,
+   306
+  ],
+  "file": "debug-135-stride-b.png",
+  "foot-left": [
+   87,
+   296
+  ],
+  "foot-right": [
+   157,
+   290
+  ],
+  "h": 306,
+  "hand-left": [
+   81,
+   168
+  ],
+  "hand-right": [
+   202,
+   143
+  ],
+  "neck-left": [
+   109,
+   16
+  ],
+  "neck-right": [
+   139,
+   21
+  ],
+  "sheet": "debug-135-stride-a-options.png",
+  "w": 241
+ },
  "debug-180-stand": {
   "box": [
    66,
@@ -462,6 +498,42 @@
   ],
   "neck-right": [
    109,
+   34
+  ],
+  "sheet": "debug-180-stride-a-options.png",
+  "w": 203
+ },
+ "debug-180-stride-b": {
+  "box": [
+   102,
+   3,
+   203,
+   327
+  ],
+  "file": "debug-180-stride-b.png",
+  "foot-left": [
+   95,
+   314
+  ],
+  "foot-right": [
+   115,
+   298
+  ],
+  "h": 327,
+  "hand-left": [
+   76,
+   112
+  ],
+  "hand-right": [
+   159,
+   194
+  ],
+  "neck-left": [
+   93,
+   34
+  ],
+  "neck-right": [
+   120,
    34
   ],
   "sheet": "debug-180-stride-a-options.png",

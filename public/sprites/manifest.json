@@ -1,5 +1,5 @@
 {
- "generated": "2026-08-23T14:37:11+00:00",
+ "generated": "2026-08-23T14:45:53+00:00",
  "sprites": [
   {
    "folder": "bg",
@@ -1381,6 +1381,15 @@
   {
    "folder": "people",
    "sub": "v4",
+   "file": "debug-135-stride-b.png",
+   "name": "debug-135-stride-b",
+   "url": "/sprites/people/v4/debug-135-stride-b.png",
+   "w": 241,
+   "h": 306
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
    "file": "debug-180-stand-options.png",
    "name": "debug-180-stand-options",
    "url": "/sprites/people/v4/debug-180-stand-options.png",
@@ -1417,6 +1426,15 @@
   {
    "folder": "people",
    "sub": "v4",
+   "file": "debug-180-stride-b.png",
+   "name": "debug-180-stride-b",
+   "url": "/sprites/people/v4/debug-180-stride-b.png",
+   "w": 203,
+   "h": 327
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
    "file": "debug-angled-all-frames-options.png",
    "name": "debug-angled-all-frames-options",
    "url": "/sprites/people/v4/debug-angled-all-frames-options.png",
@@ -1431,6 +1449,15 @@
    "url": "/sprites/people/v4/debug-ordered-angles-frames-options.png",
    "w": 1241,
    "h": 1267
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "sheet.png",
+   "name": "sheet",
+   "url": "/sprites/people/v4/sheet.png",
+   "w": 864,
+   "h": 1730
   },
   {
    "folder": "props",
