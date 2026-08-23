@@ -32,9 +32,9 @@ import type { ScanRun, WallPaint } from '@/lib/engine/probe-backdrop';
  *
  * - **Textures**, and therefore texture crawl and aliasing of every kind. In
  *   the only mode it can read, there are no textures to shimmer.
- * - **The sky, the fog and the backdrop.** `createView` builds no sky dome at
- *   all when the probe is on, so "no sky in the readback" says nothing about
- *   whether sky appears in the real picture.
+ * - **The sky and the backdrop.** `createView` builds no sky dome at all when
+ *   the probe is on, so "no sky in the readback" says nothing about whether sky
+ *   appears in the real picture.
  * - **Anything that is motion rather than geometry.** It reads still frames on
  *   a fixed timestep, with the people deliberately frozen, so a flicker between
  *   two frames is invisible to it unless somebody asks it for two frames.

@@ -324,9 +324,7 @@ export default function LevelViewport({
         const scanning = wantsScan(window.location.search);
 
         // `?debug` swaps the backdrop for a magenta and green check, so that
-        // anything showing through a seam is a colour the art never uses. The
-        // fog goes with it: fog fades a leak towards the wall colour, which is
-        // the one thing that makes a sliver hard to be sure of.
+        // anything showing through a seam is a colour the art never uses.
         const probe =
             scanning || wantsProbeBackdrop(window.location.search)
                 ? createProbeBackdrop()

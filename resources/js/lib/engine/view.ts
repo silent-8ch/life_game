@@ -16,9 +16,6 @@ import type { Level } from '@/types';
  * nothing here knows about the player, the frame loop, or React.
  */
 
-const FOG_NEAR = 8;
-const FOG_FAR = 60;
-
 export type LevelView = {
     scene: THREE.Scene;
     camera: THREE.PerspectiveCamera;
@@ -59,9 +56,8 @@ export function reachOf(level: Level): number {
 
 /**
  * @param  probe  The debug backdrop, if this is a debug run. It stands in for
- *                the background and takes the fog away with it: fog fades a
- *                leak towards the wall colour, which is the one thing that
- *                makes a sliver hard to be sure of.
+ *                the background, so a leak reads as a colour nothing in the
+ *                level wears rather than as more of the wall behind it.
  */
 export function createView(
     level: Level,
@@ -70,12 +66,19 @@ export function createView(
 ): LevelView {
     const scene = new THREE.Scene();
 
-    if (probe === null) {
-        scene.background = new THREE.Color(BACKGROUND_COLOR);
-        scene.fog = new THREE.Fog(BACKGROUND_COLOR, FOG_NEAR, FOG_FAR);
-    } else {
-        scene.background = probe.texture;
-    }
+    // No fog. Paul: *why does it go black the further away you see? can't we
+    // just see forever for now?* There was a fade from 8 m to 60 m into the
+    // background colour, which is most of the way across any room in the game
+    // and all of the way down a corridor — so a level big enough to be worth
+    // looking across was the level you could not see across.
+    //
+    // Nothing depended on it for clipping: `reachOf` sizes the far plane to the
+    // level's own bounds, so the view distance is the level's and always was.
+    // What the fog did do was soften a sight-line that runs out of the level,
+    // fading it towards the wall colour; without it those read as a hard edge
+    // to the background, which is easier to spot and harder to argue with.
+    scene.background =
+        probe === null ? new THREE.Color(BACKGROUND_COLOR) : probe.texture;
 
     const camera = new THREE.PerspectiveCamera(
         FIELD_OF_VIEW,
