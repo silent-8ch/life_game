@@ -1,5 +1,5 @@
 {
- "generated": "2026-08-23T14:27:51+00:00",
+ "generated": "2026-08-23T14:37:11+00:00",
  "sprites": [
   {
    "folder": "bg",
@@ -1165,11 +1165,29 @@
   {
    "folder": "people",
    "sub": "v4",
+   "file": "debug-000-stand.png",
+   "name": "debug-000-stand",
+   "url": "/sprites/people/v4/debug-000-stand.png",
+   "w": 224,
+   "h": 316
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
    "file": "debug-000-stride-a-options.png",
    "name": "debug-000-stride-a-options",
    "url": "/sprites/people/v4/debug-000-stride-a-options.png",
    "w": 1254,
    "h": 1254
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "debug-000-stride-a.png",
+   "name": "debug-000-stride-a",
+   "url": "/sprites/people/v4/debug-000-stride-a.png",
+   "w": 245,
+   "h": 318
   },
   {
    "folder": "people",
@@ -1183,11 +1201,29 @@
   {
    "folder": "people",
    "sub": "v4",
+   "file": "debug-000-stride-b.png",
+   "name": "debug-000-stride-b",
+   "url": "/sprites/people/v4/debug-000-stride-b.png",
+   "w": 172,
+   "h": 311
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
    "file": "debug-045-stand-options.png",
    "name": "debug-045-stand-options",
    "url": "/sprites/people/v4/debug-045-stand-options.png",
    "w": 1224,
    "h": 1285
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "debug-045-stand.png",
+   "name": "debug-045-stand",
+   "url": "/sprites/people/v4/debug-045-stand.png",
+   "w": 179,
+   "h": 323
   },
   {
    "folder": "people",
@@ -1201,11 +1237,29 @@
   {
    "folder": "people",
    "sub": "v4",
+   "file": "debug-045-stride-a.png",
+   "name": "debug-045-stride-a",
+   "url": "/sprites/people/v4/debug-045-stride-a.png",
+   "w": 228,
+   "h": 307
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
    "file": "debug-045-stride-b-options.png",
    "name": "debug-045-stride-b-options",
    "url": "/sprites/people/v4/debug-045-stride-b-options.png",
    "w": 1254,
    "h": 1254
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "debug-045-stride-b.png",
+   "name": "debug-045-stride-b",
+   "url": "/sprites/people/v4/debug-045-stride-b.png",
+   "w": 190,
+   "h": 310
   },
   {
    "folder": "people",
@@ -1219,11 +1273,38 @@
   {
    "folder": "people",
    "sub": "v4",
+   "file": "debug-090-stand.png",
+   "name": "debug-090-stand",
+   "url": "/sprites/people/v4/debug-090-stand.png",
+   "w": 158,
+   "h": 314
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
    "file": "debug-090-stride-a-options.png",
    "name": "debug-090-stride-a-options",
    "url": "/sprites/people/v4/debug-090-stride-a-options.png",
    "w": 1230,
    "h": 1278
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "debug-090-stride-a.png",
+   "name": "debug-090-stride-a",
+   "url": "/sprites/people/v4/debug-090-stride-a.png",
+   "w": 256,
+   "h": 318
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "debug-090-stride-b.png",
+   "name": "debug-090-stride-b",
+   "url": "/sprites/people/v4/debug-090-stride-b.png",
+   "w": 279,
+   "h": 317
   },
   {
    "folder": "people",
@@ -1264,11 +1345,29 @@
   {
    "folder": "people",
    "sub": "v4",
+   "file": "debug-135-stand.png",
+   "name": "debug-135-stand",
+   "url": "/sprites/people/v4/debug-135-stand.png",
+   "w": 197,
+   "h": 378
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
    "file": "debug-135-stride-a-options.png",
    "name": "debug-135-stride-a-options",
    "url": "/sprites/people/v4/debug-135-stride-a-options.png",
    "w": 1254,
    "h": 1254
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "debug-135-stride-a.png",
+   "name": "debug-135-stride-a",
+   "url": "/sprites/people/v4/debug-135-stride-a.png",
+   "w": 241,
+   "h": 306
   },
   {
    "folder": "people",
@@ -1291,11 +1390,29 @@
   {
    "folder": "people",
    "sub": "v4",
+   "file": "debug-180-stand.png",
+   "name": "debug-180-stand",
+   "url": "/sprites/people/v4/debug-180-stand.png",
+   "w": 181,
+   "h": 315
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
    "file": "debug-180-stride-a-options.png",
    "name": "debug-180-stride-a-options",
    "url": "/sprites/people/v4/debug-180-stride-a-options.png",
    "w": 1254,
    "h": 1254
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "debug-180-stride-a.png",
+   "name": "debug-180-stride-a",
+   "url": "/sprites/people/v4/debug-180-stride-a.png",
+   "w": 203,
+   "h": 327
   },
   {
    "folder": "people",
