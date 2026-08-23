@@ -14,12 +14,11 @@ use Livewire\Livewire;
  * account nobody can use, and that failure has already happened once here.
  */
 beforeEach(function (): void {
-    // Nothing in this file is about assets. Resolving the Vite manifest was
-    // never part of what these check — it came along for the ride because an
-    // Inertia page renders a blade view that asks for the bundle, and it made
-    // every one of them green or red depending on whether anybody had run
-    // `npm run build` lately. `public/build` is gitignored, so on a clean
-    // checkout or a cold runner that answer was no.
+    // These render Inertia pages, which resolve their assets through the Vite
+    // manifest — and `public/build` is gitignored, so on a clean checkout there
+    // is no manifest to resolve against. Without this the test is green or red
+    // depending on whether anybody has run `npm run build` lately, which is a
+    // check nobody should believe. Nothing here is asserting about assets.
     $this->withoutVite();
 
     $this->seed(PlayersSeeder::class);

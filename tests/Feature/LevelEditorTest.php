@@ -139,12 +139,19 @@ it('lets anyone who can sign in redraw a level, for now', function (): void {
     expect($this->editor->can('update', $this->level))->toBeTrue();
 });
 
-it('turns away a save the policy will not have', function (): void {
+it('turns away a save the policy will not have, without taking the page away', function (): void {
     Gate::before(fn (): bool => false);
 
+    // Not 403, and deliberately not: `UpdateLevelMapRequest::failedAuthorization`
+    // throws a validation failure instead, because a 403 page is the one answer
+    // you must not give somebody holding unsaved work — the editor would
+    // navigate and the draft would go with it. So the refusal comes back as
+    // something to read, in the place the editor already listens for errors.
     $this->actingAs($this->editor)
+        ->from(route('levels.editor', $this->level))
         ->put(route('levels.editor.update', $this->level), drawnMap())
-        ->assertForbidden();
+        ->assertRedirect(route('levels.editor', $this->level))
+        ->assertSessionHasErrors('save');
 
     expect($this->level->fresh()->sectors)->toHaveCount(3, 'The stored map is untouched.');
 });

@@ -13,7 +13,7 @@
 | Session | May commit |
 | --- | --- |
 | **`scanner`** | **its own work, on its own — commits and pushes, no waiting.** Paul restored this. |
-| **`organizer`** | `docs/**.md` and nothing else, ever. No code, no config, no seeders, no tests. |
+| **`organizer`** | **its own work, whatever it is** — Paul lifted the docs-only limit. In practice that is this board, the handoff briefs, and the checker tooling it writes. Not agent work: it does not commit for `scanner` or `production`. |
 | **`production`** | nothing. Reports findings; a fix it takes goes to whoever can land it. |
 | **Paul** | everything, and he is still the release manager. |
 

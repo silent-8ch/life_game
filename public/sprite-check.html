@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>What are we looking at?</title>
+        <style>
+            :root {
+                color-scheme: dark;
+                --ink: #e2e8f0;
+                --dim: #94a3b8;
+                --line: #1e293b;
+                --panel: #0f172a;
+                --pick: #fbbf24;
+                --ok: #34d399;
+            }
+            * { box-sizing: border-box; }
+            body {
+                margin: 0; padding: 24px; background: #05070a; color: var(--ink);
+                font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, sans-serif;
+            }
+            h1 { font-size: 20px; margin: 0 0 4px; }
+            h2 {
+                font-size: 15px; margin: 32px 0 4px; padding-bottom: 6px;
+                border-bottom: 1px solid var(--line);
+            }
+            p.note { color: var(--dim); margin: 0 0 12px; max-width: 70ch; }
+            .grid {
+                display: grid; gap: 10px;
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            }
+            .card {
+                background: var(--panel); border: 1px solid var(--line);
+                border-radius: 6px; padding: 8px;
+            }
+            .card.done { border-color: var(--ok); }
+            .shot {
+                width: 100%; aspect-ratio: 1; border-radius: 4px; display: block;
+                /* Alpha has to be visible or a hand cannot be judged. */
+                background-color: #1e293b;
+                background-image:
+                    linear-gradient(45deg, #0b1220 25%, transparent 25%),
+                    linear-gradient(-45deg, #0b1220 25%, transparent 25%),
+                    linear-gradient(45deg, transparent 75%, #0b1220 75%),
+                    linear-gradient(-45deg, transparent 75%, #0b1220 75%);
+                background-size: 16px 16px;
+                background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+            }
+            .shot img { width: 100%; height: 100%; object-fit: contain; display: block; }
+            /* A texture is judged tiled, never alone — a seam is invisible on
+               one copy and obvious where four meet. */
+            .tiled {
+                width: 100%; aspect-ratio: 1; border-radius: 4px;
+                background-repeat: repeat; background-size: 50% 50%;
+            }
+            .name {
+                font: 11px/1.4 ui-monospace, monospace; color: var(--dim);
+                margin: 6px 0 4px; word-break: break-all;
+            }
+            .size { font: 10px/1.3 ui-monospace, monospace; color: #64748b; }
+            .choices { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+            button.pick {
+                flex: 1 1 auto; background: #1e293b; color: var(--ink);
+                border: 1px solid var(--line); border-radius: 4px;
+                padding: 4px 6px; font-size: 11px; cursor: pointer;
+            }
+            button.pick:hover { border-color: var(--dim); }
+            button.pick[aria-pressed='true'] {
+                background: var(--pick); color: #05070a; border-color: var(--pick);
+                font-weight: 600;
+            }
+            .bar {
+                position: sticky; top: 0; z-index: 10; background: #05070ae6;
+                backdrop-filter: blur(6px); padding: 12px 0; margin: -24px -24px 0;
+                padding-left: 24px; padding-right: 24px;
+                border-bottom: 1px solid var(--line);
+            }
+            .bar button {
+                background: var(--pick); color: #05070a; border: 0; font-weight: 600;
+                border-radius: 4px; padding: 7px 14px; cursor: pointer; font-size: 13px;
+            }
+            .bar button.ghost {
+                background: transparent; color: var(--dim); border: 1px solid var(--line);
+                font-weight: 400;
+            }
+            .count { color: var(--dim); margin-left: 12px; font-size: 13px; }
+            textarea {
+                width: 100%; height: 220px; margin-top: 12px; background: #020408;
+                color: var(--ok); border: 1px solid var(--line); border-radius: 6px;
+                padding: 12px; font: 12px/1.5 ui-monospace, monospace;
+            }
+            .missing { color: #f87171; }
+            .walk { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 8px; }
+            .facing { text-align: center; }
+            .facing .stage {
+                width: 108px; aspect-ratio: 3/4; background: #0b1220;
+                border: 1px solid var(--line); border-radius: 4px; position: relative;
+                overflow: hidden;
+            }
+            .facing .stage img {
+                position: absolute; inset: 0; width: 100%; height: 100%;
+                object-fit: contain; opacity: 0;
+            }
+            .facing .stage img.on { opacity: 1; }
+            .facing.flip .stage img { transform: scaleX(-1); }
+            .facing .deg { font: 11px/1.6 ui-monospace, monospace; color: var(--dim); }
+            .facing.flip .deg::after { content: ' mirrored'; color: #64748b; }
+            .facing .deg.gap { color: #f87171; }
+            .person { margin-bottom: 28px; }
+            .speed { margin-left: 12px; color: var(--dim); font-size: 12px; }
+        </style>
+    </head>
+    <body>
+        <div class="bar">
+            <button id="copy">Copy answers as JSON</button>
+            <button class="ghost" id="clear">Clear</button>
+            <span class="count" id="count"></span>
+        </div>
+
+        <h1>What are we looking at?</h1>
+        <p class="note">
+            Everything on disk, read from a generated manifest — run
+            <code>python3 docs/tools/sprite_manifest.py</code> after new art lands and it
+            appears here. The questions below are the ones no script can answer. Answers are
+            kept in this browser as you go; the button copies them out as JSON.
+        </p>
+
+        <div id="out"></div>
+        <textarea id="json" readonly hidden></textarea>
+
+        <script>
+            // What a human is asked, per folder. Adding a family is adding a
+            // row here — the manifest already lists everything on disk, so a
+            // folder with no row still renders, it just asks nothing.
+            const QUESTIONS = {
+                hands: {
+                    ask: 'Which hand?',
+                    why: 'DRAWN in hands.ts carries a sign per person AND per pose, because the art does not agree with itself. It has been measured off the pixels by guessing which side the thumb is on. Looking is better.',
+                    options: ['left', 'right', 'unclear'],
+                    view: 'shot',
+                },
+                textures: {
+                    ask: 'Does it tile?',
+                    why: 'Shown four times over, because a seam is invisible on one copy and obvious where four meet. Nothing checks this automatically and it is the rule a generated set most often breaks — a texture whose edges do not meet puts a grid across every floor, one line every two metres.',
+                    options: ['seamless', 'visible seam', 'unsure'],
+                    view: 'tiled',
+                },
+                props: {
+                    ask: 'How should it be drawn?',
+                    why: 'box is a solid, billboard turns to face you, cross is two or three quads standing in each other, flat is one quad at a fixed angle — a door or a window. Nothing in the file says which, and a new prop has no table entry.',
+                    options: ['box', 'billboard', 'cross', 'flat'],
+                    view: 'shot',
+                },
+            };
+
+            const STORE = 'sprite-check-answers';
+            const answers = JSON.parse(localStorage.getItem(STORE) || '{}');
+
+            const out = document.getElementById('out');
+            const count = document.getElementById('count');
+
+            function save() {
+                localStorage.setItem(STORE, JSON.stringify(answers));
+                tally();
+            }
+
+            function tally() {
+                const asked = document.querySelectorAll('.card[data-key]').length;
+                const done = Object.keys(answers).length;
+                count.textContent = `${done} of ${asked} answered`;
+            }
+
+            function card(sprite, question) {
+                const key = `${sprite.folder}/${sprite.name}`;
+                const el = document.createElement('div');
+                el.className = 'card';
+                el.dataset.key = key;
+
+                if (question && question.view === 'tiled') {
+                    const tile = document.createElement('div');
+                    tile.className = 'tiled';
+                    tile.style.backgroundImage = `url("${sprite.url}")`;
+                    el.append(tile);
+                } else {
+                    const shot = document.createElement('div');
+                    shot.className = 'shot';
+                    const img = document.createElement('img');
+                    img.src = sprite.url;
+                    img.alt = sprite.name;
+                    img.loading = 'lazy';
+                    shot.append(img);
+                    el.append(shot);
+                }
+
+                const name = document.createElement('div');
+                name.className = 'name';
+                name.textContent = sprite.name;
+                el.append(name);
+
+                const size = document.createElement('div');
+                size.className = 'size';
+                size.textContent = sprite.w ? `${sprite.w}×${sprite.h}` : 'unreadable';
+                el.append(size);
+
+                if (!question) {
+                    return el;
+                }
+
+                const choices = document.createElement('div');
+                choices.className = 'choices';
+
+                for (const option of question.options) {
+                    const button = document.createElement('button');
+                    button.className = 'pick';
+                    button.type = 'button';
+                    button.textContent = option;
+                    button.setAttribute(
+                        'aria-pressed',
+                        answers[key] === option ? 'true' : 'false',
+                    );
+
+                    button.addEventListener('click', () => {
+                        // Clicking the chosen answer again clears it, so a
+                        // mistake does not need the whole set cleared.
+                        if (answers[key] === option) {
+                            delete answers[key];
+                        } else {
+                            answers[key] = option;
+                        }
+
+                        for (const sibling of choices.children) {
+                            sibling.setAttribute(
+                                'aria-pressed',
+                                answers[key] === sibling.textContent ? 'true' : 'false',
+                            );
+                        }
+
+                        el.classList.toggle('done', key in answers);
+                        save();
+                    });
+
+                    choices.append(button);
+                }
+
+                el.append(choices);
+                el.classList.toggle('done', key in answers);
+
+                return el;
+            }
+
+            // People are judged moving, not still. A walk cycle is
+            // stand, stride-a, stand, stride-b — and a mirrored direction
+            // runs it offset by half, because mirroring swaps which leg
+            // leads. Seeing those side by side is the only way to tell
+            // whether turning reads right.
+            const CYCLE = ['stand', 'stride-a', 'stand', 'stride-b'];
+            const DRAWN = ['000', '045', '090', '135', '180'];
+            const MIRRORS = { '225': '135', '270': '090', '315': '045' };
+            let tick = 0;
+
+            function facing(person, degrees, source, flipped, have, version) {
+                const box = document.createElement('div');
+                box.className = flipped ? 'facing flip' : 'facing';
+
+                const stage = document.createElement('div');
+                stage.className = 'stage';
+
+                // Every frame is loaded and shown by opacity rather than by
+                // swapping src, so the cycle never flickers on a cache miss.
+                for (const pose of ['stand', 'stride-a', 'stride-b']) {
+                    const img = document.createElement('img');
+                    const at = version ? `people/${version}` : 'people';
+                    img.src = `/sprites/${at}/${person}-${source}-${pose}.png`;
+                    img.dataset.pose = pose;
+                    img.alt = `${person} ${degrees} ${pose}`;
+                    stage.append(img);
+                }
+
+                const label = document.createElement('div');
+                label.className = have ? 'deg' : 'deg gap';
+                label.textContent = have ? `${degrees}°` : `${degrees}° missing`;
+
+                box.append(stage, label);
+
+                return box;
+            }
+
+            function people(sprites) {
+                // Only a v-number is a version. hands/overlays and
+                // textures/sources are subfolders too, and calling either a
+                // version would put an archive on screen as a candidate.
+                const versions = [...new Set(
+                    sprites.map((s) => s.sub).filter((sub) => /^v\d+$/.test(sub || '')),
+                )].sort();
+
+                for (const version of versions.length ? versions : [null]) {
+                    inVersion(sprites.filter((s) => s.sub === version), version);
+                }
+            }
+
+            function inVersion(sprites, version) {
+                const held = new Set(sprites.map((s) => s.name));
+                const names = [...new Set(sprites.map((s) => s.name.split('-')[0]))].sort();
+
+                for (const person of names) {
+                    const wrap = document.createElement('div');
+                    wrap.className = 'person';
+
+                    const title = document.createElement('h2');
+                    title.textContent = version
+                        ? `${person} ${version} — do the directions and the walk read right?`
+                        : `${person} — do the directions and the walk read right?`;
+                    wrap.append(title);
+
+                    const row = document.createElement('div');
+                    row.className = 'walk';
+
+                    for (const degrees of [...DRAWN, ...Object.keys(MIRRORS)].sort()) {
+                        const source = MIRRORS[degrees] ?? degrees;
+                        const flipped = degrees in MIRRORS;
+                        const have = held.has(`${person}-${source}-stand`);
+                        row.append(facing(person, degrees, source, flipped, have, version));
+                    }
+
+                    wrap.append(row);
+                    out.append(wrap);
+                }
+            }
+
+            // One timer for every figure on the page, so nothing drifts out
+            // of step with anything else while it is being judged.
+            setInterval(() => {
+                tick += 1;
+
+                for (const box of document.querySelectorAll('.facing')) {
+                    const flipped = box.classList.contains('flip');
+                    const at = (tick + (flipped ? 2 : 0)) % CYCLE.length;
+                    const want = CYCLE[at];
+
+                    for (const img of box.querySelectorAll('img')) {
+                        img.classList.toggle('on', img.dataset.pose === want);
+                    }
+                }
+            }, 220);
+
+            fetch('/sprites/manifest.json')
+                .then((response) => {
+                    if (!response.ok) {
+                        throw new Error(String(response.status));
+                    }
+
+                    return response.json();
+                })
+                .then((manifest) => {
+                    const folders = {};
+
+                    for (const sprite of manifest.sprites) {
+                        (folders[sprite.folder] ||= []).push(sprite);
+                    }
+
+                    // Folders with a question first — that is the work. The
+                    // rest are shown so nothing on disk is invisible here.
+                    const order = Object.keys(folders).sort((a, b) => {
+                        const asked = (name) => (QUESTIONS[name] ? 0 : 1);
+                        return asked(a) - asked(b) || a.localeCompare(b);
+                    });
+
+                    if (folders.people) {
+                        people(folders.people);
+                        delete folders.people;
+                    }
+
+                    for (const folder of order.filter((f) => folders[f])) {
+                        const question = QUESTIONS[folder];
+
+                        const heading = document.createElement('h2');
+                        heading.textContent = question
+                            ? `${folder} — ${question.ask}`
+                            : `${folder} — nothing to answer`;
+                        out.append(heading);
+
+                        const note = document.createElement('p');
+                        note.className = 'note';
+                        note.textContent = question
+                            ? question.why
+                            : `${folders[folder].length} files, shown so you can see what is there.`;
+                        out.append(note);
+
+                        const grid = document.createElement('div');
+                        grid.className = 'grid';
+
+                        for (const sprite of folders[folder]) {
+                            grid.append(card(sprite, question));
+                        }
+
+                        out.append(grid);
+                    }
+
+                    tally();
+                })
+                .catch(() => {
+                    out.innerHTML =
+                        '<p class="missing">No <code>/sprites/manifest.json</code>. ' +
+                        'Run <code>python3 docs/tools/sprite_manifest.py</code> and reload.</p>';
+                });
+
+            document.getElementById('copy').addEventListener('click', () => {
+                const box = document.getElementById('json');
+                const sorted = Object.fromEntries(
+                    Object.entries(answers).sort(([a], [b]) => a.localeCompare(b)),
+                );
+
+                box.value = JSON.stringify(sorted, null, 2);
+                box.hidden = false;
+                box.select();
+
+                try {
+                    navigator.clipboard.writeText(box.value);
+                } catch {
+                    // Selected either way, so it can be copied by hand.
+                }
+            });
+
+            document.getElementById('clear').addEventListener('click', () => {
+                if (!confirm('Throw away every answer?')) {
+                    return;
+                }
+
+                for (const key of Object.keys(answers)) {
+                    delete answers[key];
+                }
+
+                localStorage.removeItem(STORE);
+                location.reload();
+            });
+        </script>
+    </body>
+</html>
