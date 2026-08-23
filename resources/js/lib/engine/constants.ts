@@ -139,8 +139,49 @@ export const PORTAL_BOUNCES = 8;
  * The most offscreen portal passes a frame may spend. A level thick with portals
  * would otherwise cost more than the frame it is in, so depth is given up before
  * frame rate is.
+ *
+ * ## Why 16
+ *
+ * It was 40, set when a pane was rendered at a ninth of its current size. Panes
+ * are full resolution now, so every pass costs nine times what it did and the
+ * old number was nine times too generous.
+ *
+ * Measured at level 8's spawn — five panes, two of them in view — over the
+ * scan's thirty fixed frames:
+ *
+ * | budget | passes | ms/frame | targets held |
+ * | ------ | ------ | -------- | ------------ |
+ * | 40     | 793    | 22.9     | 33           |
+ * | 24     | 530    | 18.0     | 29           |
+ * | 16     | 520    | 18.0     | 26           |
+ * | 8      | 514    | 19.6     | 24           |
+ *
+ * **16 is where the curve flattens.** Going below it buys six passes out of
+ * five hundred and spends the margin a level with more panes in view would
+ * need; going above it buys nothing anybody can see. 22.9 ms a frame was most
+ * of a frame's budget spent on views of rooms nobody was looking at.
+ *
+ * **The picture does not change.** All eighteen scan spots are identical at 16
+ * and at 40, run either side of the change; so is level 8's spawn, which no
+ * spot covers; and so is the loop portal's corridor at `portals-loop-wide`,
+ * down to the deepest `twist` walls at the far end. The passes this removes
+ * were drawing levels that nothing sampled.
+ *
+ * ## What this does not fix
+ *
+ * **Memory has no hard bound here and this does not give it one.** A target is
+ * made per pane per depth the first time that depth is drawn, and is kept until
+ * the level is torn down — so the ceiling is `panes * (PORTAL_BOUNCES + 1)`
+ * targets whatever the budget is, and the budget only decides how long it takes
+ * to get there. Level 8 reaches 26 of its 45 from a standing start. At 1080p
+ * that is around 215 MB of colour buffers, and the ceiling is 373 MB.
+ *
+ * Lowering `PORTAL_BOUNCES` is what would bound that, and it is the wrong
+ * trade: bounces are the length of a corridor of portals, which is the one
+ * thing in here made entirely of depth. Freeing targets nobody has sampled for
+ * a while is the fix, and it is a task rather than a constant.
  */
-export const PORTAL_RENDER_BUDGET = 40;
+export const PORTAL_RENDER_BUDGET = 16;
 
 /**
  * How much the view is pulled in from the edges at the end of a tunnel of
