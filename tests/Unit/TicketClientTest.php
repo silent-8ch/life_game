@@ -205,3 +205,47 @@ it('still sends a report when there were no pictures to take', function (): void
         ->and($answer['room'])->toBe('hall')
         ->and($answer['pictures'])->toBe([]);
 });
+
+it('drops pictures rather than losing the whole report', function (): void {
+    $answer = ticketAnswer(<<<'JS'
+        const { withinBudget } = await import('@/lib/engine/snapshot.ts');
+
+        /** A picture of a given weight, without making one that big. */
+        const weighing = (bytes) => ({ size: bytes, type: 'image/png' });
+
+        const all = {
+            normal: weighing(900_000),
+            wireframe: weighing(700_000),
+            walls: weighing(300_000),
+        };
+
+        process.stdout.write(JSON.stringify({
+            underBudget: Object.keys(withinBudget({
+                normal: weighing(400_000),
+                wireframe: weighing(200_000),
+                walls: weighing(100_000),
+            })),
+            over: Object.keys(withinBudget(all)),
+            wayOver: Object.keys(withinBudget({
+                normal: weighing(3_000_000),
+                wireframe: weighing(3_000_000),
+                walls: weighing(3_000_000),
+            })),
+        }));
+        JS);
+
+    // Nothing is dropped when everything fits.
+    expect($answer['underBudget'])->toBe(['normal', 'wireframe', 'walls']);
+
+    // The wireframe goes first: it shows geometry, which is the half that can
+    // be rebuilt from the position the report already carries.
+    expect($answer['over'])->toBe(['normal', 'walls']);
+
+    // And when even the photograph will not fit on its own, it goes too.
+    //
+    // That looks like giving up and is the opposite. A picture over the limit
+    // does not arrive — it takes the spot, the room and the words down with it
+    // as a 413, and the thing being reported may not come back. Sending none of
+    // them delivers everything else, which is most of what diagnoses a fault.
+    expect($answer['wayOver'])->toBe([]);
+});

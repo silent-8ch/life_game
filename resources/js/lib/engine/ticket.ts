@@ -1,5 +1,5 @@
 import type { WallPaint } from '@/lib/engine/probe-backdrop';
-import { guardHeaders, reportForm } from '@/lib/engine/snapshot';
+import { guardHeaders, reportForm, withinBudget } from '@/lib/engine/snapshot';
 import type { Snapshot } from '@/lib/engine/snapshot';
 
 /**
@@ -116,7 +116,7 @@ export async function postTicket(
             // multipart boundary it just generated. Setting it by hand here is
             // the classic way to make every upload arrive empty.
             headers: { Accept: 'application/json', ...guardHeaders() },
-            body: reportForm(fields, shots),
+            body: reportForm(fields, withinBudget(shots)),
         });
     } catch {
         return { failed: 'the server did not answer' };
@@ -127,7 +127,9 @@ export async function postTicket(
             failed:
                 answer.status === 422
                     ? 'the server would not take it'
-                    : `the server said ${answer.status}`,
+                    : answer.status === 413
+                      ? 'the pictures were too big for it'
+                      : `the server said ${answer.status}`,
         };
     }
 

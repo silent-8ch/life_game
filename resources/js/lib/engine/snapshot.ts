@@ -317,10 +317,60 @@ export function reportForm(
     for (const [kind, blob] of Object.entries(shots)) {
         // Named for the view rather than numbered, because the server files
         // them by name and the admin panel reads them back the same way.
-        form.set(`shots[${kind}]`, blob, `${kind}.png`);
+        // Named for what the blob actually is, not for what we hope it is:
+        // the normal view is a JPEG and the other two are PNGs, and the server
+        // files them by the extension it derives from the bytes.
+        form.set(
+            `shots[${kind}]`,
+            blob,
+            `${kind}.${blob.type === 'image/jpeg' ? 'jpg' : 'png'}`,
+        );
     }
 
     return form;
+}
+
+/**
+ * What a body may carry, in bytes, before the far end refuses the lot.
+ *
+ * PHP's `post_max_size` is 2 MB and the local web server's own limit is 2 MB,
+ * and neither is part of this repository — a report has to fit in them rather
+ * than ask somebody to reconfigure their machine before they can file one. The
+ * margin below the limit is for the fields, the multipart boundaries and the
+ * forgery token, which are small but not nothing.
+ */
+export const SHOT_BUDGET_BYTES = 1_500_000;
+
+/**
+ * Drops pictures, least useful first, until the rest will fit.
+ *
+ * A 413 loses the whole report — the spot, the room, the words, everything —
+ * and the thing being reported may not come back. Arriving with two pictures
+ * instead of three is a far better outcome than not arriving.
+ *
+ * The order is what each view is worth to somebody reading it cold. `normal` is
+ * the photograph of the fault and goes last of all. `walls` is the one a
+ * machine can compute on, and keeps its legend. `wireframe` is the first to go:
+ * it shows geometry, which is the half that can already be rebuilt from the
+ * position the note carries.
+ */
+export function withinBudget(
+    shots: Record<string, Blob>,
+    budget: number = SHOT_BUDGET_BYTES,
+): Record<string, Blob> {
+    const keep = { ...shots };
+    const size = (): number =>
+        Object.values(keep).reduce((total, blob) => total + blob.size, 0);
+
+    for (const kind of ['wireframe', 'walls', 'normal']) {
+        if (size() <= budget) {
+            break;
+        }
+
+        delete keep[kind];
+    }
+
+    return keep;
 }
 
 export async function postSnapshot(
@@ -358,7 +408,7 @@ export async function postSnapshot(
                     ? JSON.stringify(spot)
                     : reportForm(
                           { ...spot, legend: carrying.legend },
-                          carrying.shots,
+                          withinBudget(carrying.shots),
                       ),
         });
     } catch {
@@ -366,7 +416,12 @@ export async function postSnapshot(
     }
 
     if (!answer.ok) {
-        return { failed: `the server said ${answer.status}` };
+        return {
+            failed:
+                answer.status === 413
+                    ? 'the pictures were too big for it'
+                    : `the server said ${answer.status}`,
+        };
     }
 
     const said: unknown = await answer.json().catch(() => null);

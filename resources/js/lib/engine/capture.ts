@@ -243,10 +243,27 @@ export function wireframeScene(group: THREE.Object3D): void {
  * reason to spend the margin when these pictures are a few hundred pixels
  * across to begin with.
  */
-async function toPng(
+/**
+ * Encodes one view, in the format that view actually wants.
+ *
+ * **The walls view must be lossless and the normal view must not be.** The
+ * legend matches colours exactly — `scanRow` rounds each channel to the nearest
+ * of six values and looks the result up — so a lossy walls picture decodes to
+ * the wrong walls, or to none. The normal view has no such contract: it is a
+ * photograph of a textured room for a person to look at.
+ *
+ * That difference is worth the branch because of a hard limit at the other end.
+ * PHP takes 2 MB of body and the local web server takes 2 MB, and three
+ * lossless pictures of a lit room do not fit in that — the report arrives as a
+ * 413 and the fault it was carrying is lost. As JPEG the photographic view is
+ * a fraction of the size, and the two views that carry meaning rather than
+ * light stay exact.
+ */
+async function toImage(
     pixels: Uint8ClampedArray<ArrayBuffer>,
     width: number,
     height: number,
+    type: 'image/png' | 'image/jpeg' = 'image/png',
 ): Promise<Blob> {
     const canvas = document.createElement('canvas');
     canvas.width = width;
@@ -261,15 +278,21 @@ async function toPng(
     context.putImageData(new ImageData(pixels, width, height), 0, 0);
 
     return new Promise((resolve, reject) => {
-        canvas.toBlob((blob) => {
-            if (blob === null) {
-                reject(new Error('The picture could not be encoded.'));
+        canvas.toBlob(
+            (blob) => {
+                if (blob === null) {
+                    reject(new Error('The picture could not be encoded.'));
 
-                return;
-            }
+                    return;
+                }
 
-            resolve(blob);
-        }, 'image/png');
+                resolve(blob);
+            },
+            type,
+            // Ignored for PNG. High enough that nobody reporting a fault is
+            // shown compression instead of the fault.
+            0.82,
+        );
     });
 }
 
@@ -325,9 +348,9 @@ export async function captureShots(
 
         return {
             shots: {
-                normal: await toPng(normal, width, height),
-                wireframe: await toPng(wireframe, width, height),
-                walls: await toPng(walls, width, height),
+                normal: await toImage(normal, width, height, 'image/jpeg'),
+                wireframe: await toImage(wireframe, width, height),
+                walls: await toImage(walls, width, height),
             },
             legend,
         };
