@@ -36,7 +36,7 @@ use Symfony\Component\Process\Process;
 /**
  * @return array<string, mixed>
  */
-function mirrorCamera(string $body): array
+function mirrorCamera(string $body, float $shift = 0): array
 {
     $script = <<<JS
         const THREE = await import('three');
@@ -53,7 +53,10 @@ function mirrorCamera(string $body): array
         };
 
         // A wall across the far end of the room, facing back into it.
-        const centre = new THREE.Vector3(0, 1.5, -4);
+        // `shift` slides the whole room away from the world origin without
+        // changing its shape or where the player stands in it.
+        const shift = {$shift};
+        const centre = new THREE.Vector3(shift, 1.5, -4 + shift);
         const normal = new THREE.Vector3(0, 0, 1);
 
         buildMirrorPane(
@@ -70,7 +73,7 @@ function mirrorCamera(string $body): array
         // Standing off to one side and turned, so that nothing under test can
         // pass by symmetry alone.
         const player = new THREE.PerspectiveCamera(70, 16 / 9, 0.1, 200);
-        player.position.set(0.7, 1.6, 1.2);
+        player.position.set(0.7 + shift, 1.6, 1.2 + shift);
         player.rotation.set(-0.1, 0.25, 0.04);
         player.updateMatrixWorld(true);
         player.updateProjectionMatrix();
@@ -203,4 +206,84 @@ it('lands a point on the mirror plane on the pixel the player sees it at', funct
         ->and($answer['read'][0])->toBeLessThan($answer['player'][0] + 1e-9)
         ->and($answer['read'][1])->toBeGreaterThan($answer['player'][1] - 1e-9)
         ->and($answer['read'][1])->toBeLessThan($answer['player'][1] + 1e-9);
+});
+
+it('stands the camera where it really is, and says so', function (): void {
+    $answer = mirrorCamera(<<<'JS'
+        const scale = new THREE.Vector3();
+        beyond.matrixWorld.decompose(
+            new THREE.Vector3(),
+            new THREE.Quaternion(),
+            scale,
+        );
+
+        process.stdout.write(JSON.stringify({
+            says: beyond.position.toArray(),
+            is: new THREE.Vector3()
+                .setFromMatrixPosition(beyond.matrixWorld)
+                .toArray(),
+            scale: scale.toArray(),
+        }));
+        JS);
+
+    // Three renders from matrixWorldInverse and never reads these, so nothing
+    // fails loudly when they are wrong. `aim` reads the position to decide how
+    // far off the wall it is standing, and `viewerAt` reads the quaternion to
+    // turn every billboard in the pass.
+    foreach ([0, 1, 2] as $axis) {
+        expect(abs($answer['says'][$axis] - $answer['is'][$axis]))
+            ->toBeLessThan(1e-9);
+    }
+
+    // And it comes apart cleanly, which is only true because the camera was
+    // turned right-handed first. A reflection decomposes to a negative scale
+    // and a quaternion that means nothing.
+    foreach ($answer['scale'] as $along) {
+        expect(abs($along - 1))->toBeLessThan(1e-9);
+    }
+});
+
+it('draws the same mirror the same way wherever the room was built', function (): void {
+    $here = mirrorCamera(<<<'JS'
+        const plane = new THREE.Plane()
+            .setFromNormalAndCoplanarPoint(normal, centre);
+        const e = beyond.projectionMatrix.elements;
+        const far = new THREE.Vector4(
+            e[3] - e[2], e[7] - e[6], e[11] - e[10], e[15] - e[14],
+        );
+
+        process.stdout.write(JSON.stringify({
+            off: Math.abs(plane.distanceToPoint(beyond.position)),
+            far: Math.abs(far.w / Math.hypot(far.x, far.y, far.z)),
+        }));
+        JS);
+
+    $faraway = mirrorCamera(<<<'JS'
+        const plane = new THREE.Plane()
+            .setFromNormalAndCoplanarPoint(normal, centre);
+        const e = beyond.projectionMatrix.elements;
+        const far = new THREE.Vector4(
+            e[3] - e[2], e[7] - e[6], e[11] - e[10], e[15] - e[14],
+        );
+
+        process.stdout.write(JSON.stringify({
+            off: Math.abs(plane.distanceToPoint(beyond.position)),
+            far: Math.abs(far.w / Math.hypot(far.x, far.y, far.z)),
+        }));
+        JS, 40);
+
+    // The same room, the same player, the same wall — moved forty metres from
+    // the middle of the level. Nothing about the picture may depend on that,
+    // and everything did: `aim` measured its distance to the wall from the
+    // world origin, so this number was the room's own address rather than how
+    // far the eye was standing off the glass.
+    //
+    // It decides two things. Under CLIP_MINIMUM the near plane is not tilted at
+    // all and the wall behind the mirror is drawn across the view — the sky,
+    // where a level has no room back there. Over it, the bias sets where the
+    // far plane lands, and far enough out that collapses and the pane goes
+    // black. Same room, some walls black and some showing sky, decided by
+    // nothing but where it was built.
+    expect(abs($here['off'] - $faraway['off']))->toBeLessThan(1e-9)
+        ->and(abs($here['far'] - $faraway['far']))->toBeLessThan(1e-6);
 });

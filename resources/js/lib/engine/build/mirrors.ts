@@ -121,6 +121,33 @@ export function buildMirrorPane(
                 // lands on the same pixel as the player's own camera — the
                 // identity the screen-space read is built on.
                 .multiply(TURNED);
+
+            // Three renders from `matrixWorldInverse` and never reads the
+            // fields, so this looks like bookkeeping and is not: the rest of
+            // this file asks the camera where it is standing.
+            //
+            // `aim` measures how far the camera is off the plane it clips
+            // against, and picks both whether to tilt the near plane and what
+            // bias to tilt it with from that one number. `viewerAt` turns every
+            // billboard in the pass by the camera's own quaternion. Left
+            // undecomposed, a mirror's camera answered *the world origin,
+            // facing down -z* to both questions — so the distance was origin to
+            // wall rather than eye to wall, off by however far the room happens
+            // to sit from the middle of the level.
+            //
+            // Too small and the tilt is dropped, the wall behind the mirror is
+            // never clipped away, and the pane shows whatever is on the far
+            // side of it — the sky, usually. Too large and the far plane
+            // collapses (see `ObliqueClipTest`) and the pane goes black. Both
+            // at once, in one room, decided by nothing but where that room was
+            // built. Which is what Paul saw: *some black mirrors, and some
+            // mirrors are showing the sky*.
+            //
+            // Safe to decompose only because of the turn above: `R · M` alone
+            // is left-handed, and decomposing that hands back a negative scale
+            // and a quaternion that means nothing. Turned, it is a proper
+            // rotation and comes apart cleanly.
+            out.matrixWorld.decompose(out.position, out.quaternion, out.scale);
             out.matrixWorldInverse.copy(out.matrixWorld).invert();
         },
         viewerAt: (from) => {
