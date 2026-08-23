@@ -497,11 +497,38 @@ export function createPortalSurface(
 
         wanted.set(width, height);
 
-        for (const target of targets) {
-            target?.setSize(width, height);
-        }
+        targets.forEach((target, at) => {
+            const size = sizeFor(at);
+
+            target?.setSize(size.width, size.height);
+        });
 
         material.uniforms.paneTexels.value.set(width / 2, height / 2);
+    };
+
+    /**
+     * How much smaller a level's picture is than the one in front of it.
+     *
+     * A reflection nine rooms away is a few pixels across. Drawing it at the
+     * size of the screen is most of what a corridor of mirrors costs, and it is
+     * spent on detail nobody can resolve — so the picture halves every couple of
+     * levels and stops at an eighth, which is still 240 across at 1080p.
+     *
+     * This is what pays for depth. Seventeen levels at these sizes cost less
+     * per pane than nine at full size did, so `PORTAL_BOUNCES` could double and
+     * the memory went *down*. The first three levels are full size because those
+     * are the ones the eye is actually on.
+     */
+    const scaleAt = (depth: number): number =>
+        Math.min(2 ** Math.max(0, Math.floor((depth - 1) / 2)), 8);
+
+    const sizeFor = (depth: number): { width: number; height: number } => {
+        const by = scaleAt(depth);
+
+        return {
+            width: Math.max(1, Math.round(wanted.x / by)),
+            height: Math.max(1, Math.round(wanted.y / by)),
+        };
     };
 
     /** Which depth a level of nesting actually reads, once clamped. */
@@ -521,7 +548,9 @@ export function createPortalSurface(
     const targetAt = (depth: number): THREE.WebGLRenderTarget => {
         const at = indexOf(depth);
 
-        targets[at] ??= new THREE.WebGLRenderTarget(wanted.x, wanted.y, {
+        const size = sizeFor(at);
+
+        targets[at] ??= new THREE.WebGLRenderTarget(size.width, size.height, {
             samples: 0,
         });
 
@@ -838,8 +867,20 @@ export function createPortalSurface(
         },
 
         show: (depth, shrink = 1) => {
-            material.uniforms.pane.value = targetAt(readable(depth)).texture;
+            const at = readable(depth);
+            const size = sizeFor(at);
+
+            material.uniforms.pane.value = targetAt(at).texture;
             material.uniforms.shrink.value = shrink;
+
+            // The edge bias is held in texels, so it has to be told which
+            // target it is reading: a level drawn at an eighth has an eighth
+            // the texels, and a bias measured against the full size would pull
+            // the read eight times too far in.
+            material.uniforms.paneTexels.value.set(
+                size.width / 2,
+                size.height / 2,
+            );
         },
 
         render: (renderer, scene, camera, depth) => {

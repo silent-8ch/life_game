@@ -129,8 +129,18 @@ export const PANE_TEXELS_DOWN = 1152;
  * How many times a portal may be seen through another portal. Each bounce is a
  * render target per pane and a pass per frame, so a portal hung to face itself
  * opens into a corridor this many rooms deep before the far end goes flat.
+ *
+ * **Sixteen rather than eight, and it costs less than eight did.** What kept
+ * this number down was a render target the size of the screen per level per
+ * pane. A reflection nine rooms away is a few pixels across, so those levels are
+ * drawn smaller now — halving every couple of levels down to an eighth — and
+ * seventeen levels come to about 30 MB a pane against 71 MB for the nine that
+ * were there before.
+ *
+ * Paul, on a room of mirrors: *I see more but still not enough.* This is the
+ * constant that decides how many there are.
  */
-export const PORTAL_BOUNCES = 8;
+export const PORTAL_BOUNCES = 16;
 
 /**
  * The most offscreen portal passes a frame may spend. A level thick with portals
