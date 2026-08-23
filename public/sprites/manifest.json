@@ -1,5 +1,5 @@
 {
- "generated": "2026-08-23T18:43:25+00:00",
+ "generated": "2026-08-23T23:19:17+00:00",
  "sprites": [
   {
    "folder": "bg",
@@ -1510,8 +1510,17 @@
    "file": "debug-stylized-fullbody-options.png",
    "name": "debug-stylized-fullbody-options",
    "url": "/sprites/people/v4/debug-stylized-fullbody-options.png",
-   "w": 1122,
-   "h": 1402
+   "w": 1402,
+   "h": 1122
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "debug-stylized-metal-boots-options.png",
+   "name": "debug-stylized-metal-boots-options",
+   "url": "/sprites/people/v4/debug-stylized-metal-boots-options.png",
+   "w": 1536,
+   "h": 1024
   },
   {
    "folder": "people",
@@ -1597,11 +1606,29 @@
   {
    "folder": "people",
    "sub": "v4",
+   "file": "luke-stylized-fullbody-v2-options.png",
+   "name": "luke-stylized-fullbody-v2-options",
+   "url": "/sprites/people/v4/luke-stylized-fullbody-v2-options.png",
+   "w": 1402,
+   "h": 1122
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "luna-stylized-fullbody-explicit-options.png",
+   "name": "luna-stylized-fullbody-explicit-options",
+   "url": "/sprites/people/v4/luna-stylized-fullbody-explicit-options.png",
+   "w": 1402,
+   "h": 1122
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
    "file": "luna-stylized-fullbody-options.png",
    "name": "luna-stylized-fullbody-options",
    "url": "/sprites/people/v4/luna-stylized-fullbody-options.png",
-   "w": 1122,
-   "h": 1402
+   "w": 1402,
+   "h": 1122
   },
   {
    "folder": "people",
@@ -1669,11 +1696,47 @@
   {
    "folder": "people",
    "sub": "v4",
+   "file": "paul-style-test.png",
+   "name": "paul-style-test",
+   "url": "/sprites/people/v4/paul-style-test.png",
+   "w": 1054,
+   "h": 1492
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
    "file": "paul-stylized-fullbody-options.png",
    "name": "paul-stylized-fullbody-options",
    "url": "/sprites/people/v4/paul-stylized-fullbody-options.png",
    "w": 1254,
    "h": 1254
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "paul-stylized-fullbody-v2-options.png",
+   "name": "paul-stylized-fullbody-v2-options",
+   "url": "/sprites/people/v4/paul-stylized-fullbody-v2-options.png",
+   "w": 1402,
+   "h": 1122
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "paul-stylized-fullbody-v3-options.png",
+   "name": "paul-stylized-fullbody-v3-options",
+   "url": "/sprites/people/v4/paul-stylized-fullbody-v3-options.png",
+   "w": 1536,
+   "h": 1024
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "paul-stylized-no-emotions-options.png",
+   "name": "paul-stylized-no-emotions-options",
+   "url": "/sprites/people/v4/paul-stylized-no-emotions-options.png",
+   "w": 1536,
+   "h": 1024
   },
   {
    "folder": "people",
@@ -1687,6 +1750,33 @@
   {
    "folder": "people",
    "sub": "v4",
+   "file": "wade-photorealistic-calibration-plain.png",
+   "name": "wade-photorealistic-calibration-plain",
+   "url": "/sprites/people/v4/wade-photorealistic-calibration-plain.png",
+   "w": 862,
+   "h": 1824
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "wade-photorealistic-calibration.png",
+   "name": "wade-photorealistic-calibration",
+   "url": "/sprites/people/v4/wade-photorealistic-calibration.png",
+   "w": 882,
+   "h": 1784
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "wade-stylized-calibrated-options.png",
+   "name": "wade-stylized-calibrated-options",
+   "url": "/sprites/people/v4/wade-stylized-calibrated-options.png",
+   "w": 1402,
+   "h": 1122
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
    "file": "wade-stylized-fullbody-options.png",
    "name": "wade-stylized-fullbody-options",
    "url": "/sprites/people/v4/wade-stylized-fullbody-options.png",
@@ -1696,11 +1786,29 @@
   {
    "folder": "people",
    "sub": "v4",
+   "file": "wade-stylized-fullbody-v2-options.png",
+   "name": "wade-stylized-fullbody-v2-options",
+   "url": "/sprites/people/v4/wade-stylized-fullbody-v2-options.png",
+   "w": 1402,
+   "h": 1122
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
    "file": "william-stylized-fullbody-options.png",
    "name": "william-stylized-fullbody-options",
    "url": "/sprites/people/v4/william-stylized-fullbody-options.png",
    "w": 1122,
    "h": 1402
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "william-stylized-fullbody-v2-options.png",
+   "name": "william-stylized-fullbody-v2-options",
+   "url": "/sprites/people/v4/william-stylized-fullbody-v2-options.png",
+   "w": 1402,
+   "h": 1122
   },
   {
    "folder": "people",
@@ -2128,6 +2236,24 @@
   {
    "folder": "realistic",
    "sub": null,
+   "file": "krystal-toon-realistic-cardinal-aligned-4step.png",
+   "name": "krystal-toon-realistic-cardinal-aligned-4step",
+   "url": "/sprites/realistic/krystal-toon-realistic-cardinal-aligned-4step.png",
+   "w": 1024,
+   "h": 1024
+  },
+  {
+   "folder": "realistic",
+   "sub": null,
+   "file": "krystal-toon-realistic-diagonal-aligned-4step.png",
+   "name": "krystal-toon-realistic-diagonal-aligned-4step",
+   "url": "/sprites/realistic/krystal-toon-realistic-diagonal-aligned-4step.png",
+   "w": 1024,
+   "h": 1024
+  },
+  {
+   "folder": "realistic",
+   "sub": null,
    "file": "luke-realistic-cardinal-aligned-4step.png",
    "name": "luke-realistic-cardinal-aligned-4step",
    "url": "/sprites/realistic/luke-realistic-cardinal-aligned-4step.png",
@@ -2176,6 +2302,24 @@
    "file": "paul-realistic-diagonal-aligned-4step.png",
    "name": "paul-realistic-diagonal-aligned-4step",
    "url": "/sprites/realistic/paul-realistic-diagonal-aligned-4step.png",
+   "w": 1024,
+   "h": 1024
+  },
+  {
+   "folder": "realistic",
+   "sub": null,
+   "file": "paul-toon-realistic-cardinal-aligned-4step.png",
+   "name": "paul-toon-realistic-cardinal-aligned-4step",
+   "url": "/sprites/realistic/paul-toon-realistic-cardinal-aligned-4step.png",
+   "w": 1024,
+   "h": 1024
+  },
+  {
+   "folder": "realistic",
+   "sub": null,
+   "file": "paul-toon-realistic-diagonal-aligned-4step.png",
+   "name": "paul-toon-realistic-diagonal-aligned-4step",
+   "url": "/sprites/realistic/paul-toon-realistic-diagonal-aligned-4step.png",
    "w": 1024,
    "h": 1024
   },

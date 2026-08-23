@@ -56,6 +56,13 @@ ORDERS = {
     # sheets are built to that layout here.
     'paul-toon': 'c0 d3 c1 d2 c2 d1 c3 d0',
     'krystal-toon': 'c0 d0 c3 d2 c2 d1 c1 d3',
+    # The later toons are built to a straight order -- cardinal rows 0/90/180/270,
+    # diagonal rows 45/135/225/315 -- and sprite-direction.ts reads them the same.
+    'william-toon': 'c0 d0 c1 d1 c2 d2 c3 d3',
+    'luke-toon': 'c0 d0 c1 d1 c2 d2 c3 d3',
+    'luna-toon': 'c0 d0 c1 d1 c2 d2 c3 d3',
+    'wade-toon': 'c0 d0 c1 d1 c2 d2 c3 d3',
+    'boots': 'c0 d0 c1 d1 c2 d2 c3 d3',
 }
 
 ANGLES = ['0', '45', '90', '135', '180', '225', '270', '315']

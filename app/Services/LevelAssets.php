@@ -29,24 +29,58 @@ class LevelAssets
         'paul' => 1.85,
         'paul-toon' => 1.85,
         'wade' => 1.80,
+        'wade-toon' => 1.80,
         'krystal' => 1.70,
         'krystal-toon' => 1.70,
+        'boots' => 1.70,
         'luna' => 1.66,
+        'luna-toon' => 1.66,
         'luke' => 1.62,
+        'luke-toon' => 1.62,
         'william' => 1.55,
+        'william-toon' => 1.55,
     ];
+
+    /**
+     * The people a new level is populated with. The stylised toons and the
+     * debug figures are drawable and castable but not residents, so a new room
+     * does not fill up with a dozen extra people; they are placed only when a
+     * level deliberately casts them.
+     *
+     * @var list<string>
+     */
+    public const RESIDENTS = ['paul', 'wade', 'krystal', 'luna', 'luke', 'william'];
 
     /** Who a level gets if nobody has said who the player is. */
     public const PLAYER = 'paul';
 
     /**
-     * Everybody, tallest first. The player is one of them: which of the six is
-     * being played is a matter for the level, and there is nothing to stop the
-     * rest of you wandering about while you are at it.
+     * The residents a new level is populated with, tallest first. The player is
+     * one of them: which is being played is a matter for the level, and there
+     * is nothing to stop the rest of you wandering about while you are at it.
+     *
+     * This is the auto-placed set, not everyone who can be drawn — see
+     * `roster()` for that.
      *
      * @return list<string>
      */
     public function household(): array
+    {
+        return array_values(array_filter(
+            array_keys(self::HEIGHTS),
+            fn (string $sprite): bool => in_array($sprite, self::RESIDENTS, strict: true)
+                && in_array($sprite, $this->sprites(), strict: true),
+        ));
+    }
+
+    /**
+     * Everyone who can be cast into a level — every person with both sheets and
+     * a height, tallest first. A superset of `household()`: the toons and debug
+     * figures are here, selectable and placeable, without being auto-placed.
+     *
+     * @return list<string>
+     */
+    public function roster(): array
     {
         return array_values(array_filter(
             array_keys(self::HEIGHTS),

@@ -1,0 +1,67 @@
+[
+ {
+  "sprite": "boots",
+  "directions": {
+   "0": { "kind": "cell", "file": "debug-stylized-metal-boots-r0c0.png" },
+   "45": { "kind": "mirror", "from": "315" },
+   "90": { "kind": "mirror", "from": "270" },
+   "135": { "kind": "mirror", "from": "225" },
+   "180": { "kind": "cell", "file": "debug-stylized-metal-boots-r0c4.png" },
+   "225": { "kind": "cell", "file": "debug-stylized-metal-boots-r0c3.png" },
+   "270": { "kind": "cell", "file": "debug-stylized-metal-boots-r0c2.png" },
+   "315": { "kind": "cell", "file": "debug-stylized-metal-boots-r0c1.png" }
+  }
+ },
+ {
+  "sprite": "luke-toon",
+  "directions": {
+   "0": { "kind": "cell", "file": "luke-stylized-fullbody-v2-r0c0.png" },
+   "45": { "kind": "copy", "from": "315" },
+   "90": { "kind": "copy", "from": "270" },
+   "135": { "kind": "mirror", "from": "225" },
+   "180": { "kind": "cell", "file": "luke-stylized-fullbody-v2-r0c4.png" },
+   "225": { "kind": "cell", "file": "luke-stylized-fullbody-v2-r0c3.png" },
+   "270": { "kind": "cell", "file": "luke-stylized-fullbody-v2-r0c2.png" },
+   "315": { "kind": "cell", "file": "luke-stylized-fullbody-v2-r0c1.png" }
+  }
+ },
+ {
+  "sprite": "luna-toon",
+  "directions": {
+   "0": { "kind": "cell", "file": "luna-stylized-fullbody-r0c0.png" },
+   "45": { "kind": "mirror", "from": "315" },
+   "90": { "kind": "mirror", "from": "270" },
+   "135": { "kind": "mirror", "from": "225" },
+   "180": { "kind": "cell", "file": "luna-stylized-fullbody-r0c4.png" },
+   "225": { "kind": "cell", "file": "luna-stylized-fullbody-r0c3.png" },
+   "270": { "kind": "cell", "file": "luna-stylized-fullbody-r0c2.png" },
+   "315": { "kind": "cell", "file": "luna-stylized-fullbody-r0c1.png" }
+  }
+ },
+ {
+  "sprite": "wade-toon",
+  "directions": {
+   "0": { "kind": "cell", "file": "wade-stylized-calibrated-r0c0.png" },
+   "45": { "kind": "mirror", "from": "315" },
+   "90": { "kind": "mirror", "from": "270" },
+   "135": { "kind": "cell", "file": "wade-stylized-calibrated-r0c3.png" },
+   "180": { "kind": "cell", "file": "wade-stylized-calibrated-r0c4.png" },
+   "225": { "kind": "mirror", "from": "135" },
+   "270": { "kind": "cell", "file": "wade-stylized-calibrated-r0c2.png" },
+   "315": { "kind": "cell", "file": "wade-stylized-calibrated-r0c1.png" }
+  }
+ },
+ {
+  "sprite": "william-toon",
+  "directions": {
+   "0": { "kind": "cell", "file": "william-stylized-fullbody-v2-r0c0.png" },
+   "45": { "kind": "mirror", "from": "315" },
+   "90": { "kind": "mirror", "from": "270" },
+   "135": { "kind": "mirror", "from": "225" },
+   "180": { "kind": "cell", "file": "william-stylized-fullbody-v2-r0c4.png" },
+   "225": { "kind": "cell", "file": "william-stylized-fullbody-v2-r0c3.png" },
+   "270": { "kind": "cell", "file": "william-stylized-fullbody-v2-r0c2.png" },
+   "315": { "kind": "cell", "file": "william-stylized-fullbody-v2-r0c1.png" }
+  }
+ }
+]

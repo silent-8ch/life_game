@@ -121,7 +121,7 @@
             let held = null;             // held palette cell {file,url,label}
             const plan = {};             // sprite -> { dir -> {kind:'cell',file,url} | {kind:'mirror'|'copy', from} }
 
-            const spriteOf = (file) => file.replace(/-stylized-fullbody-r\d+c\d+\.png$/, '');
+            const spriteOf = (file) => file.replace(/-r\d+c\d+\.png$/, '');
 
             // Resolve a direction to a concrete image + net horizontal flip,
             // following copy/mirror references and refusing to loop.
