@@ -766,3 +766,70 @@ it('lifts nobody where the two mouths already sit at the same height', function 
     // case nobody had built yet.
     expect($answer['rises'])->toEqual([0, 0]);
 });
+
+it('crosses a portal without the camera moving relative to the player', function (): void {
+    $answer = playerStep(<<<'JS'
+        const here = room('here', [
+            corner(0, 0), corner(4, 0), corner(4, 4, { portalLink: 'gap' }), corner(0, 4),
+        ]);
+        const there = room('there', [
+            corner(20, 0), corner(24, 0), corner(24, 4), corner(20, 4, { portalLink: 'gap' }),
+        ], { floorHeight: 3, ceilingHeight: 6 });
+
+        const built = level([here, there], { x: 2, z: 2, angle: 0 });
+        const world = {
+            sectors: built.sectors,
+            colliders: [],
+            portals: createPortals(built.sectors),
+        };
+
+        const player = spawnPlayer(built, { x: 2, z: 3.8, yaw: 180, pitch: 0 });
+
+        /** How far the eye sits above the feet, which must never lurch. */
+        const above = () => round(player.eye - player.y);
+
+        const settle = () => {
+            const standingIn = sectorAt(built.sectors, player.x, player.z);
+
+            fallPlayer(player, standingIn, 0.05);
+            settleEye(player, standingIn, 0.05);
+        };
+
+        // Settled where it started, so any movement afterwards is the crossing.
+        for (let step = 0; step < 60; step++) {
+            settle();
+        }
+
+        const before = above();
+        const gaps = [];
+
+        for (let step = 0; step < 12; step++) {
+            walkPlayer(player, { forward: 1, strafe: 0, running: false }, world, 0.05);
+            settle();
+            gaps.push(above());
+        }
+
+        process.stdout.write(JSON.stringify({
+            before,
+            worst: Math.max(...gaps.map((gap) => Math.abs(gap - before))),
+            after: above(),
+            room: sectorAt(built.sectors, player.x, player.z)?.slug ?? null,
+            y: round(player.y),
+        }));
+        JS);
+
+    // Through, and three metres up, as the commit before this one arranged.
+    expect($answer['room'])->toBe('there')
+        ->and($answer['y'])->toEqual(3);
+
+    // And the eye never moved relative to the feet, on any frame of it. That is
+    // the whole of what seamless means here: the picture a portal shows is the
+    // picture you arrive in, so the camera must not slide afterwards.
+    //
+    // Lifting only the feet left `settleEye` a three-metre gap to ease away
+    // over the next tenth of a second, and that easing is what Paul felt as a
+    // jolt. This assertion would read 3 against the version that shipped an
+    // hour ago.
+    expect($answer['worst'])->toEqual(0)
+        ->and($answer['after'])->toEqual($answer['before']);
+});

@@ -258,12 +258,29 @@ export function walkPlayer(
         // rooms at different heights read as one continuous space rather than
         // a hole into a room three metres beneath you.
         //
-        // The eye is left to catch up rather than moved with it. `settleEye`
-        // smooths a change of floor by design and a crossing is a change of
-        // floor — a stride's worth arriving over a tenth of a second, which is
-        // what a step up looks like. Moving it here as well would double the
-        // change and put the camera through the ceiling for a frame.
+        // **The eye goes with the feet, and this is the one line in the
+        // crossing that has to be exactly right.**
+        //
+        // The first version of this moved only the feet, on the reasoning that
+        // `settleEye` smooths a change of floor by design and a crossing is a
+        // change of floor. That is backwards, and Paul felt it immediately:
+        // *walking through there is a jolting, the teleport should be
+        // seamless.*
+        //
+        // `settleEye` eases the eye towards `y + eyeAbove`. Move the feet three
+        // metres and leave the eye, and there is now a three-metre gap for it
+        // to ease away over the next tenth of a second — the smoothing **is**
+        // the jolt. Move both and the eye is already where it is being eased
+        // to, so there is nothing to ease and the crossing costs no frames at
+        // all.
+        //
+        // Which is what a portal is for. Everything else about a crossing is
+        // built so that the picture never changes: the pane shows the far room
+        // from the carried-through camera, and the turn is one number shared by
+        // the walk and by that camera. A camera that then slid three metres
+        // would undo all of it.
         player.y += through.rise;
+        player.eye += through.rise;
     }
 }
 
