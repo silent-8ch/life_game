@@ -3,7 +3,7 @@ import {
     inputClass,
     NumberInput,
 } from '@/components/editor/inspector/controls';
-import { wallLabels } from '@/lib/editor/walls';
+import { slopeReach, wallLabels } from '@/lib/editor/walls';
 import type { Sector } from '@/types';
 
 /**
@@ -26,40 +26,74 @@ export default function SlopePanel({
 }) {
     const walls = wallLabels(sector);
 
+    /** What a rise per metre comes to, at the corners of this room. */
+    const reachOf = (base: number, slope: number, hinge: number | null) =>
+        slopeReach(sector, base, slope, hinge);
+
     const surface = (
         name: string,
+        base: number,
         slope: number,
         hinge: number | null,
         set: (slope: number, hinge: number | null) => void,
     ) => (
-        <div className="grid grid-cols-2 gap-2">
-            <Field label={`${name} hinged on`}>
-                <select
-                    value={hinge ?? ''}
-                    onChange={(event) =>
-                        event.target.value === ''
-                            ? set(0, null)
-                            : set(slope, Number(event.target.value))
-                    }
-                    className={inputClass}
-                >
-                    <option value="">Flat</option>
-                    {walls.map((label, index) => (
-                        <option key={label} value={index}>
-                            {label}
-                        </option>
-                    ))}
-                </select>
-            </Field>
-            <Field label="Rise per metre">
-                <NumberInput
-                    step="0.05"
-                    min={-8}
-                    max={8}
-                    value={slope}
-                    onChange={(next) => set(next, hinge)}
-                />
-            </Field>
+        <div className="flex flex-col gap-2">
+            <div className="grid grid-cols-2 gap-2">
+                <Field label={`${name} hinged on`}>
+                    <select
+                        value={hinge ?? ''}
+                        onChange={(event) =>
+                            event.target.value === ''
+                                ? set(0, null)
+                                : set(slope, Number(event.target.value))
+                        }
+                        className={inputClass}
+                    >
+                        <option value="">Flat</option>
+                        {walls.map((label, index) => (
+                            <option key={label} value={index}>
+                                {label}
+                            </option>
+                        ))}
+                    </select>
+                </Field>
+                <Field label="Rise per metre">
+                    <NumberInput
+                        step="0.05"
+                        min={-8}
+                        max={8}
+                        value={slope}
+                        onChange={(next) => set(next, hinge)}
+                    />
+                </Field>
+            </div>
+
+            {(() => {
+                const reach = reachOf(base, slope, hinge);
+
+                if (reach === null) {
+                    return null;
+                }
+
+                // Where it gets to, which is the thing the rise never said. Read
+                // off the corners rather than the room's depth: `into` is measured
+                // perpendicular from the hinge wall, so in a room that is not a
+                // rectangle a corner can sit much further from that wall than the
+                // room looks deep, and the floor there goes with it.
+                return (
+                    <p className="text-xs leading-relaxed text-slate-500">
+                        {name} runs from{' '}
+                        <span className="text-slate-200">
+                            {reach.lowest.toFixed(2)} m
+                        </span>{' '}
+                        to{' '}
+                        <span className="text-slate-200">
+                            {reach.highest.toFixed(2)} m
+                        </span>{' '}
+                        across this room.
+                    </p>
+                );
+            })()}
         </div>
     );
 
@@ -71,6 +105,7 @@ export default function SlopePanel({
 
             {surface(
                 'Floor',
+                sector.floorHeight,
                 sector.floorSlope,
                 sector.floorSlopeEdge,
                 (floorSlope, floorSlopeEdge) =>
@@ -79,6 +114,7 @@ export default function SlopePanel({
 
             {surface(
                 'Ceiling',
+                sector.ceilingHeight,
                 sector.ceilingSlope,
                 sector.ceilingSlopeEdge,
                 (ceilingSlope, ceilingSlopeEdge) =>

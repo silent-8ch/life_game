@@ -194,3 +194,76 @@ export function wallLabels(sector: Sector): string[] {
         return `${index + 1} — ${compass}`;
     });
 }
+
+/**
+ * How high a sloped surface gets, and how low, over the room it is in.
+ *
+ * A rise is **per metre**, measured into the room from the hinge wall, and the
+ * editor has always said so and never said what it comes to. That is the whole
+ * of Paul's report: *the end of the slope is higher somehow in the math*. It is
+ * not somehow — a rise of half a metre in a room twenty metres deep is ten
+ * metres at the far end — but a number you can only find out by walking up it
+ * is a number nobody can author with.
+ *
+ * Measured at the corners rather than by the room's depth, because the two are
+ * not the same thing. `into` is the perpendicular distance from the hinge wall,
+ * so in a room that is not a simple rectangle a corner can sit much further
+ * from that wall than the room looks deep, and the floor there goes with it.
+ * Both surfaces are planes, so their extremes are always at corners and this is
+ * exact rather than sampled — the same reasoning `heightsAlong` uses.
+ *
+ * Null when there is no slope to describe, which is a flat surface or a hinge
+ * pointing at a wall that has since been carved away.
+ */
+export function slopeReach(
+    sector: Sector,
+    base: number,
+    slope: number,
+    hinge: number | null,
+): { lowest: number; highest: number } | null {
+    const points = sector.points;
+
+    if (
+        !slope ||
+        hinge === null ||
+        points.length < 3 ||
+        hinge >= points.length
+    ) {
+        return null;
+    }
+
+    const from = points[hinge];
+    const to = points[(hinge + 1) % points.length];
+
+    const spanX = to.x - from.x;
+    const spanZ = to.z - from.z;
+    const length = Math.hypot(spanX, spanZ);
+
+    if (length < 1e-9) {
+        return null;
+    }
+
+    // The same inward normal the engine slopes along, worked out the same way:
+    // the wall's perpendicular, turned by which way the corners run.
+    let twiceArea = 0;
+
+    for (let index = 0; index < points.length; index++) {
+        const point = points[index];
+        const next = points[(index + 1) % points.length];
+
+        twiceArea += point.x * next.z - next.x * point.z;
+    }
+
+    const turn = twiceArea > 0 ? 1 : -1;
+    const normalX = (-spanZ / length) * turn;
+    const normalZ = (spanX / length) * turn;
+
+    const reaches = points.map(
+        (point) => (point.x - from.x) * normalX + (point.z - from.z) * normalZ,
+    );
+
+    return {
+        lowest: base + slope * Math.min(...reaches),
+        highest: base + slope * Math.max(...reaches),
+    };
+}

@@ -23,7 +23,9 @@ use Symfony\Component\Process\Process;
 function wallAnswer(string $body): array
 {
     $script = <<<JS
-        const { wallFacts, wallLabels } = await import('@/lib/editor/walls.ts');
+        const { wallFacts, wallLabels, slopeReach } = await import(
+            '@/lib/editor/walls.ts'
+        );
 
         const corner = (x, z, extra = {}) => ({
             x, z, wallTexture: null, blocks: false,
@@ -324,4 +326,62 @@ it('measures both ends of a portal, so the panel can stop crying wolf', function
     expect($answer['lonely']['mouth'])->toBeNull()
         ->and($answer['tripled']['mouth'])->toBeNull()
         ->and($answer['noLink']['mouth'])->toBeNull();
+});
+
+it('says where a slope actually gets to, which the rise never did', function (): void {
+    $answer = wallAnswer(<<<'JS'
+        // Paul's own room, to the corner: more-testing/room-2, a plain six by
+        // four rectangle hinged on its short west wall at half a metre per
+        // metre, floor and ceiling both.
+        const his = {
+            slug: 'room-2', name: 'room-2',
+            floorHeight: 0, ceilingHeight: 3,
+            floorSlope: 0.5, floorSlopeEdge: 3,
+            ceilingSlope: 0.5, ceilingSlopeEdge: 3,
+            floorTexture: null, ceilingTexture: null, wallTexture: null,
+            isSky: false, isWater: false,
+            points: [corner(4, -4), corner(10, -4), corner(10, 0), corner(4, 0)],
+        };
+
+        // An L, where a corner sits further from the hinge wall than the room
+        // looks deep. Same rise, same hinge wall, twice the height.
+        const bent = {
+            ...his,
+            points: [
+                corner(4, -4), corner(10, -4), corner(10, -2),
+                corner(16, -2), corner(16, 0), corner(4, 0),
+            ],
+        };
+
+        process.stdout.write(JSON.stringify({
+            floor: slopeReach(his, his.floorHeight, his.floorSlope, his.floorSlopeEdge),
+            ceiling: slopeReach(his, his.ceilingHeight, his.ceilingSlope, his.ceilingSlopeEdge),
+            bent: slopeReach(bent, bent.floorHeight, bent.floorSlope, bent.floorSlopeEdge),
+            flat: slopeReach(his, 0, 0, null),
+            carvedAway: slopeReach(his, 0, 0.5, 9),
+        }));
+        JS);
+
+    // Six metres at half a metre per metre is three metres, and it was never
+    // anything else. Paul: the end of the slope is higher somehow in the math.
+    // It is not somehow — but a number you can only find out by walking up it
+    // is a number nobody can author with, so the panel says it now.
+    expect($answer['floor'])->toEqual(['lowest' => 0, 'highest' => 3]);
+
+    // And this is why it read as *somehow*. The ceiling climbs with the floor
+    // on the same hinge, so headroom is three metres at both ends and the room
+    // looks identical however far you have climbed. Showing both surfaces is
+    // what makes that visible without walking it.
+    expect($answer['ceiling'])->toEqual(['lowest' => 3, 'highest' => 6]);
+
+    // Measured at the corners rather than from the room's depth, and an L is
+    // why. `into` is the perpendicular distance from the hinge wall, so a
+    // corner can sit twice as far from it as the room looks deep and the floor
+    // there goes with it.
+    expect($answer['bent'])->toEqual(['lowest' => 0, 'highest' => 6]);
+
+    // Nothing to describe rather than zero to describe: a flat surface, and a
+    // hinge pointing at a wall that has since been carved away.
+    expect($answer['flat'])->toBeNull()
+        ->and($answer['carvedAway'])->toBeNull();
 });
