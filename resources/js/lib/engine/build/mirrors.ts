@@ -29,9 +29,36 @@ export function buildMirrorPane(
     const geometry = materials.track(new THREE.PlaneGeometry(length, height));
 
     const eye = new THREE.Vector3();
-    const at = new THREE.Vector3();
-    const up = new THREE.Vector3();
     const ahead = new THREE.Vector3();
+
+    /**
+     * Reflection in this wall, as a matrix: `I - 2nn^T` about the plane, with
+     * the shift that carries it off the origin. Built once — the wall does not
+     * move — and the whole of what a mirror's camera is.
+     */
+    const reflection = ((): THREE.Matrix4 => {
+        const { x, y, z } = normal;
+        const away = normal.dot(centre) * 2;
+
+        return new THREE.Matrix4().set(
+            1 - 2 * x * x,
+            -2 * x * y,
+            -2 * x * z,
+            away * x,
+            -2 * y * x,
+            1 - 2 * y * y,
+            -2 * y * z,
+            away * y,
+            -2 * z * x,
+            -2 * z * y,
+            1 - 2 * z * z,
+            away * z,
+            0,
+            0,
+            0,
+            1,
+        );
+    })();
 
     /**
      * A point reflected in the wall: measured from the middle of it,
@@ -48,23 +75,26 @@ export function buildMirrorPane(
     const surface = createPortalSurface({
         geometry,
         aim: (from, out) => {
-            const behind = reflectEye(from).clone();
-
-            // Where the viewpoint is looking, reflected as well.
-            ahead
-                .set(0, 0, -1)
-                .applyQuaternion(from.quaternion)
-                .add(from.position);
-
-            across(ahead, at);
-
-            up.set(0, 1, 0).applyQuaternion(from.quaternion).reflect(normal);
-
-            out.position.copy(behind);
-            out.up.copy(up);
-            out.lookAt(at);
-            out.updateMatrix();
-            out.matrixWorld.copy(out.matrix);
+            // The camera is the viewer's own, reflected in this wall — as a
+            // matrix, not as a position and a place to look.
+            //
+            // It used to be built with `lookAt` from a reflected eye and a
+            // reflected target. That is what three's own `Reflector` does, and
+            // it is right *for `Reflector`*, which samples by projecting each
+            // point through that camera: the projection undoes what `lookAt`
+            // gets wrong. **`lookAt` cannot express a reflection.** It builds a
+            // right-handed basis and a reflection is left-handed, so the camera
+            // it produces is a rotation that happens to sit in the right place,
+            // and its picture is the reflected room *not* flipped.
+            //
+            // Sampling by screen position needs the real thing. The reason it
+            // is exact is that a point on the mirror plane lands on the same
+            // pixel for the viewer and for the viewer's reflection — true only
+            // when the second camera is `R · M`, with `R` the reflection. A
+            // rotation that is merely near it is wrong by a flip, and worst
+            // where the mirror faces you square on, because that is where the
+            // most of it is on screen.
+            out.matrixWorld.multiplyMatrices(reflection, from.matrixWorld);
             out.matrixWorldInverse.copy(out.matrixWorld).invert();
         },
         viewerAt: (from) => {
