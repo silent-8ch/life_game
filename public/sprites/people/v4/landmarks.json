@@ -1,0 +1,542 @@
+{
+ "debug-000-stand": {
+  "box": [
+   379,
+   9,
+   224,
+   316
+  ],
+  "file": "debug-000-stand.png",
+  "foot-left": [
+   59,
+   310
+  ],
+  "foot-right": [
+   137,
+   310
+  ],
+  "h": 316,
+  "hand-left": [
+   51,
+   177
+  ],
+  "hand-right": [
+   145,
+   177
+  ],
+  "neck-left": [
+   87,
+   18
+  ],
+  "neck-right": [
+   108,
+   17
+  ],
+  "sheet": "debug-000-stand-options.png",
+  "w": 224
+ },
+ "debug-000-stride-a": {
+  "box": [
+   347,
+   5,
+   245,
+   318
+  ],
+  "file": "debug-000-stride-a.png",
+  "foot-left": [
+   100,
+   300
+  ],
+  "foot-right": [
+   115,
+   317
+  ],
+  "h": 318,
+  "hand-left": [
+   48,
+   164
+  ],
+  "hand-right": [
+   189,
+   186
+  ],
+  "neck-left": [
+   96,
+   19
+  ],
+  "neck-right": [
+   122,
+   18
+  ],
+  "sheet": "debug-000-stride-a-options.png",
+  "w": 245
+ },
+ "debug-000-stride-b": {
+  "box": [
+   393,
+   6,
+   172,
+   311
+  ],
+  "file": "debug-000-stride-b.png",
+  "foot-left": [
+   64,
+   302
+  ],
+  "foot-right": [
+   92,
+   297
+  ],
+  "h": 311,
+  "hand-left": [
+   29,
+   171
+  ],
+  "hand-right": [
+   136,
+   140
+  ],
+  "neck-left": [
+   65,
+   8
+  ],
+  "neck-right": [
+   89,
+   8
+  ],
+  "sheet": "debug-000-stride-b-options.png",
+  "w": 172
+ },
+ "debug-045-stand": {
+  "box": [
+   662,
+   4,
+   179,
+   323
+  ],
+  "file": "debug-045-stand.png",
+  "foot-left": [
+   41,
+   307
+  ],
+  "foot-right": [
+   104,
+   316
+  ],
+  "h": 323,
+  "hand-left": [
+   34,
+   174
+  ],
+  "hand-right": [
+   115,
+   182
+  ],
+  "neck-left": [
+   71,
+   23
+  ],
+  "neck-right": [
+   94,
+   14
+  ],
+  "sheet": "debug-045-stand-options.png",
+  "w": 179
+ },
+ "debug-045-stride-a": {
+  "box": [
+   40,
+   14,
+   228,
+   307
+  ],
+  "file": "debug-045-stride-a.png",
+  "foot-left": [
+   79,
+   299
+  ],
+  "foot-right": [
+   138,
+   288
+  ],
+  "h": 307,
+  "hand-left": [
+   32,
+   144
+  ],
+  "hand-right": [
+   177,
+   174
+  ],
+  "neck-left": [
+   100,
+   31
+  ],
+  "neck-right": [
+   119,
+   20
+  ],
+  "sheet": "debug-045-stride-b-options.png",
+  "w": 228
+ },
+ "debug-045-stride-b": {
+  "box": [
+   936,
+   926,
+   190,
+   310
+  ],
+  "file": "debug-045-stride-b.png",
+  "foot-left": [
+   45,
+   294
+  ],
+  "foot-right": [
+   136,
+   281
+  ],
+  "h": 310,
+  "hand-left": [
+   52,
+   160
+  ],
+  "hand-right": [
+   80,
+   160
+  ],
+  "neck-left": [
+   73,
+   25
+  ],
+  "neck-right": [
+   94,
+   14
+  ],
+  "sheet": "debug-045-stride-b-options.png",
+  "w": 190
+ },
+ "debug-090-stand": {
+  "box": [
+   83,
+   9,
+   158,
+   314
+  ],
+  "file": "debug-090-stand.png",
+  "foot-left": [
+   75,
+   305
+  ],
+  "foot-right": [
+   83,
+   291
+  ],
+  "h": 314,
+  "hand-left": [
+   71,
+   179
+  ],
+  "hand-right": [
+   71,
+   179
+  ],
+  "neck-left": [
+   50,
+   16
+  ],
+  "neck-right": [
+   72,
+   19
+  ],
+  "sheet": "debug-090-stand-options.png",
+  "w": 158
+ },
+ "debug-090-stride-a": {
+  "box": [
+   33,
+   323,
+   256,
+   318
+  ],
+  "file": "debug-090-stride-a.png",
+  "foot-left": [
+   50,
+   306
+  ],
+  "foot-right": [
+   183,
+   307
+  ],
+  "h": 318,
+  "hand-left": [
+   75,
+   158
+  ],
+  "hand-right": [
+   212,
+   130
+  ],
+  "neck-left": [
+   136,
+   13
+  ],
+  "neck-right": [
+   157,
+   20
+  ],
+  "sheet": "debug-090-stride-a-options.png",
+  "w": 256
+ },
+ "debug-090-stride-b": {
+  "box": [
+   316,
+   7,
+   279,
+   317
+  ],
+  "file": "debug-090-stride-b.png",
+  "foot-left": [
+   51,
+   305
+  ],
+  "foot-right": [
+   188,
+   305
+  ],
+  "h": 317,
+  "hand-left": [
+   82,
+   168
+  ],
+  "hand-right": [
+   222,
+   121
+  ],
+  "neck-left": [
+   132,
+   15
+  ],
+  "neck-right": [
+   155,
+   21
+  ],
+  "sheet": "debug-090-stride-a-options.png",
+  "w": 279
+ },
+ "debug-135-stand": {
+  "box": [
+   45,
+   6,
+   197,
+   378
+  ],
+  "file": "debug-135-stand.png",
+  "foot-left": [
+   45,
+   360
+  ],
+  "foot-right": [
+   120,
+   370
+  ],
+  "h": 378,
+  "hand-left": [
+   50,
+   200
+  ],
+  "hand-right": [
+   151,
+   201
+  ],
+  "neck-left": [
+   80,
+   10
+  ],
+  "neck-right": [
+   112,
+   16
+  ],
+  "sheet": "debug-135-stand-options.png",
+  "w": 197
+ },
+ "debug-135-stride-a": {
+  "box": [
+   338,
+   14,
+   241,
+   306
+  ],
+  "file": "debug-135-stride-a.png",
+  "foot-left": [
+   87,
+   296
+  ],
+  "foot-right": [
+   157,
+   290
+  ],
+  "h": 306,
+  "hand-left": [
+   81,
+   168
+  ],
+  "hand-right": [
+   202,
+   143
+  ],
+  "neck-left": [
+   109,
+   16
+  ],
+  "neck-right": [
+   139,
+   21
+  ],
+  "sheet": "debug-135-stride-a-options.png",
+  "w": 241
+ },
+ "debug-135-stride-b": {
+  "box": [
+   338,
+   14,
+   241,
+   306
+  ],
+  "file": "debug-135-stride-b.png",
+  "foot-left": [
+   87,
+   296
+  ],
+  "foot-right": [
+   157,
+   290
+  ],
+  "h": 306,
+  "hand-left": [
+   81,
+   168
+  ],
+  "hand-right": [
+   202,
+   143
+  ],
+  "neck-left": [
+   109,
+   16
+  ],
+  "neck-right": [
+   139,
+   21
+  ],
+  "sheet": "debug-135-stride-a-options.png",
+  "w": 241
+ },
+ "debug-180-stand": {
+  "box": [
+   66,
+   5,
+   181,
+   315
+  ],
+  "file": "debug-180-stand.png",
+  "foot-left": [
+   61,
+   302
+  ],
+  "foot-right": [
+   119,
+   301
+  ],
+  "h": 315,
+  "hand-left": [
+   42,
+   185
+  ],
+  "hand-right": [
+   138,
+   184
+  ],
+  "neck-left": [
+   78,
+   22
+  ],
+  "neck-right": [
+   102,
+   21
+  ],
+  "sheet": "debug-180-stand-options.png",
+  "w": 181
+ },
+ "debug-180-stride-a": {
+  "box": [
+   102,
+   3,
+   203,
+   327
+  ],
+  "file": "debug-180-stride-a.png",
+  "foot-left": [
+   87,
+   298
+  ],
+  "foot-right": [
+   107,
+   314
+  ],
+  "h": 327,
+  "hand-left": [
+   43,
+   194
+  ],
+  "hand-right": [
+   126,
+   112
+  ],
+  "neck-left": [
+   82,
+   34
+  ],
+  "neck-right": [
+   109,
+   34
+  ],
+  "sheet": "debug-180-stride-a-options.png",
+  "w": 203
+ },
+ "debug-180-stride-b": {
+  "box": [
+   102,
+   3,
+   203,
+   327
+  ],
+  "file": "debug-180-stride-b.png",
+  "foot-left": [
+   95,
+   314
+  ],
+  "foot-right": [
+   115,
+   298
+  ],
+  "h": 327,
+  "hand-left": [
+   76,
+   112
+  ],
+  "hand-right": [
+   159,
+   194
+  ],
+  "neck-left": [
+   93,
+   34
+  ],
+  "neck-right": [
+   120,
+   34
+  ],
+  "sheet": "debug-180-stride-a-options.png",
+  "w": 203
+ }
+}

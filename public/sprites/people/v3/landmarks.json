@@ -1,0 +1,38 @@
+{
+ "debug-090-stride-a": {
+  "box": [
+   648,
+   7,
+   255,
+   311
+  ],
+  "file": "debug-090-stride-a.png",
+  "foot-left": [
+   43,
+   297
+  ],
+  "foot-right": [
+   191,
+   300
+  ],
+  "h": 311,
+  "hand-left": [
+   55,
+   143
+  ],
+  "hand-right": [
+   214,
+   107
+  ],
+  "neck-left": [
+   129,
+   5
+  ],
+  "neck-right": [
+   152,
+   14
+  ],
+  "sheet": "debug-090-stride-a-options.png",
+  "w": 255
+ }
+}

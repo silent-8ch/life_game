@@ -34,6 +34,11 @@
                 border: 1px solid var(--line); font-weight: 400;
             }
             .bar input[type=file] { display: none; }
+            .bar input[type=url] {
+                width: min(520px, 70vw); padding: 6px 9px;
+                border: 1px solid var(--line); border-radius: 4px;
+                background: #020408; color: var(--ink); font: 12px ui-monospace, monospace;
+            }
             .count { color: var(--dim); font-size: 13px; }
 
             /* Phase one: the sheet, with a box dragged round the good cell. */
@@ -103,12 +108,21 @@
             .pick { background: #0f172a; border: 1px solid var(--ok); border-radius: 6px;
                     padding: 6px; font: 11px/1.4 ui-monospace, monospace; color: var(--dim); }
             .pick canvas { width: 100%; display: block; border-radius: 3px; margin-bottom: 4px; }
+            .pick button {
+                width: 100%; margin-top: 6px; padding: 4px 6px; cursor: pointer;
+                border: 1px solid #7f1d1d; border-radius: 4px;
+                background: #450a0a; color: #fecaca; font: inherit;
+            }
             .hint { color: var(--dim); font-size: 12px; }
         </style>
     </head>
     <body>
         <div class="bar">
             <label class="load">Load a sheet <input type="file" id="file" accept="image/png,image/jpeg,image/webp" multiple></label>
+            <form id="url-form">
+                <input id="url" type="url" placeholder="/sprites/people/v3/debug-090-stride-b-options.png" required>
+                <button type="submit">Load URL</button>
+            </form>
             <button id="copy">Copy picks as JSON</button>
             <button class="ghost" id="clear">Clear all</button>
             <span class="count" id="count"></span>
@@ -162,12 +176,15 @@
 
             // -- phase one -------------------------------------------------
 
-            function showSheet(file, image) {
-                sheet = { file: file.name, image };
+            function showSheet(filename, image) {
+                const suggestedName = filename
+                    .replace(/\.[^.]+$/, '')
+                    .replace(/-options$/, '');
+                sheet = { file: filename, image, suggestedName };
                 current = null;
                 two.innerHTML = '';
 
-                one.innerHTML = `<h2>1 — ${file.name}: drag a box round the good cell</h2>`;
+                one.innerHTML = `<h2>1 — ${filename}: drag a box round the good cell</h2>`;
 
                 const wrap = document.createElement('div');
                 wrap.className = 'sheet';
@@ -274,6 +291,7 @@
                 two.append(row);
 
                 const input = name.querySelector('input');
+                input.value = sheet.suggestedName;
 
                 const refresh = () => {
                     let next = null;
@@ -347,8 +365,10 @@
                     save();
                     current = null;
                     two.innerHTML = '';
-                    one.innerHTML = '<h2>1 — load the next sheet</h2>';
-                    document.getElementById('file').click();
+                    one.innerHTML = '<h2>1 — enter the URL for the next sheet</h2>';
+                    const urlField = document.getElementById('url');
+                    urlField.focus();
+                    urlField.select();
                 });
 
                 refresh();
@@ -358,7 +378,7 @@
 
             function renderDone() {
                 done.innerHTML = '';
-                for (const pick of picks) {
+                picks.forEach((pick, index) => {
                     const card = document.createElement('div');
                     card.className = 'pick';
                     const img = document.createElement('img');
@@ -369,8 +389,16 @@
                     img.style.marginBottom = '4px';
                     card.append(img);
                     card.append(document.createTextNode(pick.name));
+                    const remove = document.createElement('button');
+                    remove.type = 'button';
+                    remove.textContent = 'Unpick';
+                    remove.addEventListener('click', () => {
+                        picks.splice(index, 1);
+                        save();
+                    });
+                    card.append(remove);
                     done.append(card);
-                }
+                });
             }
 
             // -- i/o ------------------------------------------------------
@@ -379,9 +407,20 @@
                 const file = event.target.files[0];
                 if (!file) return;
                 const image = new Image();
-                image.onload = () => showSheet(file, image);
+                image.onload = () => showSheet(file.name, image);
                 image.src = URL.createObjectURL(file);
                 event.target.value = '';
+            });
+
+            document.getElementById('url-form').addEventListener('submit', (event) => {
+                event.preventDefault();
+                const field = document.getElementById('url');
+                const url = new URL(field.value, window.location.href);
+                const filename = decodeURIComponent(url.pathname.split('/').pop());
+                const image = new Image();
+                image.onload = () => showSheet(filename, image);
+                image.onerror = () => alert(`Could not load ${url.href}`);
+                image.src = url.href;
             });
 
             document.getElementById('copy').addEventListener('click', () => {
