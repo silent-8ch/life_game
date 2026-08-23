@@ -1030,6 +1030,11 @@ export default function LevelViewport({
                             );
 
                             let dark = 0;
+                            let red = 0;
+                            let green = 0;
+                            let blue = 0;
+                            let spread = 0;
+                            let last = -1;
 
                             for (let at = 0; at < pixels.length; at += 4) {
                                 if (
@@ -1039,11 +1044,34 @@ export default function LevelViewport({
                                 ) {
                                     dark++;
                                 }
+
+                                red += pixels[at];
+                                green += pixels[at + 1];
+                                blue += pixels[at + 2];
+
+                                // How often the colour changes along the row.
+                                // A row of real reflection is busy; a row of
+                                // one flat wall changes almost nowhere, which
+                                // is how the end of the tunnel reads.
+                                if (
+                                    last >= 0 &&
+                                    Math.abs(pixels[at] - last) > 6
+                                ) {
+                                    spread++;
+                                }
+
+                                last = pixels[at];
                             }
 
-                            return String(
-                                Math.round((100 * dark) / target.width),
-                            );
+                            const count = target.width;
+
+                            return [
+                                Math.round((100 * dark) / count),
+                                Math.round(red / count),
+                                Math.round(green / count),
+                                Math.round(blue / count),
+                                spread,
+                            ].join('/');
                         },
                     ).join(' '),
                 }),
