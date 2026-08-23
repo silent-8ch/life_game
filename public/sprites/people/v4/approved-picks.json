@@ -1,0 +1,171 @@
+[
+  {
+    "sheet": "debug-000-stand-options.png",
+    "box": [379, 9, 224, 316],
+    "marks": {
+      "neck-left": [87, 18],
+      "neck-right": [108, 17],
+      "hand-left": [51, 177],
+      "hand-right": [145, 177],
+      "foot-left": [59, 310],
+      "foot-right": [137, 310]
+    },
+    "name": "debug-000-stand"
+  },
+  {
+    "sheet": "debug-000-stride-a-options.png",
+    "box": [347, 5, 245, 318],
+    "marks": {
+      "neck-left": [96, 19],
+      "neck-right": [122, 18],
+      "hand-left": [48, 164],
+      "hand-right": [189, 186],
+      "foot-left": [100, 300],
+      "foot-right": [115, 317]
+    },
+    "name": "debug-000-stride-a"
+  },
+  {
+    "sheet": "debug-000-stride-b-options.png",
+    "box": [393, 6, 172, 311],
+    "marks": {
+      "neck-left": [65, 8],
+      "neck-right": [89, 8],
+      "hand-left": [29, 171],
+      "hand-right": [136, 140],
+      "foot-left": [64, 302],
+      "foot-right": [92, 297]
+    },
+    "name": "debug-000-stride-b"
+  },
+  {
+    "sheet": "debug-045-stand-options.png",
+    "box": [662, 4, 179, 323],
+    "marks": {
+      "neck-left": [71, 23],
+      "neck-right": [94, 14],
+      "hand-left": [34, 174],
+      "hand-right": [115, 182],
+      "foot-left": [41, 307],
+      "foot-right": [104, 316]
+    },
+    "name": "debug-045-stand"
+  },
+  {
+    "sheet": "debug-045-stride-b-options.png",
+    "box": [936, 926, 190, 310],
+    "marks": {
+      "neck-left": [73, 25],
+      "neck-right": [94, 14],
+      "hand-left": [52, 160],
+      "hand-right": [80, 160],
+      "foot-left": [45, 294],
+      "foot-right": [136, 281]
+    },
+    "name": "debug-045-stride-b"
+  },
+  {
+    "sheet": "debug-045-stride-b-options.png",
+    "box": [40, 14, 228, 307],
+    "marks": {
+      "neck-left": [100, 31],
+      "neck-right": [119, 20],
+      "hand-left": [32, 144],
+      "hand-right": [177, 174],
+      "foot-left": [79, 299],
+      "foot-right": [138, 288]
+    },
+    "name": "debug-045-stride-a"
+  },
+  {
+    "sheet": "debug-090-stand-options.png",
+    "box": [83, 9, 158, 314],
+    "marks": {
+      "neck-left": [50, 16],
+      "neck-right": [72, 19],
+      "hand-left": [71, 179],
+      "hand-right": [71, 179],
+      "foot-left": [75, 305],
+      "foot-right": [83, 291]
+    },
+    "name": "debug-090-stand"
+  },
+  {
+    "sheet": "debug-090-stride-a-options.png",
+    "box": [33, 323, 256, 318],
+    "marks": {
+      "neck-left": [136, 13],
+      "neck-right": [157, 20],
+      "hand-left": [75, 158],
+      "hand-right": [212, 130],
+      "foot-left": [50, 306],
+      "foot-right": [183, 307]
+    },
+    "name": "debug-090-stride-a"
+  },
+  {
+    "sheet": "debug-090-stride-a-options.png",
+    "box": [316, 7, 279, 317],
+    "marks": {
+      "neck-left": [132, 15],
+      "neck-right": [155, 21],
+      "hand-left": [82, 168],
+      "hand-right": [222, 121],
+      "foot-left": [51, 305],
+      "foot-right": [188, 305]
+    },
+    "name": "debug-090-stride-b"
+  },
+  {
+    "sheet": "debug-135-stand-options.png",
+    "box": [45, 6, 197, 378],
+    "marks": {
+      "neck-left": [80, 10],
+      "neck-right": [112, 16],
+      "hand-left": [50, 200],
+      "hand-right": [151, 201],
+      "foot-left": [45, 360],
+      "foot-right": [120, 370]
+    },
+    "name": "debug-135-stand"
+  },
+  {
+    "sheet": "debug-135-stride-a-options.png",
+    "box": [338, 14, 241, 306],
+    "marks": {
+      "neck-left": [109, 16],
+      "neck-right": [139, 21],
+      "hand-left": [81, 168],
+      "hand-right": [202, 143],
+      "foot-left": [87, 296],
+      "foot-right": [157, 290]
+    },
+    "name": "debug-135-stride-a"
+  },
+  {
+    "sheet": "debug-180-stand-options.png",
+    "box": [66, 5, 181, 315],
+    "marks": {
+      "neck-left": [78, 22],
+      "neck-right": [102, 21],
+      "hand-left": [42, 185],
+      "hand-right": [138, 184],
+      "foot-left": [61, 302],
+      "foot-right": [119, 301]
+    },
+    "name": "debug-180-stand"
+  },
+  {
+    "sheet": "debug-180-stride-a-options.png",
+    "box": [102, 3, 203, 327],
+    "marks": {
+      "neck-left": [82, 34],
+      "neck-right": [109, 34],
+      "hand-left": [43, 194],
+      "hand-right": [126, 112],
+      "foot-left": [87, 298],
+      "foot-right": [107, 314]
+    },
+    "name": "debug-180-stride-a"
+  }
+]

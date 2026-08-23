@@ -1,5 +1,5 @@
 {
- "generated": "2026-08-22T23:44:15+00:00",
+ "generated": "2026-08-23T14:27:51+00:00",
  "sprites": [
   {
    "folder": "bg",
@@ -783,6 +783,537 @@
    "url": "/sprites/illustrated/william-illustrated-diagonal-aligned-4step.png",
    "w": 1024,
    "h": 1024
+  },
+  {
+   "folder": "people",
+   "sub": "v1",
+   "file": "paul-000-stand.png",
+   "name": "paul-000-stand",
+   "url": "/sprites/people/v1/paul-000-stand.png",
+   "w": 512,
+   "h": 512
+  },
+  {
+   "folder": "people",
+   "sub": "v1",
+   "file": "paul-000-stride-a.png",
+   "name": "paul-000-stride-a",
+   "url": "/sprites/people/v1/paul-000-stride-a.png",
+   "w": 512,
+   "h": 512
+  },
+  {
+   "folder": "people",
+   "sub": "v1",
+   "file": "paul-000-stride-b.png",
+   "name": "paul-000-stride-b",
+   "url": "/sprites/people/v1/paul-000-stride-b.png",
+   "w": 512,
+   "h": 512
+  },
+  {
+   "folder": "people",
+   "sub": "v1",
+   "file": "paul-045-stand.png",
+   "name": "paul-045-stand",
+   "url": "/sprites/people/v1/paul-045-stand.png",
+   "w": 512,
+   "h": 512
+  },
+  {
+   "folder": "people",
+   "sub": "v1",
+   "file": "paul-045-stride-a.png",
+   "name": "paul-045-stride-a",
+   "url": "/sprites/people/v1/paul-045-stride-a.png",
+   "w": 512,
+   "h": 512
+  },
+  {
+   "folder": "people",
+   "sub": "v1",
+   "file": "paul-045-stride-b.png",
+   "name": "paul-045-stride-b",
+   "url": "/sprites/people/v1/paul-045-stride-b.png",
+   "w": 512,
+   "h": 512
+  },
+  {
+   "folder": "people",
+   "sub": "v1",
+   "file": "paul-090-stand.png",
+   "name": "paul-090-stand",
+   "url": "/sprites/people/v1/paul-090-stand.png",
+   "w": 512,
+   "h": 512
+  },
+  {
+   "folder": "people",
+   "sub": "v1",
+   "file": "paul-090-stride-a.png",
+   "name": "paul-090-stride-a",
+   "url": "/sprites/people/v1/paul-090-stride-a.png",
+   "w": 512,
+   "h": 512
+  },
+  {
+   "folder": "people",
+   "sub": "v1",
+   "file": "paul-090-stride-b.png",
+   "name": "paul-090-stride-b",
+   "url": "/sprites/people/v1/paul-090-stride-b.png",
+   "w": 512,
+   "h": 512
+  },
+  {
+   "folder": "people",
+   "sub": "v1",
+   "file": "paul-135-stand.png",
+   "name": "paul-135-stand",
+   "url": "/sprites/people/v1/paul-135-stand.png",
+   "w": 512,
+   "h": 512
+  },
+  {
+   "folder": "people",
+   "sub": "v1",
+   "file": "paul-135-stride-a.png",
+   "name": "paul-135-stride-a",
+   "url": "/sprites/people/v1/paul-135-stride-a.png",
+   "w": 512,
+   "h": 512
+  },
+  {
+   "folder": "people",
+   "sub": "v1",
+   "file": "paul-135-stride-b.png",
+   "name": "paul-135-stride-b",
+   "url": "/sprites/people/v1/paul-135-stride-b.png",
+   "w": 512,
+   "h": 512
+  },
+  {
+   "folder": "people",
+   "sub": "v1",
+   "file": "paul-180-stand.png",
+   "name": "paul-180-stand",
+   "url": "/sprites/people/v1/paul-180-stand.png",
+   "w": 512,
+   "h": 512
+  },
+  {
+   "folder": "people",
+   "sub": "v1",
+   "file": "paul-180-stride-a.png",
+   "name": "paul-180-stride-a",
+   "url": "/sprites/people/v1/paul-180-stride-a.png",
+   "w": 512,
+   "h": 512
+  },
+  {
+   "folder": "people",
+   "sub": "v1",
+   "file": "paul-180-stride-b.png",
+   "name": "paul-180-stride-b",
+   "url": "/sprites/people/v1/paul-180-stride-b.png",
+   "w": 512,
+   "h": 512
+  },
+  {
+   "folder": "people",
+   "sub": "v2",
+   "file": "paul-000-stand.png",
+   "name": "paul-000-stand",
+   "url": "/sprites/people/v2/paul-000-stand.png",
+   "w": 512,
+   "h": 512
+  },
+  {
+   "folder": "people",
+   "sub": "v2",
+   "file": "paul-000-stride-a.png",
+   "name": "paul-000-stride-a",
+   "url": "/sprites/people/v2/paul-000-stride-a.png",
+   "w": 512,
+   "h": 512
+  },
+  {
+   "folder": "people",
+   "sub": "v2",
+   "file": "paul-000-stride-b.png",
+   "name": "paul-000-stride-b",
+   "url": "/sprites/people/v2/paul-000-stride-b.png",
+   "w": 512,
+   "h": 512
+  },
+  {
+   "folder": "people",
+   "sub": "v2",
+   "file": "paul-045-stand.png",
+   "name": "paul-045-stand",
+   "url": "/sprites/people/v2/paul-045-stand.png",
+   "w": 512,
+   "h": 512
+  },
+  {
+   "folder": "people",
+   "sub": "v2",
+   "file": "paul-045-stride-a.png",
+   "name": "paul-045-stride-a",
+   "url": "/sprites/people/v2/paul-045-stride-a.png",
+   "w": 512,
+   "h": 512
+  },
+  {
+   "folder": "people",
+   "sub": "v2",
+   "file": "paul-045-stride-b.png",
+   "name": "paul-045-stride-b",
+   "url": "/sprites/people/v2/paul-045-stride-b.png",
+   "w": 512,
+   "h": 512
+  },
+  {
+   "folder": "people",
+   "sub": "v2",
+   "file": "paul-090-stand.png",
+   "name": "paul-090-stand",
+   "url": "/sprites/people/v2/paul-090-stand.png",
+   "w": 512,
+   "h": 512
+  },
+  {
+   "folder": "people",
+   "sub": "v2",
+   "file": "paul-090-stride-a.png",
+   "name": "paul-090-stride-a",
+   "url": "/sprites/people/v2/paul-090-stride-a.png",
+   "w": 512,
+   "h": 512
+  },
+  {
+   "folder": "people",
+   "sub": "v2",
+   "file": "paul-090-stride-b.png",
+   "name": "paul-090-stride-b",
+   "url": "/sprites/people/v2/paul-090-stride-b.png",
+   "w": 512,
+   "h": 512
+  },
+  {
+   "folder": "people",
+   "sub": "v2",
+   "file": "paul-135-stand.png",
+   "name": "paul-135-stand",
+   "url": "/sprites/people/v2/paul-135-stand.png",
+   "w": 512,
+   "h": 512
+  },
+  {
+   "folder": "people",
+   "sub": "v2",
+   "file": "paul-135-stride-a.png",
+   "name": "paul-135-stride-a",
+   "url": "/sprites/people/v2/paul-135-stride-a.png",
+   "w": 512,
+   "h": 512
+  },
+  {
+   "folder": "people",
+   "sub": "v2",
+   "file": "paul-135-stride-b.png",
+   "name": "paul-135-stride-b",
+   "url": "/sprites/people/v2/paul-135-stride-b.png",
+   "w": 512,
+   "h": 512
+  },
+  {
+   "folder": "people",
+   "sub": "v2",
+   "file": "paul-180-stand.png",
+   "name": "paul-180-stand",
+   "url": "/sprites/people/v2/paul-180-stand.png",
+   "w": 512,
+   "h": 512
+  },
+  {
+   "folder": "people",
+   "sub": "v2",
+   "file": "paul-180-stride-a.png",
+   "name": "paul-180-stride-a",
+   "url": "/sprites/people/v2/paul-180-stride-a.png",
+   "w": 512,
+   "h": 512
+  },
+  {
+   "folder": "people",
+   "sub": "v2",
+   "file": "paul-180-stride-b.png",
+   "name": "paul-180-stride-b",
+   "url": "/sprites/people/v2/paul-180-stride-b.png",
+   "w": 512,
+   "h": 512
+  },
+  {
+   "folder": "people",
+   "sub": "v3",
+   "file": "debug-000-stand.png",
+   "name": "debug-000-stand",
+   "url": "/sprites/people/v3/debug-000-stand.png",
+   "w": 1024,
+   "h": 1536
+  },
+  {
+   "folder": "people",
+   "sub": "v3",
+   "file": "debug-000-stride-a.png",
+   "name": "debug-000-stride-a",
+   "url": "/sprites/people/v3/debug-000-stride-a.png",
+   "w": 1024,
+   "h": 1536
+  },
+  {
+   "folder": "people",
+   "sub": "v3",
+   "file": "debug-000-stride-b.png",
+   "name": "debug-000-stride-b",
+   "url": "/sprites/people/v3/debug-000-stride-b.png",
+   "w": 1024,
+   "h": 1536
+  },
+  {
+   "folder": "people",
+   "sub": "v3",
+   "file": "debug-045-stand.png",
+   "name": "debug-045-stand",
+   "url": "/sprites/people/v3/debug-045-stand.png",
+   "w": 1024,
+   "h": 1536
+  },
+  {
+   "folder": "people",
+   "sub": "v3",
+   "file": "debug-045-stride-a.png",
+   "name": "debug-045-stride-a",
+   "url": "/sprites/people/v3/debug-045-stride-a.png",
+   "w": 1254,
+   "h": 1254
+  },
+  {
+   "folder": "people",
+   "sub": "v3",
+   "file": "debug-045-stride-b.png",
+   "name": "debug-045-stride-b",
+   "url": "/sprites/people/v3/debug-045-stride-b.png",
+   "w": 1254,
+   "h": 1254
+  },
+  {
+   "folder": "people",
+   "sub": "v3",
+   "file": "debug-090-stand.png",
+   "name": "debug-090-stand",
+   "url": "/sprites/people/v3/debug-090-stand.png",
+   "w": 1024,
+   "h": 1536
+  },
+  {
+   "folder": "people",
+   "sub": "v3",
+   "file": "debug-090-stride-a-options.png",
+   "name": "debug-090-stride-a-options",
+   "url": "/sprites/people/v3/debug-090-stride-a-options.png",
+   "w": 1024,
+   "h": 1536
+  },
+  {
+   "folder": "people",
+   "sub": "v3",
+   "file": "debug-090-stride-a.png",
+   "name": "debug-090-stride-a",
+   "url": "/sprites/people/v3/debug-090-stride-a.png",
+   "w": 255,
+   "h": 311
+  },
+  {
+   "folder": "people",
+   "sub": "v3",
+   "file": "debug-090-stride-b-options.png",
+   "name": "debug-090-stride-b-options",
+   "url": "/sprites/people/v3/debug-090-stride-b-options.png",
+   "w": 1242,
+   "h": 1266
+  },
+  {
+   "folder": "people",
+   "sub": "v3",
+   "file": "debug-090-stride-b.png",
+   "name": "debug-090-stride-b",
+   "url": "/sprites/people/v3/debug-090-stride-b.png",
+   "w": 1341,
+   "h": 1173
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "debug-000-stand-options.png",
+   "name": "debug-000-stand-options",
+   "url": "/sprites/people/v4/debug-000-stand-options.png",
+   "w": 1254,
+   "h": 1254
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "debug-000-stride-a-options.png",
+   "name": "debug-000-stride-a-options",
+   "url": "/sprites/people/v4/debug-000-stride-a-options.png",
+   "w": 1254,
+   "h": 1254
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "debug-000-stride-b-options.png",
+   "name": "debug-000-stride-b-options",
+   "url": "/sprites/people/v4/debug-000-stride-b-options.png",
+   "w": 1254,
+   "h": 1254
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "debug-045-stand-options.png",
+   "name": "debug-045-stand-options",
+   "url": "/sprites/people/v4/debug-045-stand-options.png",
+   "w": 1224,
+   "h": 1285
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "debug-045-stride-a-options.png",
+   "name": "debug-045-stride-a-options",
+   "url": "/sprites/people/v4/debug-045-stride-a-options.png",
+   "w": 1219,
+   "h": 1290
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "debug-045-stride-b-options.png",
+   "name": "debug-045-stride-b-options",
+   "url": "/sprites/people/v4/debug-045-stride-b-options.png",
+   "w": 1254,
+   "h": 1254
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "debug-090-stand-options.png",
+   "name": "debug-090-stand-options",
+   "url": "/sprites/people/v4/debug-090-stand-options.png",
+   "w": 1254,
+   "h": 1254
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "debug-090-stride-a-options.png",
+   "name": "debug-090-stride-a-options",
+   "url": "/sprites/people/v4/debug-090-stride-a-options.png",
+   "w": 1230,
+   "h": 1278
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "debug-135-image-right-arm-forward-options.png",
+   "name": "debug-135-image-right-arm-forward-options",
+   "url": "/sprites/people/v4/debug-135-image-right-arm-forward-options.png",
+   "w": 1254,
+   "h": 1254
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "debug-135-left-arm-forward-options.png",
+   "name": "debug-135-left-arm-forward-options",
+   "url": "/sprites/people/v4/debug-135-left-arm-forward-options.png",
+   "w": 1254,
+   "h": 1254
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "debug-135-right-arm-forward-options.png",
+   "name": "debug-135-right-arm-forward-options",
+   "url": "/sprites/people/v4/debug-135-right-arm-forward-options.png",
+   "w": 1254,
+   "h": 1254
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "debug-135-stand-options.png",
+   "name": "debug-135-stand-options",
+   "url": "/sprites/people/v4/debug-135-stand-options.png",
+   "w": 1024,
+   "h": 1536
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "debug-135-stride-a-options.png",
+   "name": "debug-135-stride-a-options",
+   "url": "/sprites/people/v4/debug-135-stride-a-options.png",
+   "w": 1254,
+   "h": 1254
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "debug-135-stride-b-options.png",
+   "name": "debug-135-stride-b-options",
+   "url": "/sprites/people/v4/debug-135-stride-b-options.png",
+   "w": 1254,
+   "h": 1254
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "debug-180-stand-options.png",
+   "name": "debug-180-stand-options",
+   "url": "/sprites/people/v4/debug-180-stand-options.png",
+   "w": 1254,
+   "h": 1254
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "debug-180-stride-a-options.png",
+   "name": "debug-180-stride-a-options",
+   "url": "/sprites/people/v4/debug-180-stride-a-options.png",
+   "w": 1254,
+   "h": 1254
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "debug-angled-all-frames-options.png",
+   "name": "debug-angled-all-frames-options",
+   "url": "/sprites/people/v4/debug-angled-all-frames-options.png",
+   "w": 1241,
+   "h": 1268
+  },
+  {
+   "folder": "people",
+   "sub": "v4",
+   "file": "debug-ordered-angles-frames-options.png",
+   "name": "debug-ordered-angles-frames-options",
+   "url": "/sprites/people/v4/debug-ordered-angles-frames-options.png",
+   "w": 1241,
+   "h": 1267
   },
   {
    "folder": "props",
