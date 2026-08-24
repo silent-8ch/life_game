@@ -1017,14 +1017,36 @@ export default function LevelViewport({
                                 return '-';
                             }
 
+                            // The middle eighth, not the whole row.
+                            //
+                            // A target holds that camera's entire frustum, and
+                            // a camera eight levels down a corridor stands
+                            // sixty metres back — so most of its frame is
+                            // legitimately the sky beside the room, and the
+                            // pane never reads any of it. Averaging the full
+                            // row says "flat and sky coloured" about a corridor
+                            // that is working, which is exactly the wrong
+                            // answer, and is the same mistake as reading the
+                            // horizon row and calling the room black.
+                            //
+                            // What a pane actually samples is the patch its own
+                            // fragments land on, which shrinks towards the
+                            // middle as the tunnel goes back. This is a fixed
+                            // window on that middle: too wide deep down, but
+                            // never the wrong part of the picture.
+                            const width = Math.max(
+                                8,
+                                Math.floor(target.width / 8),
+                            );
+                            const from = Math.floor((target.width - width) / 2);
                             const row = Math.floor(target.height / 2);
-                            const pixels = new Uint8Array(target.width * 4);
+                            const pixels = new Uint8Array(width * 4);
 
                             renderer.readRenderTargetPixels(
                                 target,
-                                0,
+                                from,
                                 row,
-                                target.width,
+                                width,
                                 1,
                                 pixels,
                             );
@@ -1063,7 +1085,7 @@ export default function LevelViewport({
                                 last = pixels[at];
                             }
 
-                            const count = target.width;
+                            const count = width;
 
                             return [
                                 Math.round((100 * dark) / count),

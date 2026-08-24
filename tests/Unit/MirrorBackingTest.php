@@ -115,6 +115,49 @@ function mirrorBacking(string $body): array
     return json_decode($process->getOutput(), true, flags: JSON_THROW_ON_ERROR);
 }
 
+it('hands the wall builder the surface, so the wall can be hidden from it', function (): void {
+    $answer = mirrorBacking(<<<'JS'
+        const made = buildMirrorPane(
+            ctx,
+            { sector: { slug: 'room' } },
+            new THREE.Vector3(0, 1.5, 8),
+            new THREE.Vector3(0, 0, -1),
+            4,
+            3,
+        );
+
+        process.stdout.write(JSON.stringify({
+            handedBack: made === scene.mirrors[scene.mirrors.length - 1],
+            behindStartsEmpty: made.behind.length,
+        }));
+        JS);
+
+    // A mirror's camera stands behind the glass and so does the wall it hangs
+    // on, which puts the wall between that camera and the room it is meant to
+    // be looking into. The tilted near plane is supposed to cut everything on
+    // that side away and mostly does — but WALL_INSET is 0.01 and CLIP_BIAS is
+    // 0.005, so the wall sits inside the slack and survives, filling the pane
+    // with the back of itself. Paul, the moment it shipped: *i see mostly the
+    // backing walls*.
+    //
+    // Only from this mirror's own view. Every other pane still sees it, which
+    // is what makes the far end of the tunnel a wall rather than a hole.
+    // This returned nothing before, so `buildWall` had no way to say "and this
+    // is the wall you hang on". It matters because of where the two sit: a
+    // mirror's camera stands behind the glass and so does the wall, which puts
+    // the wall between that camera and the room it is meant to be looking into.
+    // The tilted near plane should cut everything on that side away and mostly
+    // does — but WALL_INSET is 0.01 and CLIP_BIAS is 0.005, so the wall lands
+    // inside the slack and survives, filling the pane with the back of itself.
+    // Paul, the moment it shipped: *i see mostly the backing walls*.
+    //
+    // `buildWall` puts it in `behind`, which hides it for that pane's own pass
+    // and no other — every *other* pane still sees it, which is what makes the
+    // far end of the tunnel a wall rather than a hole.
+    expect($answer['handedBack'])->toBeTrue()
+        ->and($answer['behindStartsEmpty'])->toBe(0);
+});
+
 it('says outright whether a surface is a mirror', function (): void {
     $answer = mirrorBacking(<<<'JS'
         process.stdout.write(JSON.stringify({

@@ -6,6 +6,7 @@ import {
     PORTAL_BOUNCES,
 } from '@/lib/engine/constants';
 import { createPortalSurface } from '@/lib/engine/portal-surface';
+import type { PortalSurface } from '@/lib/engine/portal-surface';
 import type { Edge } from '@/lib/engine/sectors';
 
 /**
@@ -26,7 +27,7 @@ export function buildMirrorPane(
     normal: THREE.Vector3,
     length: number,
     height: number,
-): void {
+): PortalSurface {
     const { scene, materials, topology } = ctx;
     const geometry = materials.track(new THREE.PlaneGeometry(length, height));
 
@@ -189,4 +190,6 @@ export function buildMirrorPane(
         .applyMatrix4(surface.mesh.matrixWorld);
 
     scene.mirrors.push(surface);
+
+    return surface;
 }

@@ -106,7 +106,7 @@ export function buildWall(
     };
 
     if (edge.from.isMirror) {
-        buildMirrorPane(
+        const mirror = buildMirrorPane(
             ctx,
             edge,
             new THREE.Vector3(centreX, bottom + height / 2, centreZ),
@@ -138,6 +138,25 @@ export function buildWall(
         // the room.
         holder.position.x -= normal.x * WALL_INSET;
         holder.position.z -= normal.z * WALL_INSET;
+
+        // ...and taken out of its own mirror's pass, or it is the only thing
+        // that mirror can see.
+        //
+        // A mirror's camera stands **behind** the glass, and the backing wall
+        // is behind the glass as well — so the wall lands between the camera
+        // and the room it is meant to be looking into. The tilted near plane is
+        // supposed to cut away everything on that side, and mostly does, but
+        // WALL_INSET is 0.01 and CLIP_BIAS is 0.005: the wall sits inside the
+        // slack and survives, filling the pane with the back of itself. Paul,
+        // immediately: *i see mostly the backing walls*.
+        //
+        // `behind` is the list this file's neighbour already keeps for exactly
+        // this — what a pane's own camera would otherwise be staring at — and
+        // taking the room out of the pass is called the certain way there for
+        // the same reason it is the certain way here. Only from this mirror's
+        // own view: every *other* pane still sees it, which is what makes the
+        // far end of the tunnel a wall rather than a hole.
+        mirror.behind = [holder];
     }
 
     const drawn = length + back + front;
