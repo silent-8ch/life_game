@@ -126,21 +126,33 @@ export const PANE_TEXELS_ACROSS = 2048;
 export const PANE_TEXELS_DOWN = 1152;
 
 /**
- * How many times a portal may be seen through another portal. Each bounce is a
- * render target per pane and a pass per frame, so a portal hung to face itself
- * opens into a corridor this many rooms deep before the far end goes flat.
+ * The most times a pane may be seen through another pane.
  *
- * **Sixteen rather than eight, and it costs less than eight did.** What kept
- * this number down was a render target the size of the screen per level per
- * pane. A reflection nine rooms away is a few pixels across, so those levels are
- * drawn smaller now — halving every couple of levels down to an eighth — and
- * seventeen levels come to about 30 MB a pane against 71 MB for the nine that
- * were there before.
+ * **A ceiling now, not a setting.** With `aperture.ts` measuring how much of the
+ * screen is left at each bounce, a chain ends where its reflection stops
+ * overlapping the one showing it — which in a room of mirrors happens on its
+ * own, well before this. Measured in `hall-of-mirrors` at floor 0.01: the room
+ * reaches 23 bounces and stops, and raising this to 48 or 64 changes nothing at
+ * all. The mirrored octagon reaches 33.
  *
- * Paul, on a room of mirrors: *I see more but still not enough.* This is the
- * constant that decides how many there are.
+ * That is the whole point of the change. Before, this number *was* how deep a
+ * mirror went, and there was no depth that was right for every room: too small
+ * and a corridor ended in mid-air, too large and the cost went to branches
+ * nobody could see. Now it only has to be beyond where any room's geometry runs
+ * out, and thirty-two is.
+ *
+ * Paul, on sixteen: *I am still seeing walls far off in the reflections.* Those
+ * were real and they were this constant — the last bounce, where the mirror
+ * comes out and the wall it hangs on is drawn instead. A corridor of mirrors
+ * does not shrink to nothing quickly: an 8m room seen at sixteen bounces is
+ * still about 2% of the screen tall. At twenty-three it is under one, which is
+ * where the openings close, and that is as far as the illusion can be seen.
+ *
+ * It costs a render target per pane per depth, so it is not free — see
+ * `scaleAt` in portal-surface.ts, which drops a target to a sixteenth beyond
+ * the first few levels and is what makes this many affordable.
  */
-export const PORTAL_BOUNCES = 16;
+export const PORTAL_BOUNCES = 32;
 
 /**
  * About how many pane passes a frame should cost, across the whole level.

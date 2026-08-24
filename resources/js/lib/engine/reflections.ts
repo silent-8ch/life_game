@@ -212,6 +212,21 @@ export function prepareReflections(
      */
     let took = 0;
 
+    /** Frames running that the cost has been comfortably under, or over. */
+    let patience = 0;
+    let impatience = 0;
+
+    /**
+     * How many frames running the cost has to stay on one side before the
+     * depth moves. Deeper is slow and shallower is quick, because being a level
+     * too deep costs frame rate and being a level too shallow costs a little
+     * distance at the back of a reflection.
+     *
+     * At sixty a second these are a tenth and half a second.
+     */
+    const IMPATIENCE = 6;
+    const PATIENCE = 30;
+
     /**
      * A brake, not a budget.
      *
@@ -693,19 +708,57 @@ export function prepareReflections(
         // every frame. Three quarters is enough room for the next level, which
         // costs about a fifth more than the one before it. Two or three frames
         // to settle, which at sixty a second nobody can see.
-        took = took === 0 ? spentMs : took * 0.8 + spentMs * 0.2;
+        took = took === 0 ? spentMs : took * 0.9 + spentMs * 0.1;
 
-        const overCount = drawn > PORTAL_RENDER_BUDGET;
-        const overClock = took > PANE_MILLISECONDS;
-
-        if (overCount || overClock) {
-            reach = Math.max(1, reach - 1);
-        } else if (
+        const over = drawn > PORTAL_RENDER_BUDGET || took > PANE_MILLISECONDS;
+        const roomToGrow =
             reach < PORTAL_BOUNCES &&
-            drawn * 4 < PORTAL_RENDER_BUDGET * 3 &&
-            took * 4 < PANE_MILLISECONDS * 3
-        ) {
+            drawn * 5 < PORTAL_RENDER_BUDGET * 4 &&
+            took * 5 < PANE_MILLISECONDS * 4;
+
+        // **Slow, and asymmetric, because moving this at all is visible.**
+        //
+        // Paul, on the first version: *the walls flicker, they all do not show
+        // every frame*. Changing `reach` moves where every chain in the level
+        // ends at once, and the end of a chain is a wall — so a controller
+        // that bobs across its own threshold blinks a wall in and out at the
+        // back of every reflection in the room, together, which is far more
+        // noticeable than one extra level of depth is worth.
+        //
+        // So: a single expensive frame does nothing. Going shallower needs the
+        // cost to stay over for `IMPATIENCE` frames running, and going deeper
+        // needs it to stay under four fifths of the allowance for `PATIENCE`
+        // of them. A dead band between the two is the point — anywhere
+        // inside it nothing moves at all, and in a room that fits comfortably
+        // (which is now most of them, since the openings end the chains rather
+        // than the budget) this never fires after the first half second.
+        //
+        // Shrinking is quicker than growing on purpose. Being one level too
+        // deep costs frame rate, which is worse than being one level too
+        // shallow.
+        //
+        // Four fifths rather than a half, which was the first try and cost
+        // nine levels of depth for nothing: the counters are what stop the
+        // bobbing, not the width of the band. One more level adds under a
+        // tenth to the count at this depth, so growing at four fifths cannot
+        // land over the line.
+        if (over) {
+            patience = 0;
+            impatience += 1;
+        } else if (roomToGrow) {
+            impatience = 0;
+            patience += 1;
+        } else {
+            patience = 0;
+            impatience = 0;
+        }
+
+        if (impatience >= IMPATIENCE) {
+            reach = Math.max(1, reach - 1);
+            impatience = 0;
+        } else if (patience >= PATIENCE) {
             reach += 1;
+            patience = 0;
         }
 
         // Back around the player, for the view they actually get.

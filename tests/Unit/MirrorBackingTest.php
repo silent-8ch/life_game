@@ -101,11 +101,13 @@ function mirrorBacking(string $body): array
             null,
         );
 
-        // Several frames, because how deep the panes go is now settled rather
-        // than set. `reach` starts low on purpose and climbs a level per frame
-        // until the cost stops it, so one frame measures the ramp instead of
-        // the answer.
-        for (let n = 0; n < 24; n++) {
+        // Enough frames for the depth to settle, because it is settled rather
+        // than set. `reach` starts at two and needs `PATIENCE` frames under
+        // budget for each level it climbs — deliberately slow, because moving
+        // it shifts where every chain in the level ends at once and Paul saw
+        // that as walls flickering at the back of every reflection. So a
+        // handful of frames measures the ramp instead of the answer.
+        for (let n = 0; n < 900; n++) {
             shown.length = 0;
             frame({ getDrawingBufferSize: (v) => v.set(64, 64) }, {});
         }

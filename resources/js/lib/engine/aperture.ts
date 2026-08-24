@@ -66,13 +66,34 @@ export const WHOLE_SCREEN: Aperture = {
  * which is the point, because a corridor of two facing mirrors barely shrinks
  * per bounce and should run until `PORTAL_BOUNCES` stops it.
  *
- * A two-hundredth of the screen is about ten pixels across at 1080p. It is not
- * what bounds the cost — what ends a chain is nearly always the openings
- * failing to overlap at all, which is `narrow` returning null rather than this.
- * It is here so that a chain which shrinks without ever quite closing has an
- * end.
+ * ## Why this is the number that buys depth
+ *
+ * It reads like a safety valve and it is the opposite: it is the lever. A
+ * hundredth of the screen is about twenty pixels at 1080p, and raising the
+ * floor to there **more than doubled how deep the illusion goes** while
+ * costing a third of the passes.
+ *
+ * Measured in `hall-of-mirrors`, uncapped, with nothing else changed:
+ *
+ * | floor | passes | deepest |
+ * | ----- | ------ | ------- |
+ * | 0.005 |    521 |      14 |
+ * | 0.01  |    488 |      23 |
+ * | 0.02  |    193 |      24 |
+ * | 0.04  |     82 |      12 |
+ *
+ * The reason is where the passes go. At the fourteenth bounce that room drew
+ * 68 passes and about four of them were the corridor straight ahead — the only
+ * ones large enough on screen to see. The other sixty-four were side chains
+ * whose reflections were already a few pixels wide, and they were being paid
+ * for out of the same frame. Cutting them at twenty pixels instead of ten hands
+ * that budget to the chain the eye is actually following, which is what a
+ * corridor of mirrors is made of.
+ *
+ * Too far the other way and it shows: at 0.04 the side chains end while they
+ * are still plainly visible, and the depth falls with them.
  */
-export const APERTURE_FLOOR = 0.005;
+export const APERTURE_FLOOR = 0.01;
 
 const viewProjection = new THREE.Matrix4();
 

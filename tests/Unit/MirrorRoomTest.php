@@ -213,16 +213,21 @@ function mirrorRoomFrame(int $sides): array
             null,
         );
 
-        // Several frames, and only the last one is audited.
+        // Enough frames for the depth to settle, and only the last one is
+        // audited.
         //
-        // How deep the panes go is settled rather than set: `reach` starts low
-        // and climbs a level per frame until the cost stops it, so one frame
-        // measures the ramp instead of the answer. That it *does* settle is
-        // part of what is being asserted — a controller that oscillates would
-        // show up here as a depth that changes between the last two frames.
+        // How deep the panes go is settled rather than set: `reach` starts at
+        // two and needs `PATIENCE` frames under budget for each level it
+        // climbs. That is deliberately slow — moving it shifts where every
+        // chain in the level ends at once, and Paul saw a quicker version of
+        // it as walls flickering at the back of every reflection.
+        //
+        // That it *does* settle is part of what is asserted here: a controller
+        // that bobs across its own threshold shows up as a draw count that
+        // differs between the last two frames.
         let before = 0;
 
-        for (let n = 0; n < 24; n++) {
+        for (let n = 0; n < 900; n++) {
             before = log.length;
             log.length = 0;
             aimed.length = 0;
@@ -230,6 +235,23 @@ function mirrorRoomFrame(int $sides): array
         }
 
         const settled = before === log.length;
+
+        // How often the depth moved over the last two hundred frames, long
+        // after it should have stopped. This is the flicker, counted.
+        let wobbles = 0;
+        let last = log.length;
+
+        for (let n = 0; n < 200; n++) {
+            log.length = 0;
+            aimed.length = 0;
+            frame({}, {});
+
+            if (log.length !== last) {
+                wobbles++;
+            }
+
+            last = log.length;
+        }
 
         // Every showing, against the viewpoint it is being seen from.
         const written = new Map();
@@ -285,6 +307,7 @@ function mirrorRoomFrame(int $sides): array
 
         process.stdout.write(JSON.stringify({
             settled,
+            wobbles,
             bareNear,
             draws: log.length,
             right,
@@ -350,6 +373,32 @@ it('draws no bare-walled room among the reflections the eye lands on',
         // nine levels; with it, 662 to reach sixteen.
         expect($answer['bareNear'])->toBe(0);
     });
+
+it('holds the depth still once it has found it', function (): void {
+    $answer = mirrorRoomFrame(4);
+
+    // Paul: *the walls flicker, they all do not show every frame.*
+    //
+    // The depth is one number for the whole level, so moving it shifts where
+    // **every** chain ends at once — and the end of a chain is a wall. A
+    // controller that bobs across its own threshold therefore blinks a wall in
+    // and out at the back of every reflection in the room, together, which is
+    // far more noticeable than the extra level of depth it was chasing.
+    //
+    // The first version grew whenever the frame came in under three quarters of
+    // its allowance and shrank the moment it went over, on a lightly smoothed
+    // one-frame measurement. One more level costs under a tenth at this depth,
+    // so it sat right on the line and crossed it constantly.
+    //
+    // Now: heavier smoothing, a dead band, and a run of frames on one side
+    // before anything moves — quick to go shallower, slow to go deeper, since
+    // one level too deep costs frame rate and one level too shallow costs a
+    // little distance at the back of a reflection.
+    //
+    // Two hundred frames measured after it has settled, with nothing moving.
+    expect($answer['wobbles'])->toBe(0)
+        ->and($answer['settled'])->toBeTrue();
+});
 
 it('sends every wall of a square room the same distance', function (): void {
     $answer = mirrorRoomFrame(4);

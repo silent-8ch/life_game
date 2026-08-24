@@ -291,3 +291,19 @@ What broke it:
 A **portal** is the opposite case at every one of these points and must stay in the picture: there is no wall behind a mouth, only the room it opens onto, so taking it out ends a corridor in a hole to the sky.
 
 Pinned by `tests/Unit/MirrorRoomTest.php`, which runs a frame in a square room and in an octagon and audits every showing against the camera the displaying pass aimed. **Compare cameras by identity, never by recomputing the matrix**: `aim` decomposes and re-inverts, so sixteen levels down a chain a camera differs from a recomputation of itself in the third decimal, which reads as ten broken reflections that are not broken.
+
+## APERTURE_FLOOR is the lever for depth, not a safety valve
+Raising it from 0.005 to 0.01 (about 20px at 1080p) **more than doubled how deep the illusion goes** while costing a third of the passes. Measured in `hall-of-mirrors`, uncapped: floor 0.005 → 521 passes, 14 bounces; 0.01 → 488 passes, 23; 0.02 → 193 passes, 24; 0.04 → 82 passes, 12.
+
+The reason is where the passes go. At the fourteenth bounce that room drew 68 passes and about four of them were the corridor straight ahead — the only ones big enough on screen to see. The other sixty-four were side chains already a few pixels wide, paid for out of the same frame. Cutting them sooner hands the budget to the chain the eye is following. Too far the other way and side chains end while still plainly visible, and the depth falls with them.
+
+With the floor at 0.01, `PORTAL_BOUNCES` stopped being how deep a mirror goes and became a ceiling: `hall-of-mirrors` reaches 23 bounces and stops on its own, the octagon 33, and raising the constant to 48 or 64 changes nothing. Paul's *I am still seeing walls far off in the reflections* was the old sixteen — an 8m room at sixteen bounces is still about 2% of the screen tall, and only past twenty-three does the opening close.
+
+## The frame depth must move slowly, or every reflection blinks at once
+`reach` is one number for the level, so moving it shifts where **every** chain ends simultaneously — and the end of a chain is a wall. Paul: *the walls flicker, they all do not show every frame.*
+
+The first controller grew whenever a frame came in under three quarters of its allowance and shrank the moment it went over, on a lightly smoothed one-frame measurement. One more level costs under a tenth at these depths, so it sat on the line and crossed it every frame. What it needs is all of: heavy smoothing (0.9/0.1), a dead band, and a run of frames on one side before anything moves — `IMPATIENCE` 6 frames to go shallower, `PATIENCE` 30 to go deeper. Quick down and slow up, because one level too deep costs frame rate and one level too shallow costs a little distance at the back of a reflection.
+
+Widening the dead band is *not* the fix and costs real depth: growing only below half the allowance capped the room nine levels short. The counters are what stop the bobbing.
+
+Pinned by `it holds the depth still once it has found it` in MirrorRoomTest, which runs 200 frames after it has settled and asserts the draw count never changes. Any test touching this must run enough frames to settle — 900 from a standing start, since `reach` begins at 2 and climbs one level per 30 frames.

@@ -559,7 +559,7 @@ export function createPortalSurface(
      * are the ones the eye is actually on.
      */
     const scaleAt = (depth: number): number =>
-        Math.min(2 ** Math.max(0, Math.floor((depth - 1) / 2)), 8);
+        Math.min(2 ** Math.max(0, Math.floor((depth - 1) / 2)), 16);
 
     const sizeFor = (depth: number): { width: number; height: number } => {
         const by = scaleAt(depth);
