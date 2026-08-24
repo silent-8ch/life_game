@@ -241,11 +241,15 @@ it('drops pictures rather than losing the whole report', function (): void {
     // be rebuilt from the position the report already carries.
     expect($answer['over'])->toBe(['normal', 'walls']);
 
-    // And when even the photograph will not fit on its own, it goes too.
+    // And the photograph survives even when it alone is over budget.
     //
-    // That looks like giving up and is the opposite. A picture over the limit
-    // does not arrive — it takes the spot, the room and the words down with it
-    // as a 413, and the thing being reported may not come back. Sending none of
-    // them delivers everything else, which is most of what diagnoses a fault.
-    expect($answer['wayOver'])->toBe([]);
+    // It used to be dropped too, on the reasoning that a picture too big to
+    // send takes the whole report down as a 413. That made the common case
+    // worse than the case it guarded: a big level's lossless views run to
+    // megabytes while the photograph is a couple of hundred kilobytes, so
+    // dropping the two big ones always leaves it comfortably inside the limit.
+    // The house yard arrived with no pictures at all and the one that mattered
+    // would have fitted easily. The budget sits well under what the far end
+    // accepts, so an oversized photograph still gets there.
+    expect($answer['wayOver'])->toBe(['normal']);
 });

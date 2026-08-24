@@ -26,6 +26,36 @@ class StoreDebugSnapshotRequest extends FormRequest
     }
 
     /**
+     * Unpacks the fields that travel as JSON rather than as form leaves.
+     *
+     * A form carries a nested value as one field per leaf, and PHP stops
+     * parsing a request after `max_input_vars` of them — 1000 by default — then
+     * silently drops the rest. **The file parts come last**, so a snapshot of a
+     * level with enough walls arrives carrying a full legend and no pictures,
+     * and nothing anywhere says why. The legend of a ninety-four walled level
+     * is about nine hundred and forty fields on its own; a four walled one is
+     * forty, which is why the room this was being chased in worked and the
+     * house did not.
+     *
+     * So those two come over as one field each and are opened here, in front of
+     * the rules below.
+     */
+    protected function prepareForValidation(): void
+    {
+        foreach (['legend', 'panes'] as $packed) {
+            $value = $this->input($packed);
+
+            if (! is_string($value)) {
+                continue;
+            }
+
+            $opened = json_decode($value, true);
+
+            $this->merge([$packed => is_array($opened) ? $opened : null]);
+        }
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function rules(): array

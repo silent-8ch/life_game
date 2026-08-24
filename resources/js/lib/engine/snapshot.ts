@@ -383,7 +383,21 @@ export function withinBudget(
     const size = (): number =>
         Object.values(keep).reduce((total, blob) => total + blob.size, 0);
 
-    for (const kind of ['wireframe', 'walls', 'normal']) {
+    // The photograph is never dropped.
+    //
+    // It was in this list, last, on the reasoning that a picture too big to
+    // send takes the whole report down with it as a 413. True, but it made the
+    // common case worse than the case it guarded: a big level's *lossless*
+    // views run to megabytes while the photograph is a couple of hundred
+    // kilobytes, and dropping the two big ones always leaves it comfortably
+    // inside the limit. Sending the note with no pictures at all, when the one
+    // that matters would have fitted, is the outcome this function exists to
+    // prevent.
+    //
+    // The budget is well under the 2 MB the far end accepts, so a photograph
+    // that overruns the budget still arrives. Only one large enough to overrun
+    // PHP itself would fail, and at these dimensions a JPEG does not get there.
+    for (const kind of ['wireframe', 'walls']) {
         if (size() <= budget) {
             break;
         }
