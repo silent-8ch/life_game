@@ -122,25 +122,35 @@ def place(sheet, cell_x, cell_y, fig, fw, fh, flip):
                 sheet[ty][tx] = px
 
 
-def build_sheet(sprite, kind, rowmap, directions, cut_dir):
+def load_scaled(cut_dir, file):
+    """Load a cut cell and scale it to the crown/feet band."""
+    w, h, colour, pix = decode(os.path.join(cut_dir, file))
+    if colour == 2:
+        pix = [[(p[0], p[1], p[2], 255) for p in r] for r in pix]
+    scale = BAND / h
+    return resample(pix, w, h, scale)
+
+
+def build_sheet(sprite, kind, rowmap, frames, cut_dir):
+    """One atlas. Each column is a walk frame; a frame with no drawing for a
+    direction falls back to that direction's Stand (frame 0)."""
     sheet = [[CLEAR] * (CELL * COLUMNS) for _ in range(CELL * ROWS)]
+    stand = frames.get('0', {})
     filled = []
     for row in range(ROWS):
         angle = rowmap.get(row)
         if angle is None:
             continue
-        resolved = resolve(directions, angle)
-        if resolved is None:
-            continue
-        file, flip = resolved
-        w, h, colour, pix = decode(os.path.join(cut_dir, file))
-        if colour == 2:
-            pix = [[(p[0], p[1], p[2], 255) for p in r] for r in pix]
-        scale = BAND / h
-        fig, fw, fh = resample(pix, w, h, scale)
         for col in range(COLUMNS):
+            framemap = frames.get(str(col), {})
+            resolved = resolve(framemap, angle) or resolve(stand, angle)
+            if resolved is None:
+                continue
+            file, flip = resolved
+            fig, fw, fh = load_scaled(cut_dir, file)
             place(sheet, col * CELL, row * CELL, fig, fw, fh, flip)
-        filled.append(f'row{row}={angle}°{"~" if flip else ""}')
+            if col == 0:
+                filled.append(f'row{row}={angle}°{"~" if flip else ""}')
     return sheet, filled
 
 
@@ -158,13 +168,19 @@ def main(argv):
 
     for entry in maps:
         sprite = entry['sprite']
-        directions = entry['directions']
+        # Two input shapes: a frames map (the walk gap-finder) or a single
+        # directions map (the older direction-only pass), which becomes four
+        # identical frames — a standing figure.
+        if 'frames' in entry:
+            frames = {f: (m or {}) for f, m in entry['frames'].items()}
+        else:
+            frames = {str(c): entry['directions'] for c in range(COLUMNS)}
         if sprite not in ORDERS:
             print(f'skip {sprite}: no order in sprite-direction.ts table', file=sys.stderr)
             continue
         cardinal_rows, diagonal_rows = row_maps(ORDERS[sprite])
         for kind, rowmap in (('cardinal', cardinal_rows), ('diagonal', diagonal_rows)):
-            sheet, filled = build_sheet(sprite, kind, rowmap, directions, args.cut)
+            sheet, filled = build_sheet(sprite, kind, rowmap, frames, args.cut)
             name = f'{sprite}-{args.style}-{kind}-aligned-4step.png'
             write_png(os.path.join(args.out, name), sheet, CELL * COLUMNS, CELL * ROWS)
             print(f'{name}: {", ".join(filled)}')

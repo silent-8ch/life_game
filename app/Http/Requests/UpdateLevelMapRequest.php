@@ -129,7 +129,7 @@ class UpdateLevelMapRequest extends FormRequest
             // the editor and surprises you two months later.
             'things.*.stats' => ['nullable', 'array', 'size:'.count(PersonStats::ATTRIBUTES)],
             'things.*.stats.*' => ['required', 'integer', 'between:'.PersonStats::MINIMUM.','.PersonStats::MAXIMUM],
-            'things.*.speed' => ['required', 'numeric', 'between:0,10'],
+            'things.*.speed' => ['required', 'numeric', 'between:0,70'],
             // Either kind of picture. A box wants a tiling texture; a billboard
             // or a cross wants cutout art from the props folder, and which one
             // is right depends on how the thing is drawn rather than on what it

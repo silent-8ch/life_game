@@ -666,3 +666,23 @@ it('offers the styles a level can be drawn in, more than one', function (): void
                 ->and($styles)->toContain('illustrated');
         });
 });
+
+it('lets a character be set extremely fast', function (): void {
+    $map = drawnMap();
+    $map['things'][0]['speed'] = 60.0;
+
+    $this->actingAs($this->editor)
+        ->put(route('levels.editor.update', $this->level), $map)
+        ->assertRedirect();
+
+    expect($this->level->fresh()->things->firstWhere('slug', 'krystal')->speed)->toBe(60.0);
+});
+
+it('still refuses a speed past the cap', function (): void {
+    $map = drawnMap();
+    $map['things'][0]['speed'] = 71.0;
+
+    $this->actingAs($this->editor)
+        ->put(route('levels.editor.update', $this->level), $map)
+        ->assertSessionHasErrors('things.0.speed');
+});

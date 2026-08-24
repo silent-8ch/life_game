@@ -337,6 +337,7 @@ export function createActors(level: Level): Actors {
                     wanderer.z,
                     wanderer.yaw,
                     wanderer.walked,
+                    wanderer.thing.speed,
                 );
 
                 // Somebody in a room the camera sees through is not drawn.

@@ -68,6 +68,7 @@ export type SpriteActor = {
         z: number,
         yaw: number,
         walked: number,
+        speed?: number,
     ) => void;
     /**
      * Square the quad up to a viewer and pick the angle that viewer would see.
@@ -135,6 +136,37 @@ export function createSpriteActor(
 
     const object = new THREE.Mesh(geometry, material);
 
+    // Motion streak: a run of fading copies of the body, left where it was over
+    // the last handful of frames, shown only when it is moving fast — so speed
+    // reads as a smear of the character rather than a teleport. The ghosts live
+    // in world space (added to the scene beside the body, not under it) so a
+    // billboard turn does not swing them around; each render pass squares them
+    // up to that pass's viewer the same way the body is squared up.
+    const GHOSTS = 8;
+    const GHOST_GAP = 2; // frames between one ghost and the next
+    const STREAK_SPEED = 12; // metres/second past which the streak shows
+    const TELEPORT = 3; // a jump larger than this (a portal) resets the trail
+
+    const ghosts = Array.from({ length: GHOSTS }, () => {
+        const ghostMaterial = new THREE.MeshBasicMaterial({
+            map: sheets.cardinal,
+            transparent: true,
+            opacity: 0,
+            alphaTest: 0.5,
+            side: THREE.DoubleSide,
+            depthWrite: false,
+            fog: false,
+        });
+        const mesh = new THREE.Mesh(geometry, ghostMaterial);
+        mesh.visible = false;
+        mesh.renderOrder = -1;
+        return { mesh, material: ghostMaterial };
+    });
+    const history: THREE.Vector3[] = [];
+    const HISTORY = GHOSTS * GHOST_GAP + 2;
+    let ghostsParented = false;
+    let lastSpeed = 0;
+
     let yaw = 0;
     let frame = 0;
 
@@ -160,13 +192,66 @@ export function createSpriteActor(
         );
     };
 
+    // Square every ghost up to this pass's viewer and stand it where the body
+    // was a few frames ago, fading with age; hidden unless the body is moving
+    // fast. Ghosts are added to the scene lazily, once the body has a parent.
+    const paintStreak = (viewerYaw: number): void => {
+        const parent = object.parent;
+        if (!ghostsParented && parent) {
+            for (const g of ghosts) {
+                parent.add(g.mesh);
+            }
+            ghostsParented = true;
+        }
+
+        const moving =
+            history.length >= 2 &&
+            history[history.length - 1].distanceTo(
+                history[history.length - 2],
+            ) > 0.002;
+        const streaking = object.visible && lastSpeed > STREAK_SPEED && moving;
+
+        for (let i = 0; i < GHOSTS; i++) {
+            const g = ghosts[i];
+            const index = history.length - 1 - (i + 1) * GHOST_GAP;
+
+            if (!streaking || index < 0) {
+                g.mesh.visible = false;
+                continue;
+            }
+
+            if (g.material.map !== material.map) {
+                g.material.map = material.map;
+                g.material.needsUpdate = true;
+            }
+
+            // Nearest the body is boldest; the tail fades away.
+            g.material.opacity = 0.5 * (1 - i / GHOSTS);
+            g.mesh.position.copy(history[index]);
+            g.mesh.rotation.y = viewerYaw;
+            g.mesh.visible = true;
+        }
+    };
+
     return {
         object,
 
-        place: (x, floorY, z, bodyYaw, walked) => {
+        place: (x, floorY, z, bodyYaw, walked, speed = 0) => {
             object.position.set(x, floorY + cell / 2 - underfoot, z);
             yaw = bodyYaw;
             frame = Math.floor(walked / STRIDE) % COLUMNS;
+            lastSpeed = speed;
+
+            // One sample per frame — place runs once a frame, faceViewer once
+            // per render pass, so sampling here keeps the trail's spacing true.
+            const last = history[history.length - 1];
+            if (last && last.distanceTo(object.position) > TELEPORT) {
+                history.length = 0;
+            }
+            history.push(object.position.clone());
+            if (history.length > HISTORY) {
+                history.shift();
+            }
         },
 
         faceViewer: (viewerX, viewerZ, viewerYaw) => {
@@ -177,25 +262,25 @@ export function createSpriteActor(
             const towardsX = viewerX - object.position.x;
             const towardsZ = viewerZ - object.position.z;
 
-            if (Math.hypot(towardsX, towardsZ) < 1e-4) {
-                return;
+            if (Math.hypot(towardsX, towardsZ) >= 1e-4) {
+                // The body faces -Z at a yaw of zero, matching the camera.
+                const facingX = -Math.sin(yaw);
+                const facingZ = -Math.cos(yaw);
+
+                // Its right-hand side, so the viewer can be left or right of it.
+                const rightX = -facingZ;
+                const rightZ = facingX;
+
+                const ahead = towardsX * facingX + towardsZ * facingZ;
+                const beside = towardsX * rightX + towardsZ * rightZ;
+
+                const turn = Math.atan2(beside, ahead);
+                const direction = spriteDirection(sprite, turn);
+
+                show(direction.sheet, direction.row, direction.mirror);
             }
 
-            // The body faces -Z at a yaw of zero, matching the camera.
-            const facingX = -Math.sin(yaw);
-            const facingZ = -Math.cos(yaw);
-
-            // Its right-hand side, so the viewer can be placed left or right of it.
-            const rightX = -facingZ;
-            const rightZ = facingX;
-
-            const ahead = towardsX * facingX + towardsZ * facingZ;
-            const beside = towardsX * rightX + towardsZ * rightZ;
-
-            const turn = Math.atan2(beside, ahead);
-            const direction = spriteDirection(sprite, turn);
-
-            show(direction.sheet, direction.row, direction.mirror);
+            paintStreak(viewerYaw);
         },
 
         dispose: () => {
@@ -203,6 +288,10 @@ export function createSpriteActor(
             material.dispose();
             sheets.cardinal.dispose();
             sheets.diagonal.dispose();
+            for (const g of ghosts) {
+                g.mesh.removeFromParent();
+                g.material.dispose();
+            }
         },
     };
 }
