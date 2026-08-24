@@ -444,3 +444,16 @@ Only the third row of a perspective projection depends on near/far, so x and y c
 **But do not read that as four mirrors being the milder case — they are the worse one.** This note first claimed their deep chains wander sideways rather than marching and so never cross the line. Paul, immediately: *it also shows in the 4 mirror room, only more extreme.* Measured, and he is right by a long way: the furthest camera in the four-mirror room stands **200 m** from the middle of it, against 16 m for the facing pair at the same heading — because a diagonal chain marches faster than an axis-aligned one and there are far more chains to find the long ones. Two mirrors are the fixture that *isolates* a tunnel fault; they are not the fixture that shows it worst.
 
 This only appeared once the draw budget went and the depth rose from ~16 to the mid thirties, which took most of the tunnel past the line. Expect the same shape of thing from any future change that buys depth: **a deeper tunnel is a longer journey, not just more bounces.**
+
+## When a measurement and the person playing disagree, find out what the measurement cannot see
+Five times in one session a number here said "fine" or "better" while Paul, looking at the screen, said otherwise. Every time he was right, and every time the fault was that the instrument was blind to the thing rather than that the reasoning was wrong:
+
+- **A still camera** cannot show flicker. It reported zero pane movement over 239 frames while a moving one popped panes 0.3 times a frame.
+- **A square mirror room** cannot show an aperture fault. Clipping a chain to its own mirror outline changed that room byte-for-byte and fixed a bare pass covering a quarter of the screen in the octagon.
+- **A zero-cost harness** cannot show a controller oscillating on frame time. Its stub passes rendered nothing, so the clock the controller reads never moved.
+- **A metric that counts total failure** cannot see partial failure. Bare-wall area counts passes where *every* pane is hidden; a cache bug that wrongly hid *some* panes read as an improvement from 1.4% to 0.45% while the picture got worse.
+- **A fixture whose chains do not march** cannot show a far-plane fault. Four-mirror rooms were measured for weeks; a facing pair — one chain, going straight out — found it in one capture.
+
+The habit that follows: when a report and a measurement disagree, the first question is not *which is right* but *what could this instrument not have seen*. Build the fixture that could show it, and only then decide.
+
+And a related trap, from the same session: a metric moving the right way is not evidence a change was good. Twice a number improved while the picture got worse.
