@@ -1,0 +1,227 @@
+[
+ {
+  "sprite": "boots",
+  "frames": {
+   "0": {
+    "0": { "kind": "cell", "file": "debug-stylized-metal-boots-r0c0.png" },
+    "45": { "kind": "mirror", "from": "315" },
+    "90": { "kind": "mirror", "from": "270" },
+    "135": { "kind": "mirror", "from": "225" },
+    "180": { "kind": "cell", "file": "debug-stylized-metal-boots-r0c4.png" },
+    "225": { "kind": "cell", "file": "debug-stylized-metal-boots-r0c3.png" },
+    "270": { "kind": "cell", "file": "debug-stylized-metal-boots-r0c2.png" },
+    "315": { "kind": "cell", "file": "debug-stylized-metal-boots-r0c1.png" }
+   },
+   "1": {
+    "0": { "kind": "cell", "file": "debug-stylized-metal-boots-r0c0.png" },
+    "45": { "kind": "cell", "file": "debug-stylized-metal-boots-r0c1.png" },
+    "90": { "kind": "cell", "file": "debug-stylized-metal-boots-r0c2.png" },
+    "135": { "kind": "mirror", "from": "225" },
+    "180": { "kind": "cell", "file": "debug-stylized-metal-boots-r0c4.png" },
+    "225": { "kind": "cell", "file": "debug-stylized-metal-boots-r0c3.png" },
+    "270": { "kind": "mirror", "from": "90" },
+    "315": { "kind": "mirror", "from": "45" }
+   },
+   "2": {
+    "0": { "kind": "cell", "file": "debug-stylized-metal-boots-r1c0.png" },
+    "45": { "kind": "mirror", "from": "315" },
+    "90": { "kind": "cell", "file": "debug-stylized-metal-boots-r1c2.png" },
+    "135": { "kind": "cell", "file": "debug-stylized-metal-boots-r1c3.png" },
+    "180": { "kind": "cell", "file": "debug-stylized-metal-boots-r1c4.png" },
+    "225": { "kind": "mirror", "from": "135" },
+    "270": { "kind": "mirror", "from": "90" },
+    "315": { "kind": "cell", "file": "debug-stylized-metal-boots-r1c1.png" }
+   },
+   "3": {
+    "0": { "kind": "cell", "file": "debug-stylized-metal-boots-r2c0.png" },
+    "45": { "kind": "cell", "file": "debug-stylized-metal-boots-r2c1.png" },
+    "90": { "kind": "cell", "file": "debug-stylized-metal-boots-r1c2.png" },
+    "135": { "kind": "mirror", "from": "225" },
+    "180": { "kind": "cell", "file": "debug-stylized-metal-boots-r2c4.png" },
+    "225": { "kind": "cell", "file": "debug-stylized-metal-boots-r1c3.png" },
+    "270": { "kind": "mirror", "from": "90" },
+    "315": { "kind": "mirror", "from": "45" }
+   }
+  }
+ },
+ {
+  "sprite": "luke-toon",
+  "frames": {
+   "0": {
+    "0": { "kind": "cell", "file": "luke-stylized-fullbody-v2-r0c0.png" },
+    "45": { "kind": "cell", "file": "luke-stylized-fullbody-v2-r0c1.png" },
+    "90": { "kind": "cell", "file": "luke-stylized-fullbody-v2-r0c2.png" },
+    "135": { "kind": "mirror", "from": "225" },
+    "180": { "kind": "cell", "file": "luke-stylized-fullbody-v2-r0c4.png" },
+    "225": { "kind": "cell", "file": "luke-stylized-fullbody-v2-r0c3.png" },
+    "270": { "kind": "mirror", "from": "90" },
+    "315": { "kind": "mirror", "from": "45" }
+   },
+   "1": {
+    "0": { "kind": "cell", "file": "luke-stylized-fullbody-v2-r0c0.png" },
+    "45": { "kind": "cell", "file": "luke-stylized-fullbody-v2-r0c1.png" },
+    "90": { "kind": "cell", "file": "luke-stylized-fullbody-v2-r0c2.png" },
+    "135": { "kind": "mirror", "from": "225" },
+    "180": { "kind": "cell", "file": "luke-stylized-fullbody-v2-r0c4.png" },
+    "225": { "kind": "cell", "file": "luke-stylized-fullbody-v2-r0c3.png" },
+    "270": { "kind": "mirror", "from": "90" },
+    "315": { "kind": "mirror", "from": "45" }
+   },
+   "2": {
+    "0": { "kind": "cell", "file": "luke-stylized-fullbody-v2-r2c0.png" },
+    "45": { "kind": "cell", "file": "luke-stylized-fullbody-v2-r1c1.png" },
+    "90": { "kind": "cell", "file": "luke-stylized-fullbody-v2-r2c2.png" },
+    "135": { "kind": "cell", "file": "luke-stylized-fullbody-v2-r1c3.png" },
+    "180": { "kind": "cell", "file": "luke-stylized-fullbody-v2-r1c4.png" },
+    "225": { "kind": "mirror", "from": "135" },
+    "270": { "kind": "mirror", "from": "90" },
+    "315": { "kind": "mirror", "from": "45" }
+   },
+   "3": {
+    "0": { "kind": "cell", "file": "luke-stylized-fullbody-v2-r1c0.png" },
+    "45": { "kind": "cell", "file": "luke-stylized-fullbody-v2-r1c1.png" },
+    "90": { "kind": "cell", "file": "luke-stylized-fullbody-v2-r1c2.png" },
+    "135": { "kind": "cell", "file": "luke-stylized-fullbody-v2-r2c3.png" },
+    "180": { "kind": "cell", "file": "luke-stylized-fullbody-v2-r2c4.png" },
+    "225": { "kind": "mirror", "from": "135" },
+    "270": { "kind": "mirror", "from": "90" },
+    "315": { "kind": "mirror", "from": "45" }
+   }
+  }
+ },
+ {
+  "sprite": "luna-toon",
+  "frames": {
+   "0": {
+    "0": { "kind": "cell", "file": "luna-stylized-fullbody-r0c0.png" },
+    "45": { "kind": "mirror", "from": "315" },
+    "90": { "kind": "mirror", "from": "270" },
+    "135": { "kind": "mirror", "from": "225" },
+    "180": { "kind": "cell", "file": "luna-stylized-fullbody-r0c4.png" },
+    "225": { "kind": "cell", "file": "luna-stylized-fullbody-r0c3.png" },
+    "270": { "kind": "cell", "file": "luna-stylized-fullbody-r0c2.png" },
+    "315": { "kind": "cell", "file": "luna-stylized-fullbody-r0c1.png" }
+   },
+   "1": {
+    "0": { "kind": "cell", "file": "luna-stylized-fullbody-r0c0.png" },
+    "45": { "kind": "mirror", "from": "315" },
+    "90": { "kind": "mirror", "from": "270" },
+    "135": { "kind": "mirror", "from": "225" },
+    "180": { "kind": "cell", "file": "luna-stylized-fullbody-r0c4.png" },
+    "225": { "kind": "cell", "file": "luna-stylized-fullbody-r0c3.png" },
+    "270": { "kind": "cell", "file": "luna-stylized-fullbody-r0c2.png" },
+    "315": { "kind": "cell", "file": "luna-stylized-fullbody-r0c1.png" }
+   },
+   "2": {
+    "0": { "kind": "cell", "file": "luna-stylized-fullbody-r1c0.png" },
+    "45": { "kind": "cell", "file": "luna-stylized-fullbody-r2c1.png" },
+    "90": { "kind": "cell", "file": "luna-stylized-fullbody-r1c2.png" },
+    "135": { "kind": "cell", "file": "luna-stylized-fullbody-r1c3.png" },
+    "180": { "kind": "cell", "file": "luna-stylized-fullbody-r1c4.png" },
+    "225": { "kind": "cell", "file": "luna-stylized-fullbody-r2c3.png" },
+    "270": { "kind": "cell", "file": "luna-stylized-fullbody-r2c2.png" },
+    "315": { "kind": "mirror", "from": "45" }
+   },
+   "3": {
+    "0": { "kind": "cell", "file": "luna-stylized-fullbody-r2c0.png" },
+    "45": { "kind": "cell", "file": "luna-stylized-fullbody-r2c1.png" },
+    "90": { "kind": "cell", "file": "luna-stylized-fullbody-r1c2.png" },
+    "135": { "kind": "cell", "file": "luna-stylized-fullbody-r1c3.png" },
+    "180": { "kind": "cell", "file": "luna-stylized-fullbody-r2c4.png" },
+    "225": { "kind": "cell", "file": "luna-stylized-fullbody-r2c3.png" },
+    "270": { "kind": "cell", "file": "luna-stylized-fullbody-r2c2.png" },
+    "315": { "kind": "mirror", "from": "45" }
+   }
+  }
+ },
+ {
+  "sprite": "wade-toon",
+  "frames": {
+   "0": {
+    "0": { "kind": "cell", "file": "wade-stylized-calibrated-r0c0.png" },
+    "45": { "kind": "cell", "file": "wade-stylized-calibrated-r0c1.png" },
+    "90": { "kind": "cell", "file": "wade-stylized-calibrated-r0c2.png" },
+    "135": { "kind": "cell", "file": "wade-stylized-calibrated-r0c3.png" },
+    "180": { "kind": "cell", "file": "wade-stylized-calibrated-r0c4.png" },
+    "225": { "kind": "mirror", "from": "135" },
+    "270": { "kind": "mirror", "from": "90" },
+    "315": { "kind": "mirror", "from": "45" }
+   },
+   "1": {
+    "0": { "kind": "cell", "file": "wade-stylized-calibrated-r0c0.png" },
+    "45": { "kind": "cell", "file": "wade-stylized-calibrated-r0c1.png" },
+    "90": { "kind": "cell", "file": "wade-stylized-calibrated-r0c2.png" },
+    "135": { "kind": "cell", "file": "wade-stylized-calibrated-r0c3.png" },
+    "180": { "kind": "cell", "file": "wade-stylized-calibrated-r0c4.png" },
+    "225": { "kind": "mirror", "from": "135" },
+    "270": { "kind": "mirror", "from": "90" },
+    "315": { "kind": "mirror", "from": "45" }
+   },
+   "2": {
+    "0": { "kind": "cell", "file": "wade-stylized-calibrated-r2c0.png" },
+    "45": { "kind": "mirror", "from": "315" },
+    "90": { "kind": "cell", "file": "wade-stylized-calibrated-r1c2.png" },
+    "135": { "kind": "cell", "file": "wade-stylized-calibrated-r1c3.png" },
+    "180": { "kind": "cell", "file": "wade-stylized-calibrated-r1c4.png" },
+    "225": { "kind": "mirror", "from": "135" },
+    "270": { "kind": "mirror", "from": "90" },
+    "315": { "kind": "cell", "file": "wade-stylized-calibrated-r2c0.png" }
+   },
+   "3": {
+    "0": { "kind": "cell", "file": "wade-stylized-calibrated-r1c0.png" },
+    "45": { "kind": "cell", "file": "wade-stylized-calibrated-r1c1.png" },
+    "90": { "kind": "cell", "file": "wade-stylized-calibrated-r1c2.png" },
+    "135": { "kind": "cell", "file": "wade-stylized-calibrated-r1c3.png" },
+    "180": { "kind": "cell", "file": "wade-stylized-calibrated-r2c4.png" },
+    "225": { "kind": "mirror", "from": "135" },
+    "270": { "kind": "mirror", "from": "90" },
+    "315": { "kind": "mirror", "from": "45" }
+   }
+  }
+ },
+ {
+  "sprite": "william-toon",
+  "frames": {
+   "0": {
+    "0": { "kind": "cell", "file": "william-stylized-fullbody-v2-r0c0.png" },
+    "45": { "kind": "cell", "file": "william-stylized-fullbody-v2-r0c1.png" },
+    "90": { "kind": "cell", "file": "william-stylized-fullbody-v2-r0c2.png" },
+    "135": { "kind": "mirror", "from": "225" },
+    "180": { "kind": "cell", "file": "william-stylized-fullbody-v2-r0c4.png" },
+    "225": { "kind": "cell", "file": "william-stylized-fullbody-v2-r0c3.png" },
+    "270": { "kind": "mirror", "from": "90" },
+    "315": { "kind": "mirror", "from": "45" }
+   },
+   "1": {
+    "0": { "kind": "cell", "file": "william-stylized-fullbody-v2-r0c0.png" },
+    "45": { "kind": "cell", "file": "william-stylized-fullbody-v2-r0c1.png" },
+    "90": { "kind": "cell", "file": "william-stylized-fullbody-v2-r0c2.png" },
+    "135": { "kind": "mirror", "from": "225" },
+    "180": { "kind": "cell", "file": "william-stylized-fullbody-v2-r0c4.png" },
+    "225": { "kind": "cell", "file": "william-stylized-fullbody-v2-r0c3.png" },
+    "270": { "kind": "mirror", "from": "90" },
+    "315": { "kind": "mirror", "from": "45" }
+   },
+   "2": {
+    "0": { "kind": "cell", "file": "william-stylized-fullbody-v2-r2c0.png" },
+    "45": { "kind": "cell", "file": "william-stylized-fullbody-v2-r1c1.png" },
+    "90": { "kind": "mirror", "from": "270" },
+    "135": { "kind": "mirror", "from": "225" },
+    "180": { "kind": "cell", "file": "william-stylized-fullbody-v2-r2c4.png" },
+    "225": { "kind": "cell", "file": "william-stylized-fullbody-v2-r1c3.png" },
+    "270": { "kind": "cell", "file": "william-stylized-fullbody-v2-r1c2.png" },
+    "315": { "kind": "mirror", "from": "45" }
+   },
+   "3": {
+    "0": { "kind": "cell", "file": "william-stylized-fullbody-v2-r1c0.png" },
+    "45": { "kind": "mirror", "from": "315" },
+    "90": { "kind": "cell", "file": "william-stylized-fullbody-v2-r1c2.png" },
+    "135": { "kind": "mirror", "from": "225" },
+    "180": { "kind": "cell", "file": "william-stylized-fullbody-v2-r2c4.png" },
+    "225": { "kind": "cell", "file": "william-stylized-fullbody-v2-r1c3.png" },
+    "270": { "kind": "mirror", "from": "90" },
+    "315": { "kind": "cell", "file": "william-stylized-fullbody-v2-r1c1.png" }
+   }
+  }
+ }
+]
