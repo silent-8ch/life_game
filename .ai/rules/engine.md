@@ -357,7 +357,20 @@ Without it an opening drifting across a single line is followed, dropped and fol
 
 Depth now depends slightly on what ran last frame, so the symmetry test asserts the four walls are within a level of each other rather than identical.
 
-## The redundancy worth taking: two chains, one virtual camera
+## The redundancy is real and is NOT safely exploitable — do not try again
+Reflections compose into a group, and in a room of two pairs of **parallel** walls the pairs commute: left-then-front and front-then-left are the same element, so they stand the camera in the same place. Measured at Paul's spot, **31–33% of every pass in a four-mirror room re-drew a picture that pane's target already held**, and skipping those subtrees took a frame from 528 passes to 293. It looks like free depth. It is not.
+
+**A pane's picture is not a function of the viewpoint alone.** What goes into it is the set of panes this pass drew one level in, and that set comes from the *aperture*, which is clipped by every mirror along the chain — so two routes to the same place arrive with different openings. If the narrow chain draws first, the wide chain finds "this viewpoint" in the target and takes a picture with the panes outside the narrow sliver missing. Paul, within one build: *I think I see more empty walls now.*
+
+Both repairs were measured and both are worse than not doing it:
+- **Require the stored opening to contain the asking one.** Correct, and saves exactly nothing — two chains' openings overlap without either containing the other, so the hit rate goes to zero and the frame is identical to no caching at all.
+- **Redraw for the union of the two openings.** Correct, and actively worse: widening apertures grows the tree. Measured at his spot — 531 passes against 520, depth 16 against 20, and bare wall 2.9% against 1.4%.
+
+The measurement that hid the fault is worth knowing about too: the bare-wall metric counts passes where *every* pane is hidden, and this bug produces passes where *some* pane is wrongly hidden. It read as an improvement (1.4% → 0.45%) while the picture got worse. He saw it; the number did not.
+
+If anyone attacks this again, the exploitable form is temporal rather than spatial — a reflection twenty levels down changes very little between frames — and it has not been tried.
+
+## Superseded: the redundancy worth taking (reverted, see above)
 Reflections compose into a group, and in a room of two pairs of **parallel** walls the two pairs commute — left-then-front and front-then-left are the same group element, so they put the camera in the same place and draw the same picture. `written`/`writtenOn` in reflections.ts keep the viewpoint each pane's target was last drawn from, and `deepen` returns immediately when the target already holds this viewpoint's picture, skipping the whole subtree: a pane's picture is decided entirely by the viewpoint, so if the target has it, everything that made it has already run.
 
 Measured at Paul's spot in a settled frame: **31–33% of passes in a four-mirror room re-drew a picture the target already held**, and skipping the subtrees took the frame from 528 passes to 293 and from 514 to 261 — over 40%, because a skip takes descendants with it.

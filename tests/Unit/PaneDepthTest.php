@@ -248,8 +248,15 @@ it('stops moving the depth once it has settled, on a camera that never moves',
         // Asserting "never changes" instead was tried and is the same mistake
         // in a new place: it passed alone and failed inside the full suite,
         // because it was asserting something about the machine rather than
-        // about the code.
-        expect($answer['ups'])->toBe(0);
+        // about the code. So was asserting no climb at all — a machine that
+        // genuinely has room to spare is *allowed* to climb, and under a
+        // loaded suite the cost can sit under half its allowance for the three
+        // seconds that says so.
+        //
+        // What no load excuses is going **both** ways inside two and a half
+        // seconds. That is a swing, and a swing is what a wall blinking on and
+        // off at the back of every reflection is made of.
+        expect(min($answer['ups'], $answer['downs']))->toBe(0);
 
         // And it has not simply given up: a room of mirrors is worth several
         // bounces even on a machine that cannot afford many.
