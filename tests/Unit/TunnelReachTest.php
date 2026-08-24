@@ -25,6 +25,15 @@ use Symfony\Component\Process\Process;
  *
  * It also only started showing once the draw budget went and the depth went
  * from about sixteen to the mid thirties, which took most of the tunnel past it.
+ *
+ * **The facing pair isolates the fault; it does not show it worst.** Paul, on
+ * being told the four-mirror rooms did not march: *it also shows in the 4
+ * mirror room, only more extreme.* Measured, and by a long way — the furthest
+ * camera in a four-mirror room stands 200 m from the middle of it against 16 m
+ * for the facing pair at the same heading, because a diagonal chain marches
+ * faster than an axis-aligned one and there are many more chains to find the
+ * long ones. Two mirrors are where the cause is legible; four are where it
+ * hurts.
  */
 
 /**
