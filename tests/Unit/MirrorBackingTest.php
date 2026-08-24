@@ -170,7 +170,7 @@ it('says outright whether a surface is a mirror', function (): void {
     expect($answer['mirrored'])->toBe([true, true]);
 });
 
-it('folds a mirror into itself at the last bounce', function (): void {
+it('ends a mirror on the wall it hangs on at the last bounce', function (): void {
     $answer = mirrorBacking(<<<'JS'
         const deepest = Math.max(...shown.map((row) => row.drew));
 
@@ -183,21 +183,38 @@ it('folds a mirror into itself at the last bounce', function (): void {
         }));
         JS);
 
-    // A mirror stays in the picture at the last bounce and shows the level
-    // above it, which already holds the level above that — so the image folds
-    // into itself and there is no last bounce for the eye to find.
+    // **A mirror that has run out of levels comes out of the picture**, and the
+    // wall a centimetre behind it is drawn instead.
     //
-    // Hiding them here was tried, for one commit, and draws the wall each
-    // mirror hangs on instead. That is right for a corridor of two facing
-    // mirrors and wrong for a room of four: a room of four is a plane tiled
-    // with rooms, and a wall at the end of every branch tiles it with walls.
+    // Both of the other two endings have been shipped and both were wrong, in
+    // opposite directions, and the reason is the same reason:
     //
-    // So nothing is hidden here at all. The pane being drawn is still taken
-    // out of its own pass — a texture cannot be read and written at once — but
-    // `render` does that itself through `partner`, not this loop, and the stub
-    // above stands in for `render`. What this asserts is that the recursion
-    // stopped taking mirrors out.
+    // - Showing the level above folds the image into itself, which sounds
+    //   right and is a lie. That picture was drawn from a camera one
+    //   reflection further out, and a pane samples its target by **screen
+    //   position** — so it is pasted onto the wall registered to a viewpoint
+    //   it was never taken from. Down a corridor of portals two adjacent
+    //   viewpoints are nearly the same picture and it passes; between two
+    //   mirrors at right angles it is a different room at the wrong angle.
+    //   That is *super stretched*.
+    //
+    // - Hiding them, which is this, was shipped once before and Paul said *i
+    //   am not seeing a seamless infinite room, i see many walls*. He was
+    //   right and the walls were not the fault. The recursion was starved by
+    //   the draw budget and ended at the first or second bounce, so the walls
+    //   landed where he was looking.
+    //
+    // What changed is where the ending is, not what it is. `aperture.ts`
+    // decides how deep a chain goes by how much of the opening is left rather
+    // than by a purse, so a corridor now runs the full `PORTAL_BOUNCES` and the
+    // wall lands sixteen reflections back at a few pixels across — which is
+    // where the last bounce of a real infinity mirror is.
+    //
+    // The rule the whole renderer now keeps: **no pane ever shows a picture
+    // taken from a camera other than the one looking at it.**
+    expect($answer['deepest'])->toBeGreaterThan(1);
+
     foreach ($answer['hiddenAtDeepest'] as $hidden) {
-        expect($hidden)->toBe(0);
+        expect($hidden)->toBe($answer['panes']);
     }
 });

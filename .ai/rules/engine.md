@@ -253,3 +253,30 @@ requestAnimationFrame does not fire in a browser tab that is not foregrounded �
 
 ## A ?scan cannot judge whether a mirror looks right
 ?scan forces the probe backdrop, and in a fully mirrored room every ray legitimately ends in backdrop — so ?scan reads a WORKING infinity mirror as sky and cannot tell it from a broken one. And &panes drawn:1 / drawnTo:N means a target HAS a picture, not that the picture is correct. ?scan is sound for portals and for proving geometry did not move; it is NOT evidence a mirror is fixed. Mirror correctness is judged by a human looking at the real (non-debug) render, with the tab foregrounded. Do not close a mirror bug on scan evidence.
+
+## How deep a chain of panes goes is decided by the opening, not by a budget
+`aperture.ts` carries a screen rectangle down the recursion in `reflections.ts`: the whole screen at the top, intersected with each pane's own projected rectangle at every level. A branch ends when the rectangles stop overlapping, or when what is left is under `APERTURE_FLOOR` of the screen.
+
+This replaced a frustum test, and the difference is the whole reason a room of four mirrored walls could not be made deep. A frustum is the entire screen, so every pane saw every other one at every level and the tree branched by three per bounce — sixteen bounces asks for 43 million passes against a budget of 96. The budget then decided *which* branch got the depth rather than how deep the room went, and it decided by position in an array. That is why a perfectly symmetric room came out with one wall deep and three shallow, which no geometry can produce and which Paul found with four captures ninety degrees apart from one spot.
+
+A pane is a hole, not a screen. Two mirrors facing each other keep nearly all of the opening per bounce and run the full `PORTAL_BOUNCES`; a mirror off to one side is a sliver through the first bounce and nothing through the second, so that chain ends itself. Measured in `hall-of-mirrors` from the middle: the straight chain keeps 31% of the screen at the first bounce and 0.17% at the eighth without ever closing, while `north>east>north` closes at the third.
+
+**Screen rectangles compose only because a pane samples by screen position.** The target's screen and the pass that displays it are the same screen, so nesting is intersection. None of this would be true of a `textureMatrix` read.
+
+**A mirror's rectangle is flipped inside its own target** (`flipAcross`). The camera carries a left-for-right turn to stay right-handed, so the picture is drawn flipped and the shader flips it back. Miss this and every chain through a mirror hunts for its reflections down the wrong side of the view — which prunes the branches that were really there and keeps the ones that were not.
+
+`apertureOf` is deliberately conservative in two places: a corner behind the camera, and a mesh it cannot measure, both answer "the whole screen". Too generous costs a pass; too mean loses a reflection that was really there, silently.
+
+## No pane ever shows a picture taken from a camera other than the one looking at it
+The single rule the pane renderer keeps, and three separate things used to break it. It sounds like a tautology and is not, because a pane samples by screen position: a picture drawn from the wrong viewpoint is not merely stale, it is a different view of the room pasted onto a wall at the wrong angle. Down a corridor of portals two adjacent viewpoints are nearly the same picture and it passes; between two mirrors at right angles it does not, and Paul's word for it both times was *super stretched*.
+
+What broke it:
+1. Every pane in the level was shown one level in whether or not this pass had drawn it there. `deepen` now keeps the kids it actually drew and shows only those.
+2. At the last bounce a mirror was handed the level *above* it, so the image would fold into itself. That picture is one reflection further out. **A mirror now comes out of the picture instead**, at every depth, and the wall `buildWall` puts a hair behind it is drawn.
+3. The cheap pass for a pane the player cannot see showed every other mirror at level 0 — the player's own view — inside a pass drawn from somewhere else. Invisible in a square room where every wall is in view; 24 wrong showings a frame in Paul's mirrored octagon.
+
+**Hiding mirrors at the end was shipped once before and reverted**, because Paul said *i am not seeing a seamless infinite room, i see many walls*. He was right and the walls were not the fault: the tree was starved by the draw budget and ended at the first or second bounce, so the walls landed where he was looking. It is only safe with the opening test above deciding where a chain stops. Do not put the fold-into-itself ending back without also putting the budget starvation back.
+
+A **portal** is the opposite case at every one of these points and must stay in the picture: there is no wall behind a mouth, only the room it opens onto, so taking it out ends a corridor in a hole to the sky.
+
+Pinned by `tests/Unit/MirrorRoomTest.php`, which runs a frame in a square room and in an octagon and audits every showing against the camera the displaying pass aimed. **Compare cameras by identity, never by recomputing the matrix**: `aim` decomposes and re-inverts, so sixteen levels down a chain a camera differs from a recomputation of itself in the third decimal, which reads as ten broken reflections that are not broken.

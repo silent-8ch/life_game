@@ -1,5 +1,15 @@
 import * as THREE from 'three';
 import type { Actors } from '@/lib/engine/actors';
+import {
+    anAperture,
+    apertureOf,
+    copyAperture,
+    flipAcross,
+    narrow,
+    WHOLE_SCREEN,
+    worthDrawing,
+} from '@/lib/engine/aperture';
+import type { Aperture } from '@/lib/engine/aperture';
 import type { PropSet } from '@/lib/engine/build/things';
 import {
     PANE_CLEARANCE,
@@ -25,6 +35,10 @@ import type { SpriteActor } from '@/lib/engine/sprite-actor';
  *
  * @returns a function that refreshes every pane for the coming frame.
  */
+
+/** Nothing was drawn one level in, and no array had to be made to say so. */
+const NONE: readonly PortalSurface[] = [];
+
 /**
  * The panes to recurse into, with a tunnel's own continuation at the front.
  *
@@ -124,6 +138,44 @@ export function prepareReflections(
         return frustum.intersectsSphere(pane.bounds);
     };
 
+    /**
+     * Scratch rectangles, one per level of nesting.
+     *
+     * A rectangle per depth rather than one per call because the recursion is
+     * depth-first and never has two live openings at the same level: the
+     * measurement for a pane at depth `d` is finished with by the time its
+     * sibling asks for one. Allocating in the middle of a frame is what this
+     * avoids, and there are seventeen of them.
+     */
+    const measured: Aperture[] = Array.from(
+        { length: PORTAL_BOUNCES + 2 },
+        anAperture,
+    );
+    const kept: Aperture[] = Array.from(
+        { length: PORTAL_BOUNCES + 2 },
+        anAperture,
+    );
+    const inside: Aperture[] = Array.from(
+        { length: PORTAL_BOUNCES + 2 },
+        anAperture,
+    );
+
+    /**
+     * Somewhere to keep each candidate's own opening while its siblings are
+     * measured: one rectangle per level of nesting per pane in the level.
+     *
+     * Made once. A frame in a room of mirrors runs this a few hundred times and
+     * an object allocated in there is an object the collector has to take back
+     * during the frame it was made in, which is a stutter rather than a cost.
+     */
+    const held: Aperture[][] = Array.from({ length: PORTAL_BOUNCES + 2 }, () =>
+        Array.from({ length: panes.length + 1 }, anAperture),
+    );
+
+    /** The rectangle a level of nesting works in, clamped to what exists. */
+    const roomFor = (store: Aperture[], depth: number): Aperture =>
+        store[Math.min(depth, store.length - 1)];
+
     return (renderer, scene) => {
         // Whatever was pulled in front of the player last frame goes back where
         // it belongs before anything is drawn, or every other pane's camera
@@ -206,6 +258,17 @@ export function prepareReflections(
             from: THREE.PerspectiveCamera,
             depth: number,
             allowed: number,
+            /**
+             * How much of the screen this pane is still showing, measured in
+             * the NDC of the pass that is going to display it.
+             *
+             * The whole screen at the top level, and whatever survives the
+             * intersection at every level below. It is what makes the tree
+             * finite: a chain that wanders off to the side runs out of opening
+             * within a couple of bounces and stops itself, so the depth goes
+             * where the picture is instead of where the array order sent it.
+             */
+            aperture: Aperture,
         ): void => {
             // Decided **before** the recursion, not after it.
             //
@@ -220,6 +283,15 @@ export function prepareReflections(
             // What was meant is "did this branch go any deeper", which is this
             // question, asked here, once.
             const goesDeeper = depth < allowed && spent < share;
+
+            /**
+             * The panes this pass actually drew one level in.
+             *
+             * Kept, because it is not the same set as "every pane in the
+             * level" and the difference is what a room of mirrors looked
+             * like. See the showing loop below.
+             */
+            let drew: readonly PortalSurface[] = NONE;
 
             if (goesDeeper) {
                 const inner = pane.aim(from);
@@ -254,6 +326,22 @@ export function prepareReflections(
                 // the self case, the most opposed normal goes first: two panes
                 // looking at each other are a corridor, and the depth belongs
                 // to them rather than to a wall off to one side.
+                // What is left of this pane's own opening, as its target sees
+                // it. A mirror's camera draws the room left-for-right — that
+                // is the turn keeping its basis right-handed — so the
+                // rectangle has to be flipped to match, or every chain hunts
+                // for its reflections down the wrong side of the picture.
+                const through = pane.mirrored
+                    ? flipAcross(aperture, roomFor(inside, depth))
+                    : copyAperture(aperture, roomFor(inside, depth));
+
+                // Where each candidate's own opening is kept while the rest are
+                // measured. One slot per pane at this level of nesting, handed
+                // out in order, so nothing is allocated in the middle of a
+                // frame and no sibling can overwrite another's rectangle.
+                const slots = held[Math.min(depth, held.length - 1)];
+                let taken = 0;
+
                 const kids = tunnelFirst(panes, pane)
                     .slice()
                     .sort(
@@ -261,12 +349,60 @@ export function prepareReflections(
                             a.facing.dot(pane.facing) -
                             b.facing.dot(pane.facing),
                     )
-                    .filter(
-                        (other) =>
-                            other.mesh !== pane.partner &&
-                            pane.onto.includes(other.home) &&
-                            inViewOf(other, inner),
-                    );
+                    .filter((other) => {
+                        if (
+                            other.mesh === pane.partner ||
+                            !pane.onto.includes(other.home)
+                        ) {
+                            return false;
+                        }
+
+                        // Where the candidate lands on the screen this pane's
+                        // camera draws, and then what survives being seen
+                        // through this pane.
+                        //
+                        // This replaces a frustum test, and the difference is
+                        // the whole of why a room of four mirrors could not be
+                        // made deep. A frustum is the entire screen, so every
+                        // pane saw every other one at every level and the tree
+                        // branched by three per bounce — 43 million passes at
+                        // sixteen deep, asked of a budget of ninety-six. The
+                        // budget then decided *which* branch got the depth
+                        // rather than how deep the room went, and it decided it
+                        // by array order, which is the one thing a symmetric
+                        // room cannot survive.
+                        //
+                        // An opening is not a screen. Two mirrors facing each
+                        // other keep nearly all of it and run deep; a mirror
+                        // off to one side is a sliver through the first bounce
+                        // and nothing through the second, so that chain ends
+                        // itself. Same panes, same budget, and the depth lands
+                        // where the picture is.
+                        const rect = apertureOf(
+                            other.mesh,
+                            inner,
+                            roomFor(measured, depth),
+                        );
+
+                        if (rect === null) {
+                            return false;
+                        }
+
+                        const left = narrow(
+                            through,
+                            rect,
+                            roomFor(kept, depth),
+                        );
+
+                        if (left === null || !worthDrawing(left)) {
+                            return false;
+                        }
+
+                        copyAperture(left, slots[taken]);
+                        taken++;
+
+                        return true;
+                    });
 
                 // Deepest branch first, and spent from one counter.
                 //
@@ -283,9 +419,11 @@ export function prepareReflections(
                 // see, and that is kept by resetting the counter for each of
                 // them below, so no mirror is shallow because of where it sits
                 // in an array.
-                for (const other of kids) {
-                    deepen(other, inner, depth + 1, allowed);
-                }
+                kids.forEach((other, at) => {
+                    deepen(other, inner, depth + 1, allowed, slots[at]);
+                });
+
+                drew = kids;
             }
 
             // Running out of `allowed` is the end of the tunnel; running out
@@ -323,8 +461,41 @@ export function prepareReflections(
 
             for (const other of panes) {
                 if (!deepest) {
-                    other.mesh.visible = true;
-                    other.show(depth + 1);
+                    // **Only what this pass drew, and this is the whole of
+                    // "many walls" the other way round.**
+                    //
+                    // Every pane in the level used to be shown one level in,
+                    // whether or not this pass had drawn it there. A pane it
+                    // had not drawn still held a picture at that depth — from
+                    // some other chain, some other viewpoint — and a pane
+                    // samples by screen position, so that picture was pasted
+                    // onto this wall registered to a camera it was never taken
+                    // from. Down a corridor of portals two adjacent viewpoints
+                    // are nearly the same picture and it passes; between two
+                    // mirrors at right angles it is a different room entirely,
+                    // smeared across a surface at the wrong angle. That is
+                    // *super stretched*, and it was 45 of every 290 showings in
+                    // a four-mirror room, measured.
+                    //
+                    // A mirror that was not drawn comes out of the picture and
+                    // the wall behind it is drawn instead — `buildWall` puts
+                    // one a hair behind every mirror for exactly this. It costs
+                    // nothing on screen, because the aperture test above only
+                    // drops a pane whose reflection does not overlap this
+                    // opening at all: it was not visible here to begin with.
+                    //
+                    // A portal is the opposite case and stays in. There is no
+                    // wall behind a mouth — taking it out leaves a hole to the
+                    // sky at the end of the corridor, which is the one thing
+                    // this engine has already learned reads worse than
+                    // anything else.
+                    const wasDrawn = drew.includes(other);
+
+                    other.mesh.visible = wasDrawn || !other.mirrored;
+
+                    if (other.mesh.visible) {
+                        other.show(depth + 1);
+                    }
 
                     continue;
                 }
@@ -377,36 +548,66 @@ export function prepareReflections(
                 // clip, and the tunnel of portals that this whole branch exists
                 // for would end in a hole. So a mouth stays in and reads a
                 // level further out, exactly as before.
+                // **A mirror ends on the wall it hangs on, at every depth.**
+                //
+                // Not only at the last of a deep chain: the cheap pass at depth
+                // zero — the one run for a pane the player cannot see — used to
+                // show every *other* mirror at level zero, which is the
+                // player's own view of them, pasted into a pass being drawn
+                // from somewhere else entirely. In a square room that never
+                // showed, because every wall was in view and there were no
+                // cheap passes. In Paul's mirrored **octagon** half the walls
+                // are behind you at any moment, and it was 24 wrong showings a
+                // frame.
+                //
+                // The reason this is safe now and was not before is the
+                // `readable` fallback it used to feed. A pane out of view is
+                // drawn at level zero and no deeper, so a pass asking it for
+                // level one got the nearest level that had ever been drawn —
+                // level zero, the bare-walled one — and the first reflection
+                // inside every mirror was a room with no mirrors in it. The
+                // showing loop above no longer asks: a pane is shown only at a
+                // level **this pass drew it at**, so nothing reads the cheap
+                // pass except the player, who cannot see it.
+                if (other.mirrored) {
+                    other.mesh.visible = false;
+
+                    continue;
+                }
+
                 if (depth >= 1) {
+                    // **A mirror ends on the wall it hangs on.**
+                    //
+                    // It used to be handed the level above instead, so that the
+                    // picture folded into itself and the eye could not find the
+                    // last bounce. That is a lovely idea and it is not what it
+                    // does: the level above was drawn from a camera one
+                    // reflection further out, and a pane samples by *screen
+                    // position*, so what got pasted on the wall was a different
+                    // view of the room registered to a camera it was never
+                    // taken from. Down a corridor of portals two adjacent
+                    // viewpoints are nearly the same picture and it passes.
+                    // Between two mirrors at right angles it is a different
+                    // room at the wrong angle — which is *super stretched*, and
+                    // it was 325 showings out of 462 in a four-mirror room.
+                    //
+                    // Hiding them was also tried, before this commit, and Paul
+                    // said *i am not seeing a seamless infinite room, i see
+                    // many walls*. He was right, and the walls were not the
+                    // fault: the tree was starved by the draw budget and ended
+                    // at the first or second bounce, so the walls landed where
+                    // he was looking. With the opening test above deciding
+                    // where a chain stops, a corridor now runs the full
+                    // `PORTAL_BOUNCES` and the wall lands sixteen reflections
+                    // back, a few pixels across — which is where the last
+                    // bounce of a real infinity mirror is too.
+                    //
+                    // So: **no pane ever shows a picture taken from a camera
+                    // other than the one looking at it.** A mirror that has run
+                    // out of levels comes out — handled above, for every
+                    // depth — and `buildWall` puts real plaster a hair behind
+                    // it. What is left here is portals.
                     other.mesh.visible = true;
-
-                    // **A mirror tiles into itself rather than ending.**
-                    //
-                    // It shows the level above, which already holds the level
-                    // above that, so the picture folds into itself and there is
-                    // no last bounce for the eye to find. One frame of lag per
-                    // level, which at this depth nobody can see, and it is how
-                    // a real infinity mirror works — that is a feedback loop
-                    // too, and also one frame behind.
-                    //
-                    // Hiding them here instead was tried, for one commit. It
-                    // draws the wall each mirror hangs on, which is honest and
-                    // is what a corridor of two facing mirrors wants — but a
-                    // room with four mirrored walls is not a corridor. It is a
-                    // plane tiled with rooms, and a wall at the end of every
-                    // branch tiles it with walls instead. Paul, immediately:
-                    // *i am not seeing a seamless infinite room, i see many
-                    // walls*.
-                    //
-                    // The level above is a different texture from the one being
-                    // written, so there is no read-and-write of one target. The
-                    // same level would be, which is what settled on black
-                    // before there was any geometry to seed it.
-                    if (other.mirrored) {
-                        other.show(depth - 1);
-
-                        continue;
-                    }
 
                     // **Paul's cheat, and the end of the tunnel.**
                     //
@@ -431,28 +632,11 @@ export function prepareReflections(
 
                     other.show(readsItself ? depth - 1 : depth);
                 } else {
-                    // The cheap pass, for a pane the player cannot see.
+                    // The cheap pass, for a portal mouth the player cannot see.
                     //
-                    // Only *this* pane comes out, not every pane in the level.
-                    // Taking them all out draws a room with no mirrors in it,
-                    // and in a room whose walls **are** mirrors that is a room
-                    // of bare walls — which is exactly what it looks like.
-                    //
-                    // It reaches the screen by the shortest possible route. A
-                    // pane out of view is drawn at depth 0 and no deeper, so
-                    // when some other pane's view asks it for level 1 there is
-                    // nothing there and `readable` falls back to the nearest
-                    // level that was drawn: level 0, the bare-walled one. So
-                    // the first reflection inside every mirror is a room with
-                    // no mirrors, and the corridor is walled a single bounce
-                    // in. Paul: *i am not seeing a seamless infinite room, i
-                    // see many walls*.
-                    //
-                    // Showing them at level 0 instead is a frame stale at
-                    // worst, and that is the trade this engine has already
-                    // written down for the far end of a tunnel: stale is a
-                    // decision taken deliberately and says so, black — or bare
-                    // — is just an unwritten buffer.
+                    // Mirrors have already come out above. A mouth cannot: it
+                    // is an opening, and taking it out leaves a hole to the sky
+                    // where the next room should be.
                     other.mesh.visible = other !== pane;
 
                     if (other !== pane) {
@@ -480,7 +664,7 @@ export function prepareReflections(
 
             spent = 0;
 
-            deepen(pane, camera, 0, seen ? PORTAL_BOUNCES : 0);
+            deepen(pane, camera, 0, seen ? PORTAL_BOUNCES : 0, WHOLE_SCREEN);
         }
 
         // Back around the player, for the view they actually get.
