@@ -278,14 +278,22 @@ it('takes the panes out of the deepest pass rather than reading what it writes',
         JS
     );
 
-    // At depth 0 there is no level further out to borrow a view from, so the
-    // panes go out of the pass entirely — a texture cannot be read and written
-    // at once. Everything is drawn flat, one pass each, no recursion.
+    // The hazard, stated exactly: a texture cannot be read and written at
+    // once, so the pane being drawn is out of its own pass. At depth 0 there is
+    // no level further out for it to borrow a view from, so it goes entirely.
+    //
+    // **Only that pane.** This used to take every pane in the level out, which
+    // is broader than the hazard needs and had a cost that took a day to find:
+    // it draws a room with no mirrors in it, and in a room whose walls *are*
+    // mirrors that is a room of bare walls. A pane out of view is drawn at
+    // depth 0 and no deeper, so the first reflection inside every mirror fell
+    // back to that bare-walled level and the corridor was walled one bounce in.
+    // Paul: *i am not seeing a seamless infinite room, i see many walls*.
     expect($answer['renders'])->toBe([
-        'render near@0 body=true hidden=near+far+glass+elsewhere',
-        'render far@0 body=true hidden=near+far+glass+elsewhere',
-        'render glass@0 body=true hidden=near+far+glass+elsewhere',
-        'render elsewhere@0 body=true hidden=near+far+glass+elsewhere',
+        'render near@0 body=true hidden=near',
+        'render far@0 body=true hidden=far',
+        'render glass@0 body=true hidden=glass',
+        'render elsewhere@0 body=true hidden=elsewhere',
     ]);
 });
 

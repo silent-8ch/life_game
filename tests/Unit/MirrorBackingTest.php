@@ -170,7 +170,7 @@ it('says outright whether a surface is a mirror', function (): void {
     expect($answer['mirrored'])->toBe([true, true]);
 });
 
-it('takes the mirrors out of the picture at the last bounce', function (): void {
+it('folds a mirror into itself at the last bounce', function (): void {
     $answer = mirrorBacking(<<<'JS'
         const deepest = Math.max(...shown.map((row) => row.drew));
 
@@ -179,22 +179,25 @@ it('takes the mirrors out of the picture at the last bounce', function (): void 
             hiddenAtDeepest: shown
                 .filter((row) => row.drew === deepest)
                 .map((row) => row.hidden),
-            hiddenAbove: shown
-                .filter((row) => row.drew === 0)
-                .map((row) => row.hidden),
             panes: scene.mirrors.length,
         }));
         JS);
 
-    // At the end of the tunnel every mirror is hidden, so what draws is the
-    // wall a centimetre behind each one. That is the whole fix: the corridor
-    // ends on a surface instead of on a loop of panes showing each other.
+    // A mirror stays in the picture at the last bounce and shows the level
+    // above it, which already holds the level above that — so the image folds
+    // into itself and there is no last bounce for the eye to find.
+    //
+    // Hiding them here was tried, for one commit, and draws the wall each
+    // mirror hangs on instead. That is right for a corridor of two facing
+    // mirrors and wrong for a room of four: a room of four is a plane tiled
+    // with rooms, and a wall at the end of every branch tiles it with walls.
+    //
+    // So nothing is hidden here at all. The pane being drawn is still taken
+    // out of its own pass — a texture cannot be read and written at once — but
+    // `render` does that itself through `partner`, not this loop, and the stub
+    // above stands in for `render`. What this asserts is that the recursion
+    // stopped taking mirrors out.
     foreach ($answer['hiddenAtDeepest'] as $hidden) {
-        expect($hidden)->toBe($answer['panes']);
-    }
-
-    // And nowhere above it, or there would be no reflection to nest.
-    foreach ($answer['hiddenAbove'] as $hidden) {
         expect($hidden)->toBe(0);
     }
 });

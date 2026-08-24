@@ -363,14 +363,36 @@ export function prepareReflections(
                 // clip, and the tunnel of portals that this whole branch exists
                 // for would end in a hole. So a mouth stays in and reads a
                 // level further out, exactly as before.
-                if (other.mirrored) {
-                    other.mesh.visible = false;
-
-                    continue;
-                }
-
                 if (depth >= 1) {
                     other.mesh.visible = true;
+
+                    // **A mirror tiles into itself rather than ending.**
+                    //
+                    // It shows the level above, which already holds the level
+                    // above that, so the picture folds into itself and there is
+                    // no last bounce for the eye to find. One frame of lag per
+                    // level, which at this depth nobody can see, and it is how
+                    // a real infinity mirror works — that is a feedback loop
+                    // too, and also one frame behind.
+                    //
+                    // Hiding them here instead was tried, for one commit. It
+                    // draws the wall each mirror hangs on, which is honest and
+                    // is what a corridor of two facing mirrors wants — but a
+                    // room with four mirrored walls is not a corridor. It is a
+                    // plane tiled with rooms, and a wall at the end of every
+                    // branch tiles it with walls instead. Paul, immediately:
+                    // *i am not seeing a seamless infinite room, i see many
+                    // walls*.
+                    //
+                    // The level above is a different texture from the one being
+                    // written, so there is no read-and-write of one target. The
+                    // same level would be, which is what settled on black
+                    // before there was any geometry to seed it.
+                    if (other.mirrored) {
+                        other.show(depth - 1);
+
+                        continue;
+                    }
 
                     // **Paul's cheat, and the end of the tunnel.**
                     //
@@ -395,7 +417,33 @@ export function prepareReflections(
 
                     other.show(readsItself ? depth - 1 : depth);
                 } else {
-                    other.mesh.visible = false;
+                    // The cheap pass, for a pane the player cannot see.
+                    //
+                    // Only *this* pane comes out, not every pane in the level.
+                    // Taking them all out draws a room with no mirrors in it,
+                    // and in a room whose walls **are** mirrors that is a room
+                    // of bare walls — which is exactly what it looks like.
+                    //
+                    // It reaches the screen by the shortest possible route. A
+                    // pane out of view is drawn at depth 0 and no deeper, so
+                    // when some other pane's view asks it for level 1 there is
+                    // nothing there and `readable` falls back to the nearest
+                    // level that was drawn: level 0, the bare-walled one. So
+                    // the first reflection inside every mirror is a room with
+                    // no mirrors, and the corridor is walled a single bounce
+                    // in. Paul: *i am not seeing a seamless infinite room, i
+                    // see many walls*.
+                    //
+                    // Showing them at level 0 instead is a frame stale at
+                    // worst, and that is the trade this engine has already
+                    // written down for the far end of a tunnel: stale is a
+                    // decision taken deliberately and says so, black — or bare
+                    // — is just an unwritten buffer.
+                    other.mesh.visible = other !== pane;
+
+                    if (other !== pane) {
+                        other.show(depth);
+                    }
                 }
             }
 
