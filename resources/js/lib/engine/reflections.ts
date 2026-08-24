@@ -207,7 +207,21 @@ export function prepareReflections(
             depth: number,
             allowed: number,
         ): void => {
-            if (depth < allowed && spent < share) {
+            // Decided **before** the recursion, not after it.
+            //
+            // `spent` is a running total for the whole subtree, so reading it
+            // afterwards asks "is the budget gone now", and by then it always
+            // is. Every parent on the way back up then declared itself the end
+            // of the tunnel — the pane at depth 0 included — and showed every
+            // other pane at its own level instead of one level in. The nesting
+            // collapsed to nothing, which read as a dark room with a bright
+            // floor and no sky.
+            //
+            // What was meant is "did this branch go any deeper", which is this
+            // question, asked here, once.
+            const goesDeeper = depth < allowed && spent < share;
+
+            if (goesDeeper) {
                 const inner = pane.aim(from);
 
                 // This pane's own continuation first — see `tunnelFirst`.
@@ -305,7 +319,7 @@ export function prepareReflections(
             // made it worse rather than better — measured, at 32: the chain
             // stopped reaching the one level that would have ended it, and the
             // corridor went from two levels of content to none.
-            const deepest = depth >= allowed || spent >= share;
+            const deepest = !goesDeeper;
 
             for (const other of panes) {
                 if (!deepest) {
