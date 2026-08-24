@@ -203,7 +203,7 @@ function mirrorRoomFrame(int $sides): array
 
         const nobody = { faceViewer: () => {}, object: { visible: false } };
 
-        prepareReflections(
+        const frame = prepareReflections(
             panes,
             [],
             nobody,
@@ -211,7 +211,25 @@ function mirrorRoomFrame(int $sides): array
             { faceViewer: () => {} },
             camera,
             null,
-        )({}, {});
+        );
+
+        // Several frames, and only the last one is audited.
+        //
+        // How deep the panes go is settled rather than set: `reach` starts low
+        // and climbs a level per frame until the cost stops it, so one frame
+        // measures the ramp instead of the answer. That it *does* settle is
+        // part of what is being asserted — a controller that oscillates would
+        // show up here as a depth that changes between the last two frames.
+        let before = 0;
+
+        for (let n = 0; n < 24; n++) {
+            before = log.length;
+            log.length = 0;
+            aimed.length = 0;
+            frame({}, {});
+        }
+
+        const settled = before === log.length;
 
         // Every showing, against the viewpoint it is being seen from.
         const written = new Map();
@@ -250,7 +268,24 @@ function mirrorRoomFrame(int $sides): array
             depths.set(drew.name, Math.max(depths.get(drew.name) ?? 0, drew.depth));
         }
 
+        const deepest = Math.max(...depths.values());
+
+        // Passes that drew a room with no mirrors in it, in the first few
+        // bounces — where the eye can still resolve one. That is what Paul
+        // reported as reflections to the side showing as walls.
+        //
+        // Deeper down they are legitimate and expected: a chain whose opening
+        // closes at eleven while the corridor beside it runs to fourteen has
+        // genuinely run out of anything to show, and depth zero is the pass for
+        // a pane behind the player, which is allowed no depth at all.
+        const bareNear = log.filter(
+            (drew) =>
+                drew.depth >= 1 && drew.depth <= 3 && drew.showing.length === 0,
+        ).length;
+
         process.stdout.write(JSON.stringify({
+            settled,
+            bareNear,
             draws: log.length,
             right,
             wrong,
@@ -285,6 +320,36 @@ it('never shows a reflection taken from another viewpoint', function (): void {
         ->and($answer['blank'])->toBe(0)
         ->and($answer['right'])->toBeGreaterThan(100);
 });
+
+it('draws no bare-walled room among the reflections the eye lands on',
+    function (): void {
+        $answer = mirrorRoomFrame(4);
+
+        // Paul, on the first version of the opening test: *I can see many
+        // mirrors straight ahead, but reflections to the side are showing as
+        // walls.*
+        //
+        // A pass that draws no panes at all draws a room with no mirrors in it,
+        // which is a bare-walled box — right at the very end of a chain, where
+        // there genuinely is nothing more to show, and wrong anywhere the eye
+        // can still resolve it. It used to happen at the **first bounce**,
+        // because the frame's draw budget was a running counter spent
+        // depth-first: the corridor straight ahead was walked first and took
+        // all of it, and the branches beside it met an empty purse. Measured at
+        // his spot: 8 of the 12 passes at depth one, and 125 of 230 over the
+        // whole frame.
+        //
+        // Two things fixed it and both were needed. The budget no longer stops
+        // a branch — one depth is shared by every branch in the frame instead,
+        // so the room gets shallower all at once. And `apertureOf` cuts a box
+        // at the near plane edge by edge rather than giving up and calling it
+        // the whole screen, which is what made the opening test able to prune
+        // at all: a mirror's camera stands behind its own wall, so nearly every
+        // side wall straddles it, and nearly every candidate was coming back
+        // unprunable. Without that, the honest tree is 42,857 passes to reach
+        // nine levels; with it, 662 to reach sixteen.
+        expect($answer['bareNear'])->toBe(0);
+    });
 
 it('sends every wall of a square room the same distance', function (): void {
     $answer = mirrorRoomFrame(4);

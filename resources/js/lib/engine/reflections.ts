@@ -13,6 +13,7 @@ import type { Aperture } from '@/lib/engine/aperture';
 import type { PropSet } from '@/lib/engine/build/things';
 import {
     PANE_CLEARANCE,
+    PANE_MILLISECONDS,
     PORTAL_BOUNCES,
     PORTAL_RENDER_BUDGET,
 } from '@/lib/engine/constants';
@@ -176,6 +177,51 @@ export function prepareReflections(
     const roomFor = (store: Aperture[], depth: number): Aperture =>
         store[Math.min(depth, store.length - 1)];
 
+    /**
+     * How many levels deep every pane in the frame is allowed to go.
+     *
+     * One number for the whole frame, carried between frames and moved a level
+     * at a time to hold the cost near what a frame can afford. That it is
+     * **one** number is the point: a room too expensive for sixteen levels gets
+     * shallower everywhere at once, rather than keeping whichever branch the
+     * recursion happened to walk first and walling the rest.
+     *
+     * It starts low and climbs. The alternative — starting at `PORTAL_BOUNCES`
+     * and falling — spends the first frame in a level nobody has measured
+     * drawing the full tree, and the first frame is the one where every texture
+     * and every render target is also being made.
+     */
+    let reach = 2;
+
+    /**
+     * How long the passes took last time, smoothed.
+     *
+     * Counting passes alone is not enough, and the reason is which part of a
+     * pass is expensive. A level deep down is drawn into a target an eighth of
+     * the size, so it costs almost no *pixels* — but it costs a whole scene
+     * traversal and a full set of draw calls like any other, and that part does
+     * not shrink at all. Six hundred passes is a few milliseconds of GPU and
+     * most of a frame of CPU.
+     *
+     * So the depth is held against the clock as well as the count, and the
+     * clock is what makes this fit a machine rather than a guess. A fast one
+     * gets more levels; a slow one gets fewer, instead of a slideshow.
+     *
+     * Smoothed because a single frame is noisy — a texture upload or a
+     * collection lands in one and would otherwise drop a level for no reason.
+     */
+    let took = 0;
+
+    /**
+     * A brake, not a budget.
+     *
+     * Nothing should reach this: `reach` settles within two or three frames and
+     * holds the count near the budget. It is here so that one frame in a level
+     * nobody has tried cannot hang the tab while that happens. Generous on
+     * purpose — a brake that is really a budget is the thing this replaced.
+     */
+    const PANIC = PORTAL_RENDER_BUDGET * 4;
+
     return (renderer, scene) => {
         // Whatever was pulled in front of the player last frame goes back where
         // it belongs before anything is drawn, or every other pane's camera
@@ -184,67 +230,13 @@ export function prepareReflections(
             portal.release();
         }
 
-        /**
-         * How much of the frame's budget this top-level pane has left.
-         *
-         * Per pane rather than per frame, and that is the fix for a room with
-         * four mirrored walls. Paul drew one — an eight-metre square with every
-         * side a mirror — and reported *some mirrors are black, some are super
-         * stretched*.
-         *
-         * Four mutually visible panes means each recurses into the other three,
-         * so the tree is 3^depth and `PORTAL_BOUNCES` of 8 asks for 6561 draws
-         * against a budget of 40. Shared as one counter spent depth-first in
-         * array order, the first pane in the list took the whole thing and the
-         * other three got a single shallow draw each. That is both of his
-         * words: **black** where a depth was never drawn at all, and
-         * **stretched** because `readable()` falls back to the nearest depth
-         * that *was* drawn — a target this pane holds from some other camera
-         * this frame — and a pane samples by screen position, so a picture
-         * taken from somewhere else smears across it.
-         *
-         * A share each cannot starve anybody. It does not make the deep case
-         * cheap, and it is not meant to: what it guarantees is that every pane
-         * the player can see is drawn from the player's own camera every frame,
-         * and that no pane's depth depends on where it happens to sit in an
-         * array.
-         *
-         * The corridor cases are untouched. A portal pair skips its own partner
-         * two lines down, so its branching is nearly nothing and eight bounces
-         * cost eight draws — well inside any share.
-         */
+        /** The panes the player can see for themselves this frame. */
         const inView = panes.filter((pane) => inViewOf(pane, camera));
 
-        /** Draws this frame's panes have left between them. */
-        let spent = 0;
+        /** Passes drawn so far this frame, for the depth controller below. */
+        let drawn = 0;
 
-        // Never less than the depth one pane's own chain needs.
-        //
-        // Dividing the budget among the panes in view stops any one of them
-        // taking the lot, which is what a room of four mirrors needed. But
-        // divide far enough and every pane is starved instead: at a budget of
-        // 16 with four mirrors in view each got **four** draws for a chain that
-        // wants `PORTAL_BOUNCES`, so half the corridor was never drawn. The end
-        // of it went black, and the fallback then showed a level that did not
-        // match the one around it — which is exactly the pair of symptoms Paul
-        // reports, *black and super stretched*, in exactly the room he reports
-        // them in.
-        //
-        // **That was mine.** A-23 cut the budget from 40 to 16 on measurements
-        // taken at level 8 and in the portal demo, and neither has four
-        // mutually visible panes; at 40 the share was 10 and the chain fitted.
-        // The floor is what makes the cut safe rather than the number: a pane
-        // the player can see is always allowed the depth its own tunnel needs,
-        // and the division only decides who gets more than that.
-        //
-        // The cost is bounded by the panes actually in view rather than by the
-        // budget, so a mirrored octagon costs eight chains instead of four.
-        // Correctness first: an illusion that ends in a black wall is not worth
-        // the milliseconds it saves.
-        const share = Math.max(
-            PORTAL_BOUNCES,
-            Math.floor(PORTAL_RENDER_BUDGET / Math.max(inView.length, 1)),
-        );
+        const began = performance.now();
 
         /**
          * Draws a pane as seen from a viewpoint. Going deeper draws whatever
@@ -270,19 +262,32 @@ export function prepareReflections(
              */
             aperture: Aperture,
         ): void => {
-            // Decided **before** the recursion, not after it.
+            // **A branch ends because of its own depth, never because another
+            // branch spent the money first.**
             //
-            // `spent` is a running total for the whole subtree, so reading it
-            // afterwards asks "is the budget gone now", and by then it always
-            // is. Every parent on the way back up then declared itself the end
-            // of the tunnel — the pane at depth 0 included — and showed every
-            // other pane at its own level instead of one level in. The nesting
-            // collapsed to nothing, which read as a dark room with a bright
-            // floor and no sky.
+            // This used to also ask `spent < share` — a running count of passes
+            // for the whole frame — and that one clause is what Paul saw as *I
+            // can see many mirrors straight ahead, but reflections to the side
+            // are showing as walls*. Depth-first, the corridor is drawn first
+            // and drills to sixteen; by the time the recursion unwinds to the
+            // side branches at depth one or two the purse is empty, so they get
+            // no kids, and a pane with no kids draws a room with no mirrors in
+            // it. Measured in `hall-of-mirrors`: **8 of the 12 passes at depth
+            // one rendered bare walls**, 125 of 230 over the whole frame.
             //
-            // What was meant is "did this branch go any deeper", which is this
-            // question, asked here, once.
-            const goesDeeper = depth < allowed && spent < share;
+            // A budget spent depth-first cannot be fair, because depth-first is
+            // exactly an ordering. What bounds the cost now is `allowed`, which
+            // is the same number for every branch in the frame, and the opening
+            // test below, which is a property of the geometry rather than of
+            // the order it was walked in. `reach` moves that number up and down
+            // between frames to hold the pass count near
+            // `PORTAL_RENDER_BUDGET`, so the room gets shallower **all at
+            // once** or not at all.
+            //
+            // `PANIC` is not a budget, it is a brake: one frame in a level
+            // nobody has tried yet must not be able to hang the tab while
+            // `reach` finds its level. It should never fire twice in a row.
+            const goesDeeper = depth < allowed && drawn < PANIC;
 
             /**
              * The panes this pass actually drew one level in.
@@ -645,7 +650,7 @@ export function prepareReflections(
                 }
             }
 
-            spent++;
+            drawn++;
 
             drawPane(pane, renderer, scene, from, depth);
 
@@ -656,15 +661,51 @@ export function prepareReflections(
 
         for (const pane of panes) {
             // A pane the player cannot see still needs its own view drawn, in
-            // case another pane is looking at it, but it is not worth spending
-            // the frame's depth on. What is in front of them gets that — and it
-            // costs one draw, outside anybody's share, which is why the share is
-            // divided among the panes in view rather than among all of them.
+            // case another pane is looking at it, but it is not worth any depth.
+            // Nothing reads that pass except the player, who cannot see it: a
+            // pane that turns up in some other pane's reflection is drawn by
+            // that chain, at that chain's depth, from that chain's camera.
             const seen = inView.includes(pane);
 
-            spent = 0;
+            deepen(pane, camera, 0, seen ? reach : 0, WHOLE_SCREEN);
+        }
 
-            deepen(pane, camera, 0, seen ? PORTAL_BOUNCES : 0, WHOLE_SCREEN);
+        const spentMs = performance.now() - began;
+
+        // **How deep the next frame goes, decided by what this one cost.**
+        //
+        // The same number for every branch, which is the whole point: a room
+        // that cannot afford sixteen levels gets shallower everywhere at once
+        // rather than keeping one corridor and walling the sides. Paul drew the
+        // room that proves it and reported exactly that failure twice.
+        //
+        // Held against two things, because one is not enough. The **count**
+        // bounds memory and draw calls and is predictable. The **clock** is
+        // what actually fits the machine: a pass deep down draws into a target
+        // an eighth of the size and costs almost no pixels, but it costs a
+        // whole scene traversal like any other, and that is the part that adds
+        // up. Either being over is enough to give a level back.
+        //
+        // It moves one level at a time so the depth cannot flicker as the
+        // player turns, and it grows only when the frame came in comfortably
+        // under both — a controller that grows at its own threshold oscillates
+        // across it for ever, and this one did, between nine levels and ten,
+        // every frame. Three quarters is enough room for the next level, which
+        // costs about a fifth more than the one before it. Two or three frames
+        // to settle, which at sixty a second nobody can see.
+        took = took === 0 ? spentMs : took * 0.8 + spentMs * 0.2;
+
+        const overCount = drawn > PORTAL_RENDER_BUDGET;
+        const overClock = took > PANE_MILLISECONDS;
+
+        if (overCount || overClock) {
+            reach = Math.max(1, reach - 1);
+        } else if (
+            reach < PORTAL_BOUNCES &&
+            drawn * 4 < PORTAL_RENDER_BUDGET * 3 &&
+            took * 4 < PANE_MILLISECONDS * 3
+        ) {
+            reach += 1;
         }
 
         // Back around the player, for the view they actually get.

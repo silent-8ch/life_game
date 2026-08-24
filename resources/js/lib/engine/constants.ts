@@ -143,39 +143,46 @@ export const PANE_TEXELS_DOWN = 1152;
 export const PORTAL_BOUNCES = 16;
 
 /**
- * The most offscreen portal passes a frame may spend. A level thick with portals
- * would otherwise cost more than the frame it is in, so depth is given up before
- * frame rate is.
+ * About how many pane passes a frame should cost, across the whole level.
  *
- * ## Why 96
+ * **This is a target, not a cut-off, and that changed what the number means.**
+ * It used to gate the recursion directly — a running count checked at every
+ * node, so a branch stopped the moment the frame's money ran out. Depth-first,
+ * that is an ordering rather than a budget: the corridor is walked first and
+ * drills to `PORTAL_BOUNCES`, and by the time the recursion unwinds to the
+ * branches beside it there is nothing left, so they get no depth at all. A pane
+ * with no depth draws a room with no mirrors in it. Paul, in a room with four
+ * mirrored walls: *I can see many mirrors straight ahead, but reflections to
+ * the side are showing as walls.* Measured at his spot: **8 of the 12 passes at
+ * the first bounce rendered bare walls**, and 125 of 230 over the frame.
  *
- * It was 40, then 16, and 16 was too mean by a long way.
+ * `reflections.ts` now holds one depth for the whole frame and moves it a level
+ * at a time between frames to keep the count near this number. So the room gets
+ * shallower everywhere at once, which is the only way a symmetric room can
+ * degrade without looking broken, and this number decides *how deep* rather
+ * than *who goes without*.
  *
- * The cut to 16 was measured — and measured in the wrong rooms. Level 8 and the
- * portal demo have two panes in view at the spots that were swept, and with the
- * share divided among the panes in view two is the case where a small budget
- * still buys a long chain. **A room of mirrors is the case that pays**: four in
- * view at 16 is four draws each, and Paul saw exactly that as *one reflection
- * per mirror*. He also noticed the corridors had lost levels, which is the same
- * arithmetic on portals — ten draws down to eight.
+ * ## Why 640
  *
- * At 96 a pane in a room of four gets twenty-four, which is a full chain of
- * `PORTAL_BOUNCES` with enough left for the branches beside it, and a corridor
- * gets more than it ever had. The floor below means the division can never
- * starve a pane whatever the budget is; this decides how much *more* than the
- * bare chain each one gets.
+ * It was 96 while it was still a cut-off, and 40 and 16 before that. As a target
+ * it can be much larger, because what actually bounds the tree is the opening
+ * test in `aperture.ts` — a branch ends where its reflection stops overlapping
+ * the one showing it, which is a property of the room rather than of the purse.
+ * Uncapped, a four-mirror room asks 662 passes for the full sixteen levels and
+ * an octagon 980.
  *
- * The sweep that produced 16 is still worth reading, because what it got wrong
- * was where it looked rather than how it measured. At level 8's spawn — five
- * panes, two in view — over the scan's thirty fixed frames: 40 gave 793 passes
- * at 22.9 ms a frame, 24 gave 530 at 18.0, 16 gave 520 at 18.0, 8 gave 514 at
- * 19.6. The curve really does flatten there, and all eighteen scan spots really
- * were identical at 16 and 40.
+ * 640 is above the first and below the second on purpose. It is not a number
+ * anybody should trust further than the two rooms it was measured in; what
+ * makes it safe is that being wrong costs levels rather than fairness, and
+ * `PANE_MILLISECONDS` catches the case where a machine cannot afford what the
+ * count allows.
  *
- * **None of those spots is a room of mirrors.** Eighteen identical pictures
- * said nothing about the one case that pays for depth, and the man playing it
- * found the difference in a morning. A sweep is only ever evidence about the
- * places it was swept.
+ * Most of those passes are cheap. `scaleAt` in portal-surface.ts halves a
+ * target every couple of levels down to an eighth, so a pass at depth seven
+ * costs a sixty-fourth of a pass at depth zero. Only the first three levels are
+ * worth counting for pixels, and there are seventeen of them in a room of four
+ * mirrors — but every pass costs a scene traversal whatever its size, which is
+ * why there is a clock as well.
  *
  * ## What this does not fix
  *
@@ -191,7 +198,29 @@ export const PORTAL_BOUNCES = 16;
  * thing in here made entirely of depth. Freeing targets nobody has sampled for
  * a while is the fix, and it is a task rather than a constant.
  */
-export const PORTAL_RENDER_BUDGET = 96;
+export const PORTAL_RENDER_BUDGET = 640;
+
+/**
+ * How long a frame should be willing to spend drawing panes, in milliseconds.
+ *
+ * The count above bounds draw calls and memory and is predictable. This bounds
+ * the thing that actually decides whether the game is playable, and it is not
+ * the same thing: `scaleAt` shrinks a deep target to an eighth, so a pass at
+ * depth ten costs almost no pixels — but it costs a whole scene traversal and a
+ * full set of draw calls like every other pass, and that part does not shrink.
+ * Six hundred passes is a few milliseconds of GPU and most of a frame of CPU.
+ *
+ * Holding the depth against a clock rather than only a count is what makes the
+ * illusion fit the machine it is running on. A fast one gets more levels of
+ * mirror; a slow one gets fewer, which is the right way to be slow.
+ *
+ * Six of a sixteen-millisecond frame, leaving the rest for the pass the player
+ * actually looks at, the physics and everything else. Measured on the frame's
+ * own wall clock, which for this workload is mostly honest: the cost being
+ * bounded is CPU-side scene traversal, and that is exactly what wall clock
+ * catches. It undercounts GPU work, which is the smaller half here.
+ */
+export const PANE_MILLISECONDS = 6;
 
 /**
  * How many times a frame will let action lines drive action lines before it stops.

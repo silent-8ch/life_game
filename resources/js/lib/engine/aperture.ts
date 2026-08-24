@@ -13,6 +13,12 @@ import * as THREE from 'three';
  * and the answer was whichever pane happened to come first — which is the one
  * thing a symmetric room cannot survive.
  *
+ * Measured in `hall-of-mirrors` with nothing else changed: 662 passes reach all
+ * sixteen levels in every direction, and the count per level climbs 4, 5, 8,
+ * 12, 17, 23 — near enough linear. That is the shape the method of images
+ * predicts, a ring of virtual rooms growing with the distance, and it is what
+ * three-to-the-power-of-depth turns into once the openings are measured.
+ *
  * A pane is not a screen, though. It is a **hole**, and what can be seen
  * through a hole is bounded by the hole. Two mirrors facing each other down a
  * room show each other at nearly full size, so that chain runs deep. A mirror
@@ -61,16 +67,54 @@ export const WHOLE_SCREEN: Aperture = {
  * per bounce and should run until `PORTAL_BOUNCES` stops it.
  *
  * A two-hundredth of the screen is about ten pixels across at 1080p. It is not
- * what bounds the cost — measured in `hall-of-mirrors`, moving it from a
- * thousandth to a twenty-fifth changed a frame from 245 passes to 210, because
- * what ends a chain is nearly always the openings failing to overlap at all
- * rather than getting small. It is here so that a chain which shrinks without
- * ever quite closing has an end.
+ * what bounds the cost — what ends a chain is nearly always the openings
+ * failing to overlap at all, which is `narrow` returning null rather than this.
+ * It is here so that a chain which shrinks without ever quite closing has an
+ * end.
  */
 export const APERTURE_FLOOR = 0.005;
 
-const corner = new THREE.Vector4();
 const viewProjection = new THREE.Matrix4();
+
+/** The eight corners of a box, in clip space. Reused; never handed out. */
+const clip = Array.from({ length: 8 }, () => new THREE.Vector4());
+
+/**
+ * Which corners the twelve edges of a box join, given the bit-per-axis
+ * numbering used above: bit 1 is x, bit 2 is y, bit 4 is z. An edge is a pair
+ * differing in exactly one bit.
+ */
+const BOX_EDGES: ReadonlyArray<readonly [number, number]> = [
+    [0, 1],
+    [2, 3],
+    [4, 5],
+    [6, 7],
+    [0, 2],
+    [1, 3],
+    [4, 6],
+    [5, 7],
+    [0, 4],
+    [1, 5],
+    [2, 6],
+    [3, 7],
+];
+
+/**
+ * How far in front of the camera a point has to be to be worth projecting.
+ *
+ * Not zero: at exactly zero the divide is infinite, and a hair either side of
+ * it swings a point from one edge of the screen to the other. Small enough that
+ * nothing real is ever cut by it — a camera's own near plane is centimetres.
+ */
+const NEAR_ENOUGH = 1e-6;
+
+/** Grows a rectangle to hold a point. */
+function stretch(into: Aperture, x: number, y: number): void {
+    into.left = Math.min(into.left, x);
+    into.right = Math.max(into.right, x);
+    into.bottom = Math.min(into.bottom, y);
+    into.top = Math.max(into.top, y);
+}
 
 /**
  * Where a pane's own rectangle lands on the screen a camera draws, or null if
@@ -82,11 +126,13 @@ const viewProjection = new THREE.Matrix4();
  * safe direction. Being too generous costs a pass; being too mean loses a
  * reflection that was really there.
  *
- * **A corner behind the camera makes the answer the whole screen.** Dividing by
- * a negative `w` puts a point on the wrong side of the screen and inside-out,
- * so a pane straddling the near plane would measure as a rectangle off in a
- * corner — and a pane straddling the near plane is exactly the one filling the
- * view. There is no cheap right answer, and the conservative one is free.
+ * The box is cut at the near plane edge by edge rather than corner by corner.
+ * Dividing by a negative `w` puts a point on the wrong side of the screen and
+ * inside-out, so the corners of a box straddling the camera cannot simply be
+ * projected — and in a room of mirrors nearly every box straddles the camera,
+ * because a mirror's camera stands behind its own wall and the side walls of
+ * the room run past it in both directions. See the loop below for what
+ * answering "the whole screen" to that cost.
  */
 export function apertureOf(
     mesh: THREE.Mesh,
@@ -123,42 +169,88 @@ export function apertureOf(
     );
     viewProjection.multiply(mesh.matrixWorld);
 
+    for (let at = 0; at < 8; at++) {
+        clip[at]
+            .set(
+                (at & 1) === 0 ? bounds.min.x : bounds.max.x,
+                (at & 2) === 0 ? bounds.min.y : bounds.max.y,
+                (at & 4) === 0 ? bounds.min.z : bounds.max.z,
+                1,
+            )
+            .applyMatrix4(viewProjection);
+    }
+
     into.left = Infinity;
     into.right = -Infinity;
     into.bottom = Infinity;
     into.top = -Infinity;
 
-    for (let at = 0; at < 8; at++) {
-        corner.set(
-            (at & 1) === 0 ? bounds.min.x : bounds.max.x,
-            (at & 2) === 0 ? bounds.min.y : bounds.max.y,
-            (at & 4) === 0 ? bounds.min.z : bounds.max.z,
-            1,
-        );
+    let any = false;
 
-        corner.applyMatrix4(viewProjection);
+    // **The twelve edges, each cut at the near plane — not the eight corners.**
+    //
+    // Bailing to the whole screen the moment one corner sat behind the camera
+    // was the first version, and it read as "conservative" while being the
+    // thing that stopped this file working. A mirror's camera stands *behind*
+    // its own wall, and the side walls of the room run from well in front of
+    // that point to well behind it — so in a room of mirrors the box of a side
+    // wall straddles the camera nearly every time, and nearly every candidate
+    // came back as the whole screen. With no rectangle to intersect there is no
+    // pruning, and the tree goes back to branching by three per bounce:
+    // measured with the brake off, 42,857 passes to reach nine levels in a
+    // four-mirror room.
+    //
+    // Clipping each edge to the near plane and taking what survives is the
+    // right answer and costs twelve segments instead of eight points. A box
+    // that genuinely swallows the camera still comes out as the whole screen,
+    // because a vertex held at the plane projects a long way out and the
+    // clamp below catches it — so the conservative case is kept where it is
+    // real, and paid for only there.
+    for (const [from, to] of BOX_EDGES) {
+        const start = clip[from];
+        const end = clip[to];
+        const startAhead = start.w > NEAR_ENOUGH;
+        const endAhead = end.w > NEAR_ENOUGH;
 
-        // Behind the camera, or exactly on it. Nothing measured from here can
-        // be trusted, so the pane is treated as covering everything.
-        if (corner.w <= 0) {
-            into.left = -1;
-            into.right = 1;
-            into.bottom = -1;
-            into.top = 1;
-
-            return into;
+        if (!startAhead && !endAhead) {
+            continue;
         }
 
-        const x = corner.x / corner.w;
-        const y = corner.y / corner.w;
+        any = true;
 
-        into.left = Math.min(into.left, x);
-        into.right = Math.max(into.right, x);
-        into.bottom = Math.min(into.bottom, y);
-        into.top = Math.max(into.top, y);
+        if (startAhead) {
+            stretch(into, start.x / start.w, start.y / start.w);
+        }
+
+        if (endAhead) {
+            stretch(into, end.x / end.w, end.y / end.w);
+        }
+
+        if (startAhead !== endAhead) {
+            // Where the edge crosses the near plane, in the one parameter that
+            // matters. `w` is linear along the segment in clip space, so this
+            // is exact rather than an approximation.
+            const along = (NEAR_ENOUGH - start.w) / (end.w - start.w);
+            const w = NEAR_ENOUGH;
+
+            stretch(
+                into,
+                (start.x + (end.x - start.x) * along) / w,
+                (start.y + (end.y - start.y) * along) / w,
+            );
+        }
     }
 
-    if (into.right < -1 || into.left > 1 || into.top < -1 || into.bottom > 1) {
+    if (!any) {
+        return null;
+    }
+
+    into.left = Math.max(-1, into.left);
+    into.right = Math.min(1, into.right);
+    into.bottom = Math.max(-1, into.bottom);
+    into.top = Math.min(1, into.top);
+
+    if (into.right <= into.left || into.top <= into.bottom) {
         return null;
     }
 

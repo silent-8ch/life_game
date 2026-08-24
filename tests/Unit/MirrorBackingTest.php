@@ -66,12 +66,13 @@ function mirrorBacking(string $body): array
         const shown = [];
 
         for (const pane of scene.mirrors) {
-            pane.aim = () => {
-                const inner = new THREE.PerspectiveCamera(75, 1, 0.1, 100);
-                inner.updateMatrixWorld(true);
-
-                return inner;
-            };
+            // `aim` is the real one. It was stubbed to hand back a camera at
+            // the world origin, which was harmless while recursion was decided
+            // by a bounding sphere somebody had also stubbed — and is not now
+            // that it is decided by where the panes actually land on screen. A
+            // mirror camera parked at the origin cannot see the far wall, so
+            // the corridor these two mirrors make ended after one bounce. It
+            // does no drawing and needs no renderer; only `render` does.
             pane.viewerAt = () => ({ x: 0, z: 0, yaw: 0 });
             pane.render = (r, s, from, depth) => {
                 shown.push({
@@ -79,7 +80,10 @@ function mirrorBacking(string $body): array
                     hidden: scene.mirrors.filter((o) => !o.mesh.visible).length,
                 });
             };
-            pane.bounds = new THREE.Sphere(new THREE.Vector3(0, 0, -5), 1);
+            // `bounds` is the real one too, for the same reason: it is what
+            // decides whether the player can see a pane at all, and a stub
+            // sphere five metres down -z said yes to both walls of a corridor
+            // running the other way.
         }
 
         const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 100);
@@ -87,7 +91,7 @@ function mirrorBacking(string $body): array
 
         const noop = { object: { visible: false }, faceViewer() {}, follow() {} };
 
-        prepareReflections(
+        const frame = prepareReflections(
             scene.mirrors,
             [],
             noop,
@@ -95,7 +99,16 @@ function mirrorBacking(string $body): array
             noop,
             camera,
             null,
-        )({ getDrawingBufferSize: (v) => v.set(64, 64) }, {});
+        );
+
+        // Several frames, because how deep the panes go is now settled rather
+        // than set. `reach` starts low on purpose and climbs a level per frame
+        // until the cost stops it, so one frame measures the ramp instead of
+        // the answer.
+        for (let n = 0; n < 24; n++) {
+            shown.length = 0;
+            frame({ getDrawingBufferSize: (v) => v.set(64, 64) }, {});
+        }
 
         {$body}
         JS;
