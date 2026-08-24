@@ -287,7 +287,25 @@ export function prepareReflections(
             // So a pane the budget could not reach keeps an undrawn target and
             // shows black. Black is confusing; smeared is worse, because it
             // looks like a fault in the geometry rather than a missing draw.
-            const deepest = depth >= allowed;
+            // The end of the tunnel is wherever this branch actually stops,
+            // which is not only where it was allowed to.
+            //
+            // These were deliberately kept apart, and the reason was sound at
+            // the time: the old ending handed a pane the view from one level
+            // out, which between two mirrors at right angles is a different
+            // room smeared across a surface it was never taken for. Better to
+            // leave that branch alone than to paint it wrong.
+            //
+            // The ending is a **wall** now, and a wall is right wherever the
+            // tunnel stops. Keeping them apart is what left every
+            // budget-stopped branch ending on nothing at all: the mirrors were
+            // only ever taken out of the picture at exactly `allowed`, so a
+            // branch that ran out of purse first never terminated on a surface
+            // and settled on black. That is also why asking for more bounces
+            // made it worse rather than better — measured, at 32: the chain
+            // stopped reaching the one level that would have ended it, and the
+            // corridor went from two levels of content to none.
+            const deepest = depth >= allowed || spent >= share;
 
             for (const other of panes) {
                 if (!deepest) {
