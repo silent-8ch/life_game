@@ -457,3 +457,16 @@ Five times in one session a number here said "fine" or "better" while Paul, look
 The habit that follows: when a report and a measurement disagree, the first question is not *which is right* but *what could this instrument not have seen*. Build the fixture that could show it, and only then decide.
 
 And a related trap, from the same session: a metric moving the right way is not evidence a change was good. Twice a number improved while the picture got worse.
+
+## A pane's read must be the identity, and a lens applied per level compounds
+Whatever a target holds at a point, the pane shows at that same point. Anything else is a lens — and a lens applied once per level of a tunnel is applied again inside itself, so whatever it does it does more of, the deeper you look.
+
+The rim guard used to be `mix(at, centre, clamp(edgeBias / reach, 0, 0.25))`: a pull towards the pane's own middle, sized in texels of the target. That is a **radial shrink**, it compounds down a chain, and it grows as targets get smaller with depth. Worked out down a corridor of two facing mirrors: about a third of a per cent at the first bounce, 3% at ten, 5% at fourteen — near enough 30% accumulated.
+
+Paul named it twice, and both descriptions are the signature of a scale error about a fixed point: *it looks like the shape is warped into a circle around a point*, standing at the centre of a four-mirror room with the vanishing point on his reticle; and *the illusion of two mirrors facing each other should be a room that vanishes to infinity — i see a distortion much sooner than the vanishing lines converging.*
+
+It is a **clamp** now, not a pull: the target is cropped to exactly the window the pane reads through, so straying past the rim *is* straying outside 0..1, and stopping a texel and a half short of the edge does the same job with no radial term. An inset costs a fixed number of texels wherever the pane is; a mix costs a fraction of the picture, which is what made it compound.
+
+`PaneReadTest` asserts the composed read is exactly ±1 scale and exactly centred, at fourteen depths with the window shrinking as it does down a real corridor. **Exactly, not nearly** — a scale of 0.99 per level is a third of the picture gone by fourteen levels, and would pass any tolerance loose enough to feel comfortable.
+
+Related trap for anything added to that shader: a per-fragment adjustment which looks harmless at one level is multiplied by the nesting. Test it composed, never singly — the old `crop` test asserted the right thing at one level and could not have caught this.

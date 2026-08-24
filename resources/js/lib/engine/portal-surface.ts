@@ -146,9 +146,7 @@ const VERTEX_SHADER = `
 
     uniform vec2 paneTexels;
     uniform float edgeBias;
-    uniform float shrink;
     varying vec4 vPane;
-    varying vec3 vMiddle;
 
     void main() {
         vec4 clip = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
@@ -170,14 +168,6 @@ const VERTEX_SHADER = `
             // the clipped edge takes its value from that corner.
             vPane = vec4(clip.xy * 0.5 + clip.w * 0.5, clip.z, clip.w);
 
-            // The pane's own middle, for the fragment shader to pull the read
-            // in towards. The same for every vertex, so nothing interpolates.
-            vec4 middle = projectionMatrix * modelViewMatrix * vec4(0.0, 0.0, 0.0, 1.0);
-
-            vMiddle = middle.w > 0.0
-                ? vec3(middle.xy / middle.w * 0.5 + 0.5, 1.0)
-                : vec3(0.5, 0.5, 0.0);
-
         gl_Position = clip;
 
         #include <logdepthbuf_vertex>
@@ -191,11 +181,9 @@ const FRAGMENT_SHADER = `
     uniform sampler2D pane;
     uniform vec2 paneTexels;
     uniform float edgeBias;
-    uniform float shrink;
     uniform vec2 paneScale;
     uniform vec2 paneOffset;
     varying vec4 vPane;
-    varying vec3 vMiddle;
 
     void main() {
         #include <logdepthbuf_fragment>
@@ -205,23 +193,6 @@ const FRAGMENT_SHADER = `
             // camera by definition.
             vec2 at = vPane.xy / vPane.w;
 
-            // Read a hair towards the middle of the pane rather than at its
-            // very edge. The pane and the mouth it fills line up to within a
-            // pixel, and on the far side of that pixel is the sky the tilted
-            // near plane left behind, which shows as a bright hairline round
-            // the portal.
-            if (vMiddle.z > 0.0) {
-                vec2 centre = vMiddle.xy;
-
-                // In texels, so a pane across the room is pulled in by as much
-                // as one in front of you. paneTexels is half the target and at
-                // runs 0..1, so the full width is twice it.
-                float reach = length((at - centre) * paneTexels * 2.0);
-
-                at = mix(at, centre, clamp(edgeBias / max(reach, 0.0001), 0.0, 0.25));
-                at = centre + (at - centre) * shrink;
-            }
-
             // From where this fragment lands in the pass being drawn, to
             // where that is in the target being read.
             //
@@ -230,11 +201,37 @@ const FRAGMENT_SHADER = `
             // was rendered through, and the mirror camera's left-for-right
             // turn (which is a negative x scale here and nothing more). All
             // three are fixed for a given pane at a given level, so they are
-            // multiplied out on the way in, by readThrough in this file.
-            //
-            // Last of all, after the edge bias, which is symmetric about the
-            // pane's own middle and so gives the same answer on either side.
+            // multiplied out on the way in.
             at = at * paneScale + paneOffset;
+
+            // Keep the read a hair inside the target.
+            //
+            // A pane and the mouth it fills line up to within a pixel, and on
+            // the far side of that pixel is whatever the tilted near plane left
+            // outside the opening — which shows as a bright hairline round the
+            // rim, there whenever the edge falls the wrong side of a pixel and
+            // gone a step later, so it flickers as the player walks.
+            //
+            // **A clamp, not a pull towards the middle**, and that difference
+            // is the whole of Paul's *it looks like the shape is warped into a
+            // circle around a point.* This used to mix the read towards the
+            // pane's own centre by up to a quarter, sized in texels of the
+            // target. That is a radial shrink, it is applied once per level, and
+            // levels nest — so it compounds, and it grows as the targets get
+            // smaller with depth. Worked out down his corridor of two facing
+            // mirrors: about a third of a per cent at the first bounce, three
+            // per cent at ten, five at fourteen, near enough thirty per cent
+            // accumulated. His words for it were also *i see a distortion much
+            // sooner than the vanishing lines converging*, which is what a fault
+            // that grows with depth looks like from inside the tunnel.
+            //
+            // Clamping does the same job with no radial term at all: the target
+            // is cropped to exactly the window this pane is read through, so
+            // straying past the rim *is* straying outside nought to one, and
+            // stopping half a texel short of the edge is the whole fix.
+            vec2 inset = edgeBias / max(paneTexels * 2.0, vec2(1.0));
+
+            at = clamp(at, inset, 1.0 - inset);
 
             gl_FragColor = vec4(texture2D(pane, at).rgb, 1.0);
 
@@ -512,9 +509,6 @@ export type PortalSurface = {
      * ones are what the pane shows when it is itself being looked at through a
      * pane, which is what turns a portal hung to face itself into a corridor.
      *
-     * `shrink` pulls the view in from the edges, so the same picture reads as
-     * one further away. It is what stands in for the level that was never
-     * drawn, at the end of the tunnel.
      */
     show: (
         depth: number,
@@ -829,7 +823,6 @@ export function createPortalSurface(
         name: 'ViewPane',
         uniforms: {
             pane: { value: targetAt(0).texture },
-            shrink: { value: 1 },
             // Half the target's size: NDC spans two, so this turns the reach
             // from the pane's middle into a count of texels.
             paneTexels: {
