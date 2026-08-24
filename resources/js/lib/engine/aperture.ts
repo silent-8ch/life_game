@@ -66,32 +66,31 @@ export const WHOLE_SCREEN: Aperture = {
  * which is the point, because a corridor of two facing mirrors barely shrinks
  * per bounce and should run until `PORTAL_BOUNCES` stops it.
  *
- * ## Why this is the number that buys depth
+ * ## What it buys and what it costs, which depends on the room
  *
- * It reads like a safety valve and it is the opposite: it is the lever. A
- * hundredth of the screen is about twenty pixels at 1080p, and raising the
- * floor to there **more than doubled how deep the illusion goes** while
- * costing a third of the passes.
+ * A **corridor** — two mirrors facing each other, or a wrap-around portal — is a
+ * single chain, so it costs one pass per bounce. A room that **branches** costs
+ * about the square of its depth, because the reflections of a four-mirror room
+ * are a lattice and there are more of them the further out you look. The same
+ * number therefore buys wildly different things:
  *
- * Measured in `hall-of-mirrors`, uncapped, with nothing else changed:
+ * | floor | two mirrors      | four mirrors        |
+ * | ----- | ---------------- | ------------------- |
+ * | 0.015 | 22 passes, 20 deep | 657 passes, 42 deep |
+ * | 0.012 | 27 passes, 25 deep | 1021 passes, 48 deep |
+ * | 0.010 | 33 passes, 31 deep | 1396 passes, 48 deep |
  *
- * | floor | passes | deepest |
- * | ----- | ------ | ------- |
- * | 0.005 |    521 |      14 |
- * | 0.01  |    488 |      23 |
- * | 0.02  |    193 |      24 |
- * | 0.04  |     82 |      12 |
+ * So this is the lever for how far a reflection goes, and lowering it is cheap
+ * in a corridor and expensive in anything that branches. It sits where a
+ * four-mirror room costs about what Paul has said runs smoothly.
  *
- * The reason is where the passes go. At the fourteenth bounce that room drew
- * 68 passes and about four of them were the corridor straight ahead — the only
- * ones large enough on screen to see. The other sixty-four were side chains
- * whose reflections were already a few pixels wide, and they were being paid
- * for out of the same frame. Cutting them at twenty pixels instead of ten hands
- * that budget to the chain the eye is actually following, which is what a
- * corridor of mirrors is made of.
- *
- * Too far the other way and it shows: at 0.04 the side chains end while they
- * are still plainly visible, and the depth falls with them.
+ * **What it cannot buy is a vanishing point.** The last patch is always about
+ * `floor` by `floor` — some twenty pixels square here — because that is what the
+ * floor means. Getting it down to something the eye cannot find would take a
+ * floor near a single pixel, and the branching cost grows as the square of the
+ * depth, so there is no setting where a room of four mirrors reaches it. That
+ * is a limit of drawing reflections by recursion, not a number that wants
+ * tuning.
  */
 export const APERTURE_FLOOR = 0.015;
 
@@ -311,10 +310,25 @@ export function worthDrawing(
     aperture: Aperture,
     floor: number = APERTURE_FLOOR,
 ): boolean {
-    return (
-        (aperture.right - aperture.left) / 2 >= floor &&
-        (aperture.top - aperture.bottom) / 2 >= floor
-    );
+    const across = (aperture.right - aperture.left) / 2;
+    const down = (aperture.top - aperture.bottom) / 2;
+
+    // **How much of the screen it covers, not how it measures on each axis.**
+    //
+    // This asked for *both* spans to clear the floor, which stops a reflection
+    // that is wide and short while it is still perfectly easy to see. Down a
+    // corridor of two facing mirrors — a room eight metres across and three
+    // tall — the height runs out first, and measured at Paul's own spot the
+    // chain stopped at the seventeenth bounce with the picture still **47
+    // pixels wide** and 16 tall. A patch that size at the end of a corridor is
+    // not a vanishing point, it is a thing you can look at. His words: *in two
+    // mirrors i do not see a vanishing point.*
+    //
+    // Area is the honest question — a reflection is worth another pass while
+    // there are pixels in it to see — and it does not care which way round the
+    // room is. The floor is squared so that it still means the same thing where
+    // the two agree: a patch of `floor` by `floor`.
+    return across * down >= floor * floor;
 }
 
 /**

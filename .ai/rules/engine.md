@@ -470,3 +470,18 @@ It is a **clamp** now, not a pull: the target is cropped to exactly the window t
 `PaneReadTest` asserts the composed read is exactly ±1 scale and exactly centred, at fourteen depths with the window shrinking as it does down a real corridor. **Exactly, not nearly** — a scale of 0.99 per level is a third of the picture gone by fourteen levels, and would pass any tolerance loose enough to feel comfortable.
 
 Related trap for anything added to that shader: a per-fragment adjustment which looks harmless at one level is multiplied by the nesting. Test it composed, never singly — the old `crop` test asserted the right thing at one level and could not have caught this.
+
+## The opening floor is on AREA, and what it costs depends on whether the room branches
+`worthDrawing` asks whether the opening still covers `floor * floor` of the screen, not whether each span separately clears `floor`. Both-axes stops a reflection that is wide and short while it is still plainly visible: down a corridor of two facing mirrors — a room 8 m across and 3 tall — the height runs out first, and the chain stopped at the seventeenth bounce with the picture still **47 pixels wide**. Paul: *in two mirrors i do not see a vanishing point.*
+
+A **corridor** costs one pass per bounce; a room that **branches** costs about the square of its depth, because its reflections are a lattice and there are more of them the further out you look. So one floor buys very different things:
+
+| floor | two mirrors | four mirrors |
+| --- | --- | --- |
+| 0.015 | 22 passes, 20 deep | 657 passes, 42 deep |
+| 0.012 | 27 passes, 25 deep | 1021 passes, 48 deep |
+| 0.010 | 33 passes, 31 deep | 1396 passes, 48 deep |
+
+**A vanishing point is not reachable this way, and that is a limit rather than a tuning problem.** The last patch of any chain is always about `floor` by `floor` — twenty pixels square at the current setting — because that is what the floor means. Getting it below what the eye can find needs a floor near one pixel, and the branching cost grows as the square of the depth, so no setting reaches it in a room of four mirrors. If that ending has to disappear rather than shrink, the lever is geometry and not passes: `build/images.ts` already hangs one reflected copy of the room behind each mirror for free, and nesting those would push the ending back further at no cost in passes.
+
+An ending is the same size wherever it lands, so **how soon** a room reaches one differs: an octagon has no parallel walls, so a chain turning a corner can be under the floor by the second bounce, where a square room's chains run straight and take twenty. `MirrorRoomTest` therefore counts shallow endings rather than forbidding them — what it guards is the old failure, a pane with a *large* opening and nothing in it.
