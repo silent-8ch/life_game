@@ -93,7 +93,7 @@ export const WHOLE_SCREEN: Aperture = {
  * Too far the other way and it shows: at 0.04 the side chains end while they
  * are still plainly visible, and the depth falls with them.
  */
-export const APERTURE_FLOOR = 0.01;
+export const APERTURE_FLOOR = 0.015;
 
 const viewProjection = new THREE.Matrix4();
 

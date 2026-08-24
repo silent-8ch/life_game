@@ -94,6 +94,52 @@ export type PaneWindow = {
 /** The whole picture: what the player's own camera is drawn through. */
 const WHOLE_VIEW: PaneWindow = { left: -1, right: 1, bottom: -1, top: 1 };
 
+/**
+ * The narrowest window a pass may be drawn through, in NDC.
+ *
+ * **This is a guard against wedging the GPU, not a quality setting.** Cropping
+ * a projection onto a window divides by that window's span, and the openings
+ * handed down the recursion have no floor under them: `narrow` returns a
+ * rectangle whenever two overlap *at all*, so a chain grazing the edge of a
+ * mirror produces a span of a millionth and a crop factor in the millions. What
+ * comes out is a projection whose numbers no longer mean anything, and the
+ * symptom is not a wrong picture — it is the page ceasing to paint while its
+ * scripts carry on. Paul: *the game crashed... looks like the game halts at
+ * some point.* This engine has met that failure once before, from pushing a
+ * clip plane forward, and the note left then says the same thing.
+ *
+ * A fiftieth of NDC is about twenty pixels across a 1080p screen, which is also
+ * about the smallest buffer worth allocating. Below it the window is widened
+ * about its own middle: the pass then draws a little more than will be read,
+ * which costs nothing and cannot divide by nearly nothing.
+ */
+const NARROWEST = 0.02;
+
+/** A window widened to something a projection can safely be cropped onto. */
+function safely(window: PaneWindow, into: PaneWindow): PaneWindow {
+    const spread = (low: number, high: number): [number, number] => {
+        const span = high - low;
+
+        if (span >= NARROWEST) {
+            return [low, high];
+        }
+
+        const middle = (low + high) / 2;
+
+        return [middle - NARROWEST / 2, middle + NARROWEST / 2];
+    };
+
+    const [left, right] = spread(window.left, window.right);
+    const [bottom, top] = spread(window.bottom, window.top);
+
+    into.left = left;
+    into.right = right;
+    into.bottom = bottom;
+    into.top = top;
+
+    return into;
+}
+
 const VERTEX_SHADER = `
     #include <common>
     #include <logdepthbuf_pars_vertex>
@@ -712,10 +758,23 @@ export function createPortalSurface(
             return targets[at] as THREE.WebGLRenderTarget;
         }
 
-        // Powers of two, so this is rare rather than every frame — a render
-        // target that resizes is a render target that reallocates.
-        if (held.width !== size.width || held.height !== size.height) {
-            held.setSize(size.width, size.height);
+        // **Grows, never shrinks**, and powers of two on top of that.
+        //
+        // `setSize` throws the texture away and makes another one. The window
+        // moves with the player, so a size that tracked it exactly would
+        // reallocate every frame, for every level of every pane — hundreds of
+        // textures a frame, which a driver will not forgive and which is the
+        // other half of Paul's *the game halts at some point*.
+        //
+        // Growing only means a target settles on the largest that level has
+        // ever needed and then stops. It costs a little memory in a room the
+        // player has walked all over, and buys never reallocating in one they
+        // are walking through now.
+        if (held.width < size.width || held.height < size.height) {
+            held.setSize(
+                Math.max(held.width, size.width),
+                Math.max(held.height, size.height),
+            );
         }
 
         return held;
@@ -1087,12 +1146,7 @@ export function createPortalSurface(
             // What this level is drawn through, remembered so that `show` can
             // hand the pane the mapping to read it back by, and so that
             // `targetAt` sizes the buffer for it.
-            const held = windows[indexOf(depth)];
-
-            held.left = window.left;
-            held.right = window.right;
-            held.bottom = window.bottom;
-            held.top = window.top;
+            const held = safely(window, windows[indexOf(depth)]);
 
             const beyond = surface.aim(camera);
             const target = targetAt(depth);
@@ -1104,13 +1158,15 @@ export function createPortalSurface(
             // The crop maps the window onto the whole of the target: what was a
             // sliver of a screen-sized picture becomes the entire buffer, at
             // the density of the screen.
-            const acrossBy = 2 / (window.right - window.left);
-            const downBy = 2 / (window.top - window.bottom);
-
-            crop(beyond.projectionMatrix, acrossBy, downBy, {
-                x: -(window.right + window.left) / (window.right - window.left),
-                y: -(window.top + window.bottom) / (window.top - window.bottom),
-            });
+            crop(
+                beyond.projectionMatrix,
+                2 / (held.right - held.left),
+                2 / (held.top - held.bottom),
+                {
+                    x: -(held.right + held.left) / (held.right - held.left),
+                    y: -(held.top + held.bottom) / (held.top - held.bottom),
+                },
+            );
             const partnerWasVisible = surface.partner?.visible ?? false;
             const behindWasVisible = surface.behind.map((what) => what.visible);
 
