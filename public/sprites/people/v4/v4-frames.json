@@ -5,30 +5,30 @@
    "0": {
     "0": { "kind": "cell", "file": "debug-stylized-metal-boots-r0c0.png" },
     "45": { "kind": "mirror", "from": "315" },
-    "90": { "kind": "mirror", "from": "270" },
-    "135": { "kind": "mirror", "from": "225" },
-    "180": { "kind": "cell", "file": "debug-stylized-metal-boots-r0c4.png" },
-    "225": { "kind": "cell", "file": "debug-stylized-metal-boots-r0c3.png" },
-    "270": { "kind": "cell", "file": "debug-stylized-metal-boots-r0c2.png" },
-    "315": { "kind": "cell", "file": "debug-stylized-metal-boots-r0c1.png" }
-   },
-   "1": {
-    "0": { "kind": "cell", "file": "debug-stylized-metal-boots-r0c0.png" },
-    "45": { "kind": "cell", "file": "debug-stylized-metal-boots-r0c1.png" },
     "90": { "kind": "cell", "file": "debug-stylized-metal-boots-r0c2.png" },
     "135": { "kind": "mirror", "from": "225" },
     "180": { "kind": "cell", "file": "debug-stylized-metal-boots-r0c4.png" },
     "225": { "kind": "cell", "file": "debug-stylized-metal-boots-r0c3.png" },
     "270": { "kind": "mirror", "from": "90" },
-    "315": { "kind": "mirror", "from": "45" }
+    "315": { "kind": "cell", "file": "debug-stylized-metal-boots-r0c1.png" }
+   },
+   "1": {
+    "0": { "kind": "cell", "file": "debug-stylized-metal-boots-r0c0.png" },
+    "45": { "kind": "mirror", "from": "315" },
+    "90": { "kind": "cell", "file": "debug-stylized-metal-boots-r0c2.png" },
+    "135": { "kind": "mirror", "from": "225" },
+    "180": { "kind": "cell", "file": "debug-stylized-metal-boots-r0c4.png" },
+    "225": { "kind": "cell", "file": "debug-stylized-metal-boots-r0c3.png" },
+    "270": { "kind": "mirror", "from": "90" },
+    "315": { "kind": "cell", "file": "debug-stylized-metal-boots-r0c1.png" }
    },
    "2": {
     "0": { "kind": "cell", "file": "debug-stylized-metal-boots-r1c0.png" },
     "45": { "kind": "mirror", "from": "315" },
     "90": { "kind": "cell", "file": "debug-stylized-metal-boots-r1c2.png" },
-    "135": { "kind": "cell", "file": "debug-stylized-metal-boots-r1c3.png" },
+    "135": { "kind": "mirror", "from": "225" },
     "180": { "kind": "cell", "file": "debug-stylized-metal-boots-r1c4.png" },
-    "225": { "kind": "mirror", "from": "135" },
+    "225": { "kind": "cell", "file": "debug-stylized-metal-boots-r2c3.png" },
     "270": { "kind": "mirror", "from": "90" },
     "315": { "kind": "cell", "file": "debug-stylized-metal-boots-r1c1.png" }
    },
