@@ -408,8 +408,18 @@ it('sends every wall of a square room the same distance', function (): void {
     // the other three met an exhausted purse, so one wall looked right and
     // three did not. Paul found that with four captures ninety degrees apart
     // from one spot, and no geometry can produce it.
-    expect(array_unique($answer['deepest']))->toHaveCount(1);
-    expect($answer['deepest'][0])->toBeGreaterThanOrEqual(8);
+    // Within a level of each other, not identical to the texel.
+    //
+    // The opening test has hysteresis — a chain already being followed carries
+    // on past the point where a new one would be started — and that makes how
+    // deep a chain runs depend a little on what ran last frame. Two walls of a
+    // symmetric room can therefore settle a level apart, which is nothing:
+    // what this test exists to catch is the old failure, where one wall got a
+    // full corridor and the other three got a single bounce because the draw
+    // budget was spent depth-first in array order.
+    expect(max($answer['deepest']) - min($answer['deepest']))
+        ->toBeLessThanOrEqual(1);
+    expect(min($answer['deepest']))->toBeGreaterThanOrEqual(8);
 });
 
 it('holds an octagon of mirrors to the same rule', function (): void {

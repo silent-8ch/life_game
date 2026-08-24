@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import type { Actors } from '@/lib/engine/actors';
 import {
     anAperture,
+    APERTURE_FLOOR,
+    APERTURE_HOLD,
     apertureOf,
     copyAperture,
     flipAcross,
@@ -185,6 +187,33 @@ export function prepareReflections(
     const roomFor = (store: Aperture[], depth: number): Aperture =>
         store[Math.min(depth, store.length - 1)];
 
+    /** Where a pane sits in the list, for indexing the arrays below. */
+    const numbered = new Map<PortalSurface, number>(
+        panes.map((pane, at) => [pane, at]),
+    );
+
+    const levels = PORTAL_BOUNCES + 2;
+
+    /**
+     * The frame each pane was last followed into at each depth.
+     *
+     * This is what gives the opening test hysteresis, and hysteresis is the
+     * only thing that makes it steady for a viewer who is moving. A chain
+     * followed on the previous frame is allowed to carry on at
+     * `APERTURE_HOLD` of the usual floor; one that was not has to reach the
+     * full floor to start. Without the memory there is a single line, and an
+     * opening drifting across it blinks a wall on and off at the back of a
+     * reflection — which is what Paul reported while running through the middle
+     * of his four-mirror room.
+     *
+     * Flat and typed rather than a map of maps: it is read once per candidate
+     * per level per frame, which in a room of mirrors is a few thousand times.
+     */
+    const followed = new Int32Array(panes.length * levels).fill(-1);
+
+    /** Which frame this is, only ever compared with the line above. */
+    let frames = 0;
+
     /**
      * How many levels deep every pane in the frame is allowed to go.
      *
@@ -261,6 +290,8 @@ export function prepareReflections(
         for (const portal of portals) {
             portal.release();
         }
+
+        frames++;
 
         /** The panes the player can see for themselves this frame. */
         const inView = panes.filter((pane) => inViewOf(pane, camera));
@@ -468,9 +499,30 @@ export function prepareReflections(
                             roomFor(overlap, depth),
                         );
 
-                        if (left === null || !worthDrawing(left)) {
+                        if (left === null) {
                             return false;
                         }
+
+                        // Two lines, not one — see `APERTURE_HOLD`. A chain
+                        // already being followed carries on until it is well
+                        // under; a new one has to reach the full floor.
+                        const slot =
+                            (numbered.get(other) as number) * levels +
+                            Math.min(depth + 1, levels - 1);
+                        const carryOn = followed[slot] === frames - 1;
+
+                        if (
+                            !worthDrawing(
+                                left,
+                                carryOn
+                                    ? APERTURE_FLOOR * APERTURE_HOLD
+                                    : APERTURE_FLOOR,
+                            )
+                        ) {
+                            return false;
+                        }
+
+                        followed[slot] = frames;
 
                         copyAperture(left, slots[taken]);
                         taken++;

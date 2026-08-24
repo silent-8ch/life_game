@@ -307,12 +307,36 @@ export function narrow(
  *
  * NDC spans two, so a span is halved to read as a fraction of the screen.
  */
-export function worthDrawing(aperture: Aperture): boolean {
+export function worthDrawing(
+    aperture: Aperture,
+    floor: number = APERTURE_FLOOR,
+): boolean {
     return (
-        (aperture.right - aperture.left) / 2 >= APERTURE_FLOOR &&
-        (aperture.top - aperture.bottom) / 2 >= APERTURE_FLOOR
+        (aperture.right - aperture.left) / 2 >= floor &&
+        (aperture.top - aperture.bottom) / 2 >= floor
     );
 }
+
+/**
+ * How much smaller an opening may get before a chain that was **already** being
+ * followed is dropped, as a fraction of `APERTURE_FLOOR`.
+ *
+ * A single threshold cannot be stable for a viewer who is moving, whatever
+ * value it takes. An opening drifting across the line is followed, dropped,
+ * followed again from one frame to the next, and because the end of a chain is
+ * a wall, what that looks like is a wall blinking on and off at the back of a
+ * reflection. Paul, running through the middle of his four-mirror room: *the far
+ * walls in the reflection flickering, the walls show sometimes.* Measured at his
+ * spot and heading: standing still, nothing moves at all; running, panes cross
+ * the line about a third of a frame each.
+ *
+ * So there are two lines. A chain not being followed has to reach
+ * `APERTURE_FLOOR` to start; one already being followed carries on until it is
+ * well under. Half is a wide enough band to cover a frame of running — a
+ * reflection at this size changes by a few per cent per frame, not by half —
+ * and narrow enough that a chain still stops close to where it should.
+ */
+export const APERTURE_HOLD = 0.5;
 
 /**
  * The same opening as the target of a **mirror** sees it.
