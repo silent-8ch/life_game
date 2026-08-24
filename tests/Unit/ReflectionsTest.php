@@ -46,6 +46,7 @@ function reflectionFrame(string $scene, string $body): array
             facing: new THREE.Vector3(0, 0, 1),
             mesh: { visible: true, name },
             partner: null,
+            image: [],
             viewerAt: () => ({ x: name.length, z: -name.length, yaw: 0 }),
             aim: () => {
                 const inner = new THREE.PerspectiveCamera(75, 1, 0.1, 100);

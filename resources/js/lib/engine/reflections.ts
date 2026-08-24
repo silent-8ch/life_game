@@ -698,6 +698,29 @@ export function prepareReflections(
                 if (other.mirrored) {
                     other.mesh.visible = false;
 
+                    // ...and the room stands where its reflection was.
+                    //
+                    // This is where a chain stopped, so the pane comes out —
+                    // it has no level left to show, and showing one taken from
+                    // another viewpoint is the thing this renderer will not do.
+                    // What is behind it is the wall it hangs on, and *only bare
+                    // walls where mirrors should be* is the last thing Paul
+                    // reported. `build/images.ts` puts a reflected copy of the
+                    // room there instead, which is not a stand-in for the
+                    // continuation but is the continuation — the method of
+                    // images, in geometry rather than in cameras.
+                    //
+                    // Never for the pane being drawn. Its own image sits
+                    // between its camera and the glass, on the wrong side
+                    // entirely, and the tilted near plane is only mostly able
+                    // to cut it away — the same slack that made `behind`
+                    // necessary.
+                    if (other !== pane) {
+                        for (const room of other.image) {
+                            room.visible = true;
+                        }
+                    }
+
                     continue;
                 }
 
@@ -777,6 +800,10 @@ export function prepareReflections(
 
             for (const other of panes) {
                 other.mesh.visible = true;
+
+                for (const room of other.image) {
+                    room.visible = false;
+                }
             }
         };
 

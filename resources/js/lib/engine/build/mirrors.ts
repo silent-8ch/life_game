@@ -16,6 +16,41 @@ import type { Edge } from '@/lib/engine/sectors';
 const TURNED = new THREE.Matrix4().makeScale(-1, 1, 1);
 
 /**
+ * Reflection in a plane, as a matrix: `I - 2nn^T` about it, with the shift that
+ * carries it off the origin.
+ *
+ * Shared with `images.ts`, which hangs a reflected copy of the room behind each
+ * mirror. That copy and this camera have to be the same reflection or the room
+ * beyond the glass is not the room the glass shows.
+ */
+export function reflectionIn(
+    centre: THREE.Vector3,
+    normal: THREE.Vector3,
+): THREE.Matrix4 {
+    const { x, y, z } = normal;
+    const away = normal.dot(centre) * 2;
+
+    return new THREE.Matrix4().set(
+        1 - 2 * x * x,
+        -2 * x * y,
+        -2 * x * z,
+        away * x,
+        -2 * y * x,
+        1 - 2 * y * y,
+        -2 * y * z,
+        away * y,
+        -2 * z * x,
+        -2 * z * y,
+        1 - 2 * z * z,
+        away * z,
+        0,
+        0,
+        0,
+        1,
+    );
+}
+
+/**
  * A mirror: the same pane as a portal, except that the camera drawing it is
  * the viewpoint reflected in the wall rather than carried through it, and
  * the plane it is clipped against is the wall itself.
@@ -35,33 +70,10 @@ export function buildMirrorPane(
     const ahead = new THREE.Vector3();
 
     /**
-     * Reflection in this wall, as a matrix: `I - 2nn^T` about the plane, with
-     * the shift that carries it off the origin. Built once — the wall does not
-     * move — and the whole of what a mirror's camera is.
+     * Reflection in this wall. Built once — the wall does not move — and the
+     * whole of what a mirror's camera is.
      */
-    const reflection = ((): THREE.Matrix4 => {
-        const { x, y, z } = normal;
-        const away = normal.dot(centre) * 2;
-
-        return new THREE.Matrix4().set(
-            1 - 2 * x * x,
-            -2 * x * y,
-            -2 * x * z,
-            away * x,
-            -2 * y * x,
-            1 - 2 * y * y,
-            -2 * y * z,
-            away * y,
-            -2 * z * x,
-            -2 * z * y,
-            1 - 2 * z * z,
-            away * z,
-            0,
-            0,
-            0,
-            1,
-        );
-    })();
+    const reflection = reflectionIn(centre, normal);
 
     /**
      * A point reflected in the wall: measured from the middle of it,

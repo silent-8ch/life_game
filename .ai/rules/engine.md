@@ -321,3 +321,27 @@ Measure `partner`, not `mesh`. A mirror's camera stands behind its own glass so 
 `reach` starts at 2. Half a second of patience per level is right for holding it still and hopeless for arriving at it: thirty frames a level is **fifteen seconds** to reach the twenty-odd a mirror room affords. Over that ramp in `hall-of-mirrors`, bare wall covers 20.7% of the screen on the first frame, 12.4% after a second, 2.9% after five and 1.1% once settled — so a player spends the whole ramp looking at a room with walls in it, which is what Paul reported after the flicker was fixed.
 
 Nothing is known about what a room costs until a frame has gone over budget, so until then there is nothing to be careful of: climb a level a frame (`hasBeenOver` is false) and find the ceiling in well under a second. After the first overrun, `PATIENCE` applies. A room that never goes over never becomes patient and simply climbs to `PORTAL_BOUNCES`, which is correct — it can afford it.
+
+## Where a chain of reflections stops, the room stands there — not a wall
+`build/images.ts` hangs a reflected copy of each mirror's own room behind it (`pane.image`), hidden until a pass takes that mirror out of the picture. `prepareReflections` shows it exactly where it hides the pane.
+
+A chain has to end somewhere, and a pane cannot show a level nobody drew without showing a picture taken from the wrong viewpoint, which is the one thing this renderer will not do. What is behind a mirror otherwise is the wall it hangs on. Paul, once everything else was fixed: *no black mirrors or stretching, only bare walls where mirrors should be.*
+
+Neither obvious answer works. **Depth does not fix it**: the levels run until the openings close on their own — 23 in his 8 m room — and there is still a wall at the end, a little smaller. A corridor of mirrors does not shrink to nothing. **Fading does fix it and is ruled out**, twice and explicitly: a mirror that loses light is not what he asked for.
+
+A mirror's image of a room is a *real place* — the method of images, the same fact the mirror camera is built from — so a reflected copy of the room's geometry standing at that image is not a stand-in for the continuation, it is the continuation. Correct from every camera at every depth, because the virtual cameras do all the work and this is geometry standing where geometry belongs. It costs no passes: depth costs a render per level per pane, this costs one draw of cloned meshes in the passes where a mirror has come out.
+
+Load-bearing details:
+- `buildMirrorImages` runs **last** in `buildLevel`. A room's image is a copy of everything that room drew, and the last of that is not there until the last edge is built.
+- The reflection comes from `reflectionIn` in mirrors.ts, shared with the mirror camera. If the two ever disagree, the room beyond the glass is not the room the glass shows.
+- **Sky lids are excluded.** A lid paints nothing and writes depth; a copy of one hangs a hole in the image with everything past it cut away.
+- `clone()` shares geometry and material, so an image costs objects and not buffers — and retexturing a room retextures its reflections with nothing to keep in step.
+- **Never shown for the pane being drawn.** Its own image sits between its camera and the glass, and the tilted near plane is only mostly able to cut it away — the same slack that made `behind` necessary.
+- It buys one level, not infinity: the copy has no mirrors in it. What makes that worth having is where the level is bought — at the very back, where "more room" versus "a slab of plaster" is the whole difference.
+
+## Hysteresis on the opening, because one threshold cannot be steady for a moving viewer
+`APERTURE_HOLD` gives the opening test two lines: a chain already followed last frame carries on until it is at half the floor, a new one must reach the full floor to start. `followed` in reflections.ts is the frame number per pane per depth that remembers which.
+
+Without it an opening drifting across a single line is followed, dropped and followed again frame to frame, and because the end of a chain is a wall that reads as a wall blinking on and off. Paul, running through the middle of his four-mirror room: *the far walls in the reflection flickering, the walls show sometimes.* Measured at his exact spot and heading: standing still nothing moves at all over four seconds; running, panes crossed the line 0.3 times a frame. With two lines, 0.1. **Reproduce this by moving the camera, never standing still** — a still-camera measurement says everything is perfect, and it is the one this bug hides from.
+
+Depth now depends slightly on what ran last frame, so the symmetry test asserts the four walls are within a level of each other rather than identical.

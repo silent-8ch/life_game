@@ -144,6 +144,7 @@ function mirrorRoomFrame(int $sides): array
                 onto: ['room'],
                 mirrored: true,
                 partner: mesh,
+                image: [],
                 behind: [],
                 blocking: [],
                 facing: normal.clone(),

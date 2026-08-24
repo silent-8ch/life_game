@@ -2,6 +2,7 @@ import type * as THREE from 'three';
 import { buildBoundaries } from '@/lib/engine/build/boundaries';
 import { createBuildContext } from '@/lib/engine/build/context';
 import { buildSectorFlats } from '@/lib/engine/build/flats';
+import { buildMirrorImages } from '@/lib/engine/build/images';
 import { buildPortals } from '@/lib/engine/build/portal-panes';
 import type { SkyLid } from '@/lib/engine/build/scene';
 import { buildThings } from '@/lib/engine/build/things';
@@ -63,6 +64,10 @@ export function buildLevel(level: Level, textures: TextureLibrary): BuiltLevel {
     const props = buildThings(ctx);
 
     buildPortals(ctx, mouths);
+
+    // Last, and it has to be: a room's image is a copy of everything that room
+    // drew, and the last of that is not there until every edge is done.
+    buildMirrorImages(ctx);
 
     const dispose = (): void => {
         for (const mirror of mirrors) {

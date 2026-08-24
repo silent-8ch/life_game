@@ -326,6 +326,19 @@ export type PortalSurface = {
      */
     behind: THREE.Object3D[];
     /**
+     * The room again, standing where this mirror's reflection of it is.
+     *
+     * Shown in the passes where this pane has come out of the picture, which is
+     * where a chain of reflections stopped. What is behind a mirror otherwise
+     * is the wall it hangs on, and a wall at the back of a reflection is the
+     * one complaint left after everything else was fixed. A mirror's image of a
+     * room is a real place, so a reflected copy of the room's geometry standing
+     * there is the continuation rather than a stand-in for it. See
+     * `build/images.ts`. Empty for a portal, which has a room of its own on the
+     * far side already.
+     */
+    image: THREE.Object3D[];
+    /**
      * The room on **this** pane's own far side, taken out of the picture while
      * the pane is hugged across the player's view.
      *
@@ -716,6 +729,7 @@ export function createPortalSurface(
         partner: null,
         behind: [],
         blocking: [],
+        image: [],
         bounds: new THREE.Sphere(),
         home: options.home,
         onto: options.onto,
