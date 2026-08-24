@@ -100,6 +100,7 @@ export function prepareReflections(
         scene: THREE.Scene,
         from: THREE.PerspectiveCamera,
         depth: number,
+        window: Aperture,
     ): void => {
         const at = pane.viewerAt(from);
 
@@ -117,7 +118,7 @@ export function prepareReflections(
         // everything — which is what a portal full of grass was.
         sky?.follow(at.x, from.position.y, at.z);
 
-        pane.render(renderer, scene, from, depth);
+        pane.render(renderer, scene, from, depth, window);
 
         playerSprite.object.visible = false;
     };
@@ -288,9 +289,38 @@ export function prepareReflections(
              */
             let drew: readonly PortalSurface[] = NONE;
 
-            if (goesDeeper) {
-                const inner = pane.aim(from);
+            // What this pass draws, and what it will be read back through.
+            //
+            // Hoisted out of the recursion below because every pass needs it,
+            // not only one that goes deeper: a target is sized and cropped to
+            // its own window now, which is what makes a reflection at the back
+            // of a tunnel as sharp as one at the front.
+            const inner = pane.aim(from);
 
+            const shown = pane.mirrored
+                ? flipAcross(aperture, roomFor(inside, depth))
+                : copyAperture(aperture, roomFor(inside, depth));
+
+            // `partner` is the right mesh to measure rather than `mesh`. A
+            // mirror's camera stands behind its own glass, so its outline in
+            // its own target is itself — and `buildMirrorPane` sets `partner`
+            // to its own mesh, so this reads correctly for both. A portal's
+            // camera stands at the **far** mouth, and it is that mouth the view
+            // is bounded by.
+            const mouth = pane.partner ?? pane.mesh;
+            const outline = apertureOf(mouth, inner, roomFor(own, depth));
+
+            const through =
+                outline === null
+                    ? null
+                    : narrow(shown, outline, roomFor(kept, depth));
+
+            // Nothing of this pane is showing, so there is no window to draw
+            // through. Its own opening will do: it costs a slightly larger
+            // buffer and nothing reads it.
+            const window = through ?? shown;
+
+            if (goesDeeper) {
                 // This pane's own continuation first — see `tunnelFirst`.
                 // Every branch gets the same purse, and that is the point.
                 //
@@ -321,50 +351,6 @@ export function prepareReflections(
                 // the self case, the most opposed normal goes first: two panes
                 // looking at each other are a corridor, and the depth belongs
                 // to them rather than to a wall off to one side.
-                // What is left of this pane's own opening, as its target sees
-                // it. A mirror's camera draws the room left-for-right — that
-                // is the turn keeping its basis right-handed — so the
-                // rectangle has to be flipped to match, or every chain hunts
-                // for its reflections down the wrong side of the picture.
-                const shown = pane.mirrored
-                    ? flipAcross(aperture, roomFor(inside, depth))
-                    : copyAperture(aperture, roomFor(inside, depth));
-
-                // **And clipped to the pane's own outline, which is the part
-                // that was missing.**
-                //
-                // A chain is bounded by every opening along it including the
-                // first, and the first was never applied: the top-level call
-                // starts from `WHOLE_SCREEN` because that is what the player
-                // can see, not what this mirror can. So at the first bounce
-                // any pane anywhere on screen was accepted, whether or not it
-                // was inside the mirror being looked into, and it went down
-                // the chain carrying an opening that was in the wrong place.
-                //
-                // What that looks like: a pane a level in with a large opening
-                // and no candidates overlapping it at all, so it draws a room
-                // with no mirrors in it. In Paul's mirrored **octagon**, one
-                // of those covered a quarter of the screen at the first
-                // bounce, and bare wall came to 16 to 43 per cent of the view
-                // depending on where he stood. A square room hid it: every
-                // wall is in view from the middle and the openings are
-                // symmetric about the screen, so clipping to them changed
-                // almost nothing.
-                //
-                // `partner` is the right mesh to measure rather than `mesh`. A
-                // mirror's camera stands behind its own glass, so its outline
-                // in its own target is itself — and `buildMirrorPane` sets
-                // `partner` to its own mesh, so this reads correctly for both.
-                // A portal's camera stands at the **far** mouth, and it is
-                // that mouth the view is bounded by.
-                const mouth = pane.partner ?? pane.mesh;
-                const outline = apertureOf(mouth, inner, roomFor(own, depth));
-
-                const through =
-                    outline === null
-                        ? null
-                        : narrow(shown, outline, roomFor(kept, depth));
-
                 // Where each candidate's own opening is kept while the rest are
                 // measured. One slot per pane at this level of nesting, handed
                 // out in order, so nothing is allocated in the middle of a
@@ -547,7 +533,7 @@ export function prepareReflections(
                     other.mesh.visible = wasDrawn || !other.mirrored;
 
                     if (other.mesh.visible) {
-                        other.show(depth + 1);
+                        other.show(depth + 1, window);
                     }
 
                     continue;
@@ -706,7 +692,7 @@ export function prepareReflections(
                     const readsItself =
                         other === pane && other.mesh !== other.partner;
 
-                    other.show(readsItself ? depth - 1 : depth);
+                    other.show(readsItself ? depth - 1 : depth, window);
                 } else {
                     // The cheap pass, for a portal mouth the player cannot see.
                     //
@@ -716,12 +702,12 @@ export function prepareReflections(
                     other.mesh.visible = other !== pane;
 
                     if (other !== pane) {
-                        other.show(depth);
+                        other.show(depth, window);
                     }
                 }
             }
 
-            drawPane(pane, renderer, scene, from, depth);
+            drawPane(pane, renderer, scene, from, depth, window);
 
             for (const other of panes) {
                 other.mesh.visible = true;

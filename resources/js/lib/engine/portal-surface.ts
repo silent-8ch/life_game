@@ -49,6 +49,51 @@ import {
  */
 const EDGE_BIAS_TEXELS = 1.5;
 
+/**
+ * Cuts a projection down to a rectangle of its own picture.
+ *
+ * The first two rows carry x and y, so scaling them and adding a multiple of
+ * the w row moves the chosen rectangle onto the whole of the frame. Lengyel's
+ * oblique tilt replaces the **third** row, so the two never meet and the order
+ * they are applied in does not matter.
+ */
+function crop(
+    projection: THREE.Matrix4,
+    acrossBy: number,
+    downBy: number,
+    shift: { x: number; y: number },
+): void {
+    const at = projection.elements;
+
+    // Column-major: element 4n+m is row m of column n.
+    for (let column = 0; column < 4; column++) {
+        const x = column * 4;
+
+        at[x] = at[x] * acrossBy + at[x + 3] * shift.x;
+        at[x + 1] = at[x + 1] * downBy + at[x + 3] * shift.y;
+    }
+}
+
+/**
+ * A rectangle of the pass being drawn, in NDC — the same shape as an `Aperture`
+ * and named separately only so that this file does not have to depend on the
+ * recursion that computes them.
+ *
+ * A pane pass no longer draws the whole frustum. It draws the window its
+ * picture will actually be read through, into a target sized for that window at
+ * the density of the screen — which is what makes a reflection thirty levels
+ * down as sharp as one at the front.
+ */
+export type PaneWindow = {
+    left: number;
+    right: number;
+    bottom: number;
+    top: number;
+};
+
+/** The whole picture: what the player's own camera is drawn through. */
+const WHOLE_VIEW: PaneWindow = { left: -1, right: 1, bottom: -1, top: 1 };
+
 const VERTEX_SHADER = `
     #include <common>
     #include <logdepthbuf_pars_vertex>
@@ -101,7 +146,8 @@ const FRAGMENT_SHADER = `
     uniform vec2 paneTexels;
     uniform float edgeBias;
     uniform float shrink;
-    uniform float mirrored;
+    uniform vec2 paneScale;
+    uniform vec2 paneOffset;
     varying vec4 vPane;
     varying vec3 vMiddle;
 
@@ -130,14 +176,19 @@ const FRAGMENT_SHADER = `
                 at = centre + (at - centre) * shrink;
             }
 
-            // Undo the mirror camera's left-for-right turn: see the
-            // mirrored option, which is where the reasoning lives.
-            // Exact, and cheap: the two cameras differ by nothing else, so the
-            // whole of the correction is one subtraction about the middle of
-            // the screen. Last of all, after the edge bias and the shrink,
-            // which are both symmetric about that same middle and so give the
-            // same answer whichever side of the flip they are done on.
-            at.x = mix(at.x, 1.0 - at.x, mirrored);
+            // From where this fragment lands in the pass being drawn, to
+            // where that is in the target being read.
+            //
+            // One affine step, and it carries three things at once: the
+            // window this pass was rendered through, the window the target
+            // was rendered through, and the mirror camera's left-for-right
+            // turn (which is a negative x scale here and nothing more). All
+            // three are fixed for a given pane at a given level, so they are
+            // multiplied out on the way in, by readThrough in this file.
+            //
+            // Last of all, after the edge bias, which is symmetric about the
+            // pane's own middle and so gives the same answer on either side.
+            at = at * paneScale + paneOffset;
 
             gl_FragColor = vec4(texture2D(pane, at).rgb, 1.0);
 
@@ -407,6 +458,8 @@ export type PortalSurface = {
         scene: THREE.Scene,
         camera: THREE.PerspectiveCamera,
         depth: number,
+        /** The rectangle of this pass's own picture that will be read back. */
+        window: PaneWindow,
     ) => void;
     /**
      * Which depth's view the pane shows. Zero is what the player sees; deeper
@@ -417,7 +470,21 @@ export type PortalSurface = {
      * one further away. It is what stands in for the level that was never
      * drawn, at the end of the tunnel.
      */
-    show: (depth: number, shrink?: number) => void;
+    show: (
+        depth: number,
+        /**
+         * Where the pass about to display this pane was itself drawn through.
+         *
+         * A pane reads its target by where its fragment lands on the screen —
+         * but "the screen" is now the window the displaying pass was cropped
+         * to, and the target holds only the window *it* was cropped to. The two
+         * are told apart here: `show` composes them, with the mirror's
+         * left-for-right turn, into the one affine step the shader does.
+         *
+         * Left out for the player's own view, which is cropped to nothing.
+         */
+        seenThrough?: PaneWindow,
+    ) => void;
     /** Where the player's eye lands once carried through, for facing sprites. */
     viewerAt: (camera: THREE.PerspectiveCamera) => {
         x: number;
@@ -554,34 +621,69 @@ export function createPortalSurface(
 
             target?.setSize(size.width, size.height);
         });
-
-        material.uniforms.paneTexels.value.set(width / 2, height / 2);
     };
 
     /**
-     * How much smaller a level's picture is than the one in front of it.
+     * How big a level's target is, in texels.
      *
-     * A reflection nine rooms away is a few pixels across. Drawing it at the
-     * size of the screen is most of what a corridor of mirrors costs, and it is
-     * spent on detail nobody can resolve — so the picture halves every couple of
-     * levels and stops at an eighth, which is still 240 across at 1080p.
+     * **Not a fraction of the screen decided by depth, which is what this was
+     * and which was the whole of Paul's *walls with distorted or stretched
+     * images far from the camera into the mirror*.**
      *
-     * This is what pays for depth. Seventeen levels at these sizes cost less
-     * per pane than nine at full size did, so `PORTAL_BOUNCES` could double and
-     * the memory went *down*. The first three levels are full size because those
-     * are the ones the eye is actually on.
+     * The old rule halved a target every couple of levels down to a sixteenth,
+     * reasoning that a reflection nine rooms away is a few pixels across and
+     * need not be drawn at the size of the screen. That reasoning is right for
+     * a pane that reads its target *projectively* — mapping the whole target
+     * onto the whole pane — and this one does not. It reads by **screen
+     * position**, so the pane's own shrinking and the target's shrinking
+     * compound, and what comes out is a magnification. Worked out for a
+     * four-mirror room: at twelve levels a pane 53 by 30 pixels across read six
+     * texels; at thirty, a patch 21 by 12 pixels was drawn from **one**.
+     *
+     * A target is sized to the window it will be read through instead, at the
+     * density of the screen. A pane covering 21 by 12 pixels gets 21 by 12
+     * texels whatever level it is at, and the picture is as sharp at the back
+     * of the tunnel as at the front. It costs less rather than more: the old
+     * scheme paid full screen size for the first three levels of every pane
+     * whatever they covered.
+     *
+     * Rounded up to powers of two, because the window moves with the player and
+     * a render target that resizes is a render target that reallocates. Sixteen
+     * at the smallest: below that the edge bias has nothing to bite on.
      */
-    const scaleAt = (depth: number): number =>
-        Math.min(2 ** Math.max(0, Math.floor((depth - 1) / 2)), 16);
+    const SMALLEST = 16;
 
-    const sizeFor = (depth: number): { width: number; height: number } => {
-        const by = scaleAt(depth);
+    const texelsFor = (
+        window: PaneWindow,
+    ): { width: number; height: number } => {
+        const across = ((window.right - window.left) / 2) * wanted.x;
+        const down = ((window.top - window.bottom) / 2) * wanted.y;
+
+        const upTo = (want: number, most: number): number => {
+            const bounded = Math.min(most, Math.max(SMALLEST, Math.ceil(want)));
+
+            return Math.min(most, 2 ** Math.ceil(Math.log2(bounded)));
+        };
 
         return {
-            width: Math.max(1, Math.round(wanted.x / by)),
-            height: Math.max(1, Math.round(wanted.y / by)),
+            width: upTo(across, wanted.x),
+            height: upTo(down, wanted.y),
         };
     };
+
+    /**
+     * The window each level was last drawn through, so that `show` can hand the
+     * pane the same one to read back by.
+     */
+    const windows: PaneWindow[] = Array.from({ length: depths }, () => ({
+        left: -1,
+        right: 1,
+        bottom: -1,
+        top: 1,
+    }));
+
+    const sizeFor = (depth: number): { width: number; height: number } =>
+        texelsFor(windows[Math.min(Math.max(depth, 0), depths - 1)]);
 
     /** Which depth a level of nesting actually reads, once clamped. */
     const indexOf = (depth: number): number =>
@@ -599,14 +701,24 @@ export function createPortalSurface(
 
     const targetAt = (depth: number): THREE.WebGLRenderTarget => {
         const at = indexOf(depth);
-
         const size = sizeFor(at);
+        const held = targets[at];
 
-        targets[at] ??= new THREE.WebGLRenderTarget(size.width, size.height, {
-            samples: 0,
-        });
+        if (held === null || held === undefined) {
+            targets[at] = new THREE.WebGLRenderTarget(size.width, size.height, {
+                samples: 0,
+            });
 
-        return targets[at];
+            return targets[at] as THREE.WebGLRenderTarget;
+        }
+
+        // Powers of two, so this is rare rather than every frame — a render
+        // target that resizes is a render target that reallocates.
+        if (held.width !== size.width || held.height !== size.height) {
+            held.setSize(size.width, size.height);
+        }
+
+        return held;
     };
 
     /**
@@ -668,7 +780,14 @@ export function createPortalSurface(
                 ),
             },
             edgeBias: { value: EDGE_BIAS_TEXELS },
-            mirrored: { value: options.mirrored === true ? 1 : 0 },
+            // Identity until a pass says otherwise, but for a mirror the
+            // identity still carries the flip.
+            paneScale: {
+                value: new THREE.Vector2(options.mirrored === true ? -1 : 1, 1),
+            },
+            paneOffset: {
+                value: new THREE.Vector2(options.mirrored === true ? 1 : 0, 0),
+            },
         },
         vertexShader: VERTEX_SHADER,
         fragmentShader: FRAGMENT_SHADER,
@@ -921,28 +1040,77 @@ export function createPortalSurface(
             return drawn[at] ? targets[at] : null;
         },
 
-        show: (depth, shrink = 1) => {
+        show: (depth, seenThrough = WHOLE_VIEW) => {
             const at = readable(depth);
             const size = sizeFor(at);
+            const held = windows[at];
 
             material.uniforms.pane.value = targetAt(at).texture;
-            material.uniforms.shrink.value = shrink;
+
+            // **From where a fragment lands in the pass being drawn, to where
+            // that is in the target being read.**
+            //
+            // A fragment arrives at `at` in [0,1] of the displaying pass's own
+            // cropped viewport. Undo that crop to get where it is in the
+            // picture as a whole; turn it left-for-right if this is a mirror,
+            // whose camera draws flipped so that its basis stays right-handed;
+            // then apply the crop the *target* was drawn through. Three affine
+            // steps, composed here once per pane per pass rather than per
+            // fragment.
+            const acrossSeen = seenThrough.right - seenThrough.left;
+            const downSeen = seenThrough.top - seenThrough.bottom;
+            const acrossHeld = held.right - held.left;
+            const downHeld = held.top - held.bottom;
+
+            const turn = surface.mirrored ? -1 : 1;
+
+            material.uniforms.paneScale.value.set(
+                (turn * acrossSeen) / acrossHeld,
+                downSeen / downHeld,
+            );
+            material.uniforms.paneOffset.value.set(
+                (turn * seenThrough.left - held.left) / acrossHeld,
+                (seenThrough.bottom - held.bottom) / downHeld,
+            );
 
             // The edge bias is held in texels, so it has to be told which
-            // target it is reading: a level drawn at an eighth has an eighth
-            // the texels, and a bias measured against the full size would pull
-            // the read eight times too far in.
+            // target it is reading.
             material.uniforms.paneTexels.value.set(
                 size.width / 2,
                 size.height / 2,
             );
         },
 
-        render: (renderer, scene, camera, depth) => {
+        render: (renderer, scene, camera, depth, window) => {
             fitTo(renderer);
+
+            // What this level is drawn through, remembered so that `show` can
+            // hand the pane the mapping to read it back by, and so that
+            // `targetAt` sizes the buffer for it.
+            const held = windows[indexOf(depth)];
+
+            held.left = window.left;
+            held.right = window.right;
+            held.bottom = window.bottom;
+            held.top = window.top;
 
             const beyond = surface.aim(camera);
             const target = targetAt(depth);
+
+            // **Only the window, not the whole frustum.**
+            //
+            // Lengyel's tilt has already been applied to this projection and
+            // touches the third row only, so cropping x and y commutes with it.
+            // The crop maps the window onto the whole of the target: what was a
+            // sliver of a screen-sized picture becomes the entire buffer, at
+            // the density of the screen.
+            const acrossBy = 2 / (window.right - window.left);
+            const downBy = 2 / (window.top - window.bottom);
+
+            crop(beyond.projectionMatrix, acrossBy, downBy, {
+                x: -(window.right + window.left) / (window.right - window.left),
+                y: -(window.top + window.bottom) / (window.top - window.bottom),
+            });
             const partnerWasVisible = surface.partner?.visible ?? false;
             const behindWasVisible = surface.behind.map((what) => what.visible);
 

@@ -405,3 +405,24 @@ What removing it costs, measured in his four-mirror room: 636 passes a frame aga
 The property worth protecting: **nothing that varies between frames while the room does not may reach how deep a chain goes.** That is why the flicker cannot come back. `PaneDepthTest` swings the frame cost by a factor of forty and asserts the depth does not move at all.
 
 A consequence to expect rather than fix: with nothing capping every chain to one number, four walls of a room settle at *different* depths — 38, 37, 36, 35 from an off-centre spot — because each corridor is a different length. That is the geometry talking, and the old uniform cap was hiding it. `MirrorRoomTest` asserts the depths are within a factor of two of each other, which still catches the real failure (one wall with a corridor, the others with a single bounce) and no longer asserts a budget that is gone.
+
+## A pane pass draws its own window, not the whole frustum
+Each pass renders only the rectangle its picture will be read back through, into a target sized for that rectangle at screen density, with the projection cropped to match (`crop` in portal-surface.ts, `window` threaded through `deepen`/`render`/`show`). A pane covering 21×12 pixels gets a 21×12 target at any depth.
+
+**What this replaced, and why `scaleAt` was wrong in principle.** The old rule halved a target every couple of levels down to a sixteenth, reasoning that a distant reflection is a few pixels across and need not be drawn at screen size. That is right for a pane that reads its target *projectively* — mapping the whole target onto the whole pane. This one reads by **screen position**, so the pane's own shrinking and the target's shrinking compound into a plain magnification. Worked out for a four-mirror room at 1080p:
+
+| depth | pane on screen | texels it read | magnified |
+| --- | --- | --- | --- |
+| 12 | 53×30 px | 6 | ×16 |
+| 20 | 32×18 px | 2.2 | ×16 |
+| 30 | 21×12 px | **1.0** | ×16 |
+
+Paul: *walls with distorted or stretched images far from the camera into the mirror.* A 21×12 patch drawn from one texel is a flat smear. Removing the draw budget took depth from 20 to 38 and put far more of the picture into that regime, which is why it appeared when it did.
+
+It costs **less** memory, not more — the old scheme paid full screen size for the first three levels of every pane whatever they covered. Roughly 22MB across a four-mirror room against ~128MB.
+
+Load-bearing details:
+- Sizes are rounded up to powers of two. The window moves with the player and a render target that resizes is a render target that reallocates.
+- Cropping touches rows 0 and 1 of the projection; Lengyel's oblique tilt replaces row 2. They never meet, so the order is free.
+- The **read mapping is affine and composed on the CPU** (`show`), not branched on in the shader: undo the displaying pass's crop, apply the mirror's left-for-right turn, apply the target's crop. The old `mirrored` uniform is gone — a flip is a scale of −1 in that same mapping.
+- `show` must be told the window of the pass about to display the pane. Its default is the whole view, which is right only for the player's own pass.

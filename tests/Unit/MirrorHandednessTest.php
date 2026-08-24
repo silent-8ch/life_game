@@ -119,7 +119,8 @@ it('leaves a mirror camera right-handed, so nothing in the pass is culled', func
         process.stdout.write(JSON.stringify({
             camera: beyond.matrixWorld.determinantAffine(),
             paneIsSingleSided: surface.mesh.material.side === THREE.FrontSide,
-            reads: surface.mesh.material.uniforms.mirrored.value,
+            readsAcross: surface.mesh.material.uniforms.paneScale.value.x,
+            readsDown: surface.mesh.material.uniforms.paneScale.value.y,
         }));
         JS);
 
@@ -135,7 +136,15 @@ it('leaves a mirror camera right-handed, so nothing in the pass is culled', func
 
     // And the shader is told to read back flipped. One without the other is a
     // mirror showing the room the wrong way round.
-    expect($answer['reads'])->toBe(1);
+    //
+    // It used to be a `mirrored` flag the shader branched on. It is a negative
+    // x in the read's own scale now, because that read carries three things at
+    // once — the window this pass was drawn through, the window the target was
+    // drawn through, and this turn — and a flip is exactly a scale of −1. The
+    // vertical is left alone, which is the other half of the claim: a mirror
+    // turns a picture left for right and does nothing else to it.
+    expect((float) $answer['readsAcross'])->toBe(-1.0)
+        ->and((float) $answer['readsDown'])->toBe(1.0);
 });
 
 it('turns the picture and changes nothing else about it', function (): void {
