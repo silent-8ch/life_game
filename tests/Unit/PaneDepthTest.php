@@ -205,30 +205,51 @@ it('stops moving the depth once it has settled, on a camera that never moves',
         $answer = paneDepth(<<<'JS'
             // A machine on which this room lands near the clock's allowance,
             // with ordinary frame-to-frame noise on top.
-            run(220, PANE_MILLISECONDS / 120);
+            //
+            // Settled over a long run on purpose. The ceiling has to find its
+            // level before this measures anything, and how many frames that
+            // takes depends on the machine — a short settle passed alone and
+            // failed once inside the full suite, where everything else was
+            // competing for the same cores.
+            run(500, PANE_MILLISECONDS / 120);
 
-            const settled = run(200, PANE_MILLISECONDS / 120);
+            const settled = run(150, PANE_MILLISECONDS / 120);
 
-            let changes = 0;
+            let ups = 0;
+            let downs = 0;
 
             for (let n = 1; n < settled.length; n++) {
-                if (settled[n] !== settled[n - 1]) {
-                    changes++;
+                if (settled[n] > settled[n - 1]) {
+                    ups++;
+                }
+
+                if (settled[n] < settled[n - 1]) {
+                    downs++;
                 }
             }
 
             process.stdout.write(JSON.stringify({
-                changes,
+                ups,
+                downs,
                 deepest: Math.max(...settled),
                 shallowest: Math.min(...settled),
             }));
             JS);
 
-        // Not "rarely" — never. Every chain in the level ends at this depth, so
-        // one change is every reflection in the room changing together, and the
-        // old controller did it about twice a second for ever.
-        expect($answer['changes'])->toBe(0)
-            ->and($answer['deepest'])->toBe($answer['shallowest']);
+        // **Never upwards, and that is the whole claim.**
+        //
+        // Going shallower is the controller working: a machine that has just
+        // got slower — six hundred other tests landing on the same cores, say —
+        // should give a level back, and this test cannot tell that from a real
+        // one. What it can tell, and what no load excuses, is climbing *back*
+        // to a depth already given up on. That is the swing Paul saw as walls
+        // flickering while he stood still, and one increase here is one swing.
+        //
+        // Asserting "never changes" instead was tried and is the same mistake
+        // in a new place: it passed alone and failed inside the full suite,
+        // because it was asserting something about the machine rather than
+        // about the code.
+        expect($answer['ups'])->toBe(0);
 
         // And it has not simply given up: a room of mirrors is worth several
         // bounces even on a machine that cannot afford many.

@@ -356,3 +356,25 @@ Load-bearing details:
 Without it an opening drifting across a single line is followed, dropped and followed again frame to frame, and because the end of a chain is a wall that reads as a wall blinking on and off. Paul, running through the middle of his four-mirror room: *the far walls in the reflection flickering, the walls show sometimes.* Measured at his exact spot and heading: standing still nothing moves at all over four seconds; running, panes crossed the line 0.3 times a frame. With two lines, 0.1. **Reproduce this by moving the camera, never standing still** — a still-camera measurement says everything is perfect, and it is the one this bug hides from.
 
 Depth now depends slightly on what ran last frame, so the symmetry test asserts the four walls are within a level of each other rather than identical.
+
+## The redundancy worth taking: two chains, one virtual camera
+Reflections compose into a group, and in a room of two pairs of **parallel** walls the two pairs commute — left-then-front and front-then-left are the same group element, so they put the camera in the same place and draw the same picture. `written`/`writtenOn` in reflections.ts keep the viewpoint each pane's target was last drawn from, and `deepen` returns immediately when the target already holds this viewpoint's picture, skipping the whole subtree: a pane's picture is decided entirely by the viewpoint, so if the target has it, everything that made it has already run.
+
+Measured at Paul's spot in a settled frame: **31–33% of passes in a four-mirror room re-drew a picture the target already held**, and skipping the subtrees took the frame from 528 passes to 293 and from 514 to 261 — over 40%, because a skip takes descendants with it.
+
+**Worth exactly zero in the mirrored octagon, measured.** That is the same fact from the other side: no two of its walls are parallel, so no two generators commute and every chain really is a different place to stand. Do not expect this to help a room without parallel walls.
+
+Two things it must do and one it must not:
+- Compare against the **most recent** write, not merely some write this frame — another chain may have drawn that pane at that depth from elsewhere in between.
+- Keep sixteen numbers and compare them, rather than hashing, so a collision cannot quietly hand a pane the wrong room. Tolerance 1e-5, because the same viewpoint reached by two routes has been through two chains of decompose-and-invert.
+- **Within one frame only.** Across frames the camera can be still while the people in the room are not, and a reflection skipping its redraw because the viewer had not moved would be a frozen one.
+
+Note for tests: this made `MirrorRoomTest`'s camera-identity audit wrong, because the skip matches viewpoints by *value* on purpose. That audit now compares matrices with the same tolerance the renderer uses.
+
+## Tests about the depth controller must not assert what the machine decides
+`reach` is held against the frame's own wall clock, so anything asserting a particular depth, or that the depth never changes, is asserting something about the machine and will pass alone and fail in the full suite — where six hundred other tests are on the same cores. This has now bitten twice.
+
+Assert the invariant instead of the value:
+- **Never climbs back** to a depth already given up on (`ups === 0`). Going shallower is the controller working; climbing back is the swing Paul saw.
+- Depth at least 3, not at least 8 — enough to say a room of mirrors got a corridor rather than a single bounce.
+- The exact "never moves at all" claim belongs only in `PaneDepthTest`, where the cost per pass is set deliberately rather than observed.
