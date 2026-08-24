@@ -152,87 +152,36 @@ export const PANE_TEXELS_DOWN = 1152;
  * `scaleAt` in portal-surface.ts, which drops a target to a sixteenth beyond
  * the first few levels and is what makes this many affordable.
  */
-export const PORTAL_BOUNCES = 32;
+export const PORTAL_BOUNCES = 48;
 
 /**
- * About how many pane passes a frame should cost, across the whole level.
+ * **There is no draw budget any more, and this records why rather than being
+ * one.**
  *
- * **This is a target, not a cut-off, and that changed what the number means.**
- * It used to gate the recursion directly — a running count checked at every
- * node, so a branch stopped the moment the frame's money ran out. Depth-first,
- * that is an ordering rather than a budget: the corridor is walked first and
- * drills to `PORTAL_BOUNCES`, and by the time the recursion unwinds to the
- * branches beside it there is nothing left, so they get no depth at all. A pane
- * with no depth draws a room with no mirrors in it. Paul, in a room with four
- * mirrored walls: *I can see many mirrors straight ahead, but reflections to
- * the side are showing as walls.* Measured at his spot: **8 of the 12 passes at
- * the first bounce rendered bare walls**, and 125 of 230 over the frame.
+ * There were two, in turn, and each was a source of the faults it was meant to
+ * prevent. A running count of passes, spent depth-first, is an *ordering*: the
+ * corridor is walked first and drills to the bottom, the branches beside it
+ * meet an empty purse and draw a room with no mirrors in it. One depth for the
+ * whole frame, moved between frames to hold the cost near a target, fixes that
+ * and buys a swing instead — every chain ends at that depth, so moving it moves
+ * every ending at once, and a wall blinks on and off at the back of every
+ * reflection in the room.
  *
- * `reflections.ts` now holds one depth for the whole frame and moves it a level
- * at a time between frames to keep the count near this number. So the room gets
- * shallower everywhere at once, which is the only way a symmetric room can
- * degrade without looking broken, and this number decides *how deep* rather
- * than *who goes without*.
+ * Paul, deciding it: *what happens when we remove the budget? safety for the
+ * engine should be the level designer's job.* So what bounds a frame now is
+ * `aperture.ts` — a branch ends where its reflection stops overlapping the one
+ * showing it — and `PORTAL_BOUNCES` as a backstop the geometry reaches first.
  *
- * ## Why 640
+ * What that costs, measured in his four-mirror room: 636 passes a frame against
+ * 520 under the controller, for depth 38 against 20 and slightly less bare wall.
+ * Full depth on the **first** frame, with no ramp, and nothing left that can
+ * vary between frames while the room does not — which is the whole of why the
+ * flicker cannot come back.
  *
- * It was 96 while it was still a cut-off, and 40 and 16 before that. As a target
- * it can be much larger, because what actually bounds the tree is the opening
- * test in `aperture.ts` — a branch ends where its reflection stops overlapping
- * the one showing it, which is a property of the room rather than of the purse.
- * Uncapped, a four-mirror room asks 662 passes for the full sixteen levels and
- * an octagon 980.
- *
- * 640 is above the first and below the second on purpose. It is not a number
- * anybody should trust further than the two rooms it was measured in; what
- * makes it safe is that being wrong costs levels rather than fairness, and
- * `PANE_MILLISECONDS` catches the case where a machine cannot afford what the
- * count allows.
- *
- * Most of those passes are cheap. `scaleAt` in portal-surface.ts halves a
- * target every couple of levels down to an eighth, so a pass at depth seven
- * costs a sixty-fourth of a pass at depth zero. Only the first three levels are
- * worth counting for pixels, and there are seventeen of them in a room of four
- * mirrors — but every pass costs a scene traversal whatever its size, which is
- * why there is a clock as well.
- *
- * ## What this does not fix
- *
- * **Memory has no hard bound here and this does not give it one.** A target is
- * made per pane per depth the first time that depth is drawn, and is kept until
- * the level is torn down — so the ceiling is `panes * (PORTAL_BOUNCES + 1)`
- * targets whatever the budget is, and the budget only decides how long it takes
- * to get there. Level 8 reaches 26 of its 45 from a standing start. At 1080p
- * that is around 215 MB of colour buffers, and the ceiling is 373 MB.
- *
- * Lowering `PORTAL_BOUNCES` is what would bound that, and it is the wrong
- * trade: bounces are the length of a corridor of portals, which is the one
- * thing in here made entirely of depth. Freeing targets nobody has sampled for
- * a while is the fix, and it is a task rather than a constant.
+ * If a level ever does cost too much, the answer is fewer mirrors facing each
+ * other in it, and that is a thing a person can see and decide. It is not a
+ * number in here choosing which of somebody's walls to ruin.
  */
-export const PORTAL_RENDER_BUDGET = 640;
-
-/**
- * How long a frame should be willing to spend drawing panes, in milliseconds.
- *
- * The count above bounds draw calls and memory and is predictable. This bounds
- * the thing that actually decides whether the game is playable, and it is not
- * the same thing: `scaleAt` shrinks a deep target to an eighth, so a pass at
- * depth ten costs almost no pixels — but it costs a whole scene traversal and a
- * full set of draw calls like every other pass, and that part does not shrink.
- * Six hundred passes is a few milliseconds of GPU and most of a frame of CPU.
- *
- * Holding the depth against a clock rather than only a count is what makes the
- * illusion fit the machine it is running on. A fast one gets more levels of
- * mirror; a slow one gets fewer, which is the right way to be slow.
- *
- * Six of a sixteen-millisecond frame, leaving the rest for the pass the player
- * actually looks at, the physics and everything else. Measured on the frame's
- * own wall clock, which for this workload is mostly honest: the cost being
- * bounded is CPU-side scene traversal, and that is exactly what wall clock
- * catches. It undercounts GPU work, which is the smaller half here.
- */
-export const PANE_MILLISECONDS = 6;
 
 /**
  * How many times a frame will let action lines drive action lines before it stops.

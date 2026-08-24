@@ -3,33 +3,41 @@
 use Symfony\Component\Process\Process;
 
 /**
- * How deep the panes go, and that it stops moving.
+ * How deep the panes go, and that nothing but the room decides it.
  *
- * `reach` is one number for the whole level, so every chain in it ends at the
- * same depth and moving that number moves **every** ending at once. The end of
- * a chain is where a mirror comes out of the picture, so what a moving `reach`
- * looks like is every reflection in the room changing together, twice a second,
- * for ever.
+ * There is no draw budget. What bounds a frame is `aperture.ts` — a branch ends
+ * where its reflection stops overlapping the one showing it — with
+ * `PORTAL_BOUNCES` as a backstop the geometry reaches first. Paul made that
+ * call: *what happens when we remove the budget? safety for the engine should
+ * be the level designer's job.*
  *
- * ## The measurement this exists because of
+ * ## Why the two budgets before it both had to go
  *
- * Paul, standing perfectly still in the middle of his four-mirror room: *the
- * walls still flicker when the user is not moving.* That contradicted a
- * measurement taken here which found **zero** movement over 239 frames with the
- * camera fixed — and the measurement was the thing that was wrong. Its stub
- * panes rendered nothing, so a pass cost no time, so the clock half of the
- * controller never fired at all and the only thing left that could move the
- * depth was the geometry. It measured a machine on which the budget can never
- * bind, which is not a machine anybody plays on.
+ * A running count of passes, spent depth-first, is an **ordering** and not a
+ * budget: the corridor is walked first and drills to the bottom, and the
+ * branches beside it meet an empty purse and draw a room with no mirrors in it.
+ * *Many mirrors straight ahead, but reflections to the side showing as walls* —
+ * 8 of the 12 passes at the first bounce rendered bare walls.
  *
- * So the panes here **burn real time**, and the frame cost carries ordinary
- * noise on top — which is what a texture upload, a collection, or another tab
- * waking up does to a frame. With that and a camera that never moves at all,
- * the old controller swung between six levels and seven on six frames of 199.
+ * One depth for the whole frame, moved between frames to hold the cost near a
+ * target, fixes that unfairness and buys a swing instead. Every chain ends at
+ * that depth, so moving it moves every ending at once, and a wall blinks on and
+ * off at the back of every reflection in the room together. *The walls
+ * flicker*; and once that was slowed down, *the walls still flicker when the
+ * user is not moving*, because a controller that can climb back to a depth it
+ * has already failed at oscillates whatever its patience.
  *
- * A controller that can climb back to a depth it has already failed at will
- * oscillate, and patience only sets the period. The fix is that it cannot: a
- * level given up on stops being on offer.
+ * ## What these two assert, and why they burn real time to do it
+ *
+ * The panes here cost real milliseconds, because the fault this file exists to
+ * catch is invisible without it. An earlier measurement of the standing case
+ * found **zero** movement over 239 frames and was worthless: its stub panes
+ * rendered nothing, so a pass cost no time, so the clock the controller read
+ * never moved. It measured a machine on which no budget can ever bind, which is
+ * not a machine anybody plays on, and Paul's report beat it.
+ *
+ * So the cost is swung by a factor of forty here, and what is asserted is that
+ * the depth does not notice.
  */
 
 /**
@@ -40,7 +48,6 @@ function paneDepth(string $body): array
     $script = <<<JS
         const THREE = await import('three');
         const { prepareReflections } = await import('@/lib/engine/reflections.ts');
-        const { PANE_MILLISECONDS } = await import('@/lib/engine/constants.ts');
 
         const TURNED = new THREE.Matrix4().makeScale(-1, 1, 1);
         const SIDES = 4;
@@ -200,86 +207,66 @@ function paneDepth(string $body): array
     return json_decode($process->getOutput(), true, flags: JSON_THROW_ON_ERROR);
 }
 
-it('stops moving the depth once it has settled, on a camera that never moves',
-    function (): void {
-        $answer = paneDepth(<<<'JS'
-            // A machine on which this room lands near the clock's allowance,
-            // with ordinary frame-to-frame noise on top.
-            //
-            // Settled over a long run on purpose. The ceiling has to find its
-            // level before this measures anything, and how many frames that
-            // takes depends on the machine — a short settle passed alone and
-            // failed once inside the full suite, where everything else was
-            // competing for the same cores.
-            run(500, PANE_MILLISECONDS / 120);
-
-            const settled = run(150, PANE_MILLISECONDS / 120);
-
-            let ups = 0;
-            let downs = 0;
-
-            for (let n = 1; n < settled.length; n++) {
-                if (settled[n] > settled[n - 1]) {
-                    ups++;
-                }
-
-                if (settled[n] < settled[n - 1]) {
-                    downs++;
-                }
-            }
-
-            process.stdout.write(JSON.stringify({
-                ups,
-                downs,
-                deepest: Math.max(...settled),
-                shallowest: Math.min(...settled),
-            }));
-            JS);
-
-        // **Never upwards, and that is the whole claim.**
-        //
-        // Going shallower is the controller working: a machine that has just
-        // got slower — six hundred other tests landing on the same cores, say —
-        // should give a level back, and this test cannot tell that from a real
-        // one. What it can tell, and what no load excuses, is climbing *back*
-        // to a depth already given up on. That is the swing Paul saw as walls
-        // flickering while he stood still, and one increase here is one swing.
-        //
-        // Asserting "never changes" instead was tried and is the same mistake
-        // in a new place: it passed alone and failed inside the full suite,
-        // because it was asserting something about the machine rather than
-        // about the code. So was asserting no climb at all — a machine that
-        // genuinely has room to spare is *allowed* to climb, and under a
-        // loaded suite the cost can sit under half its allowance for the three
-        // seconds that says so.
-        //
-        // What no load excuses is going **both** ways inside two and a half
-        // seconds. That is a swing, and a swing is what a wall blinking on and
-        // off at the back of every reflection is made of.
-        expect(min($answer['ups'], $answer['downs']))->toBe(0);
-
-        // And it has not simply given up: a room of mirrors is worth several
-        // bounces even on a machine that cannot afford many.
-        expect($answer['shallowest'])->toBeGreaterThanOrEqual(3);
-    });
-
-it('climbs again when the room really does get cheaper', function (): void {
+it('draws the same depth however long a frame takes', function (): void {
     $answer = paneDepth(<<<'JS'
-        run(300, PANE_MILLISECONDS / 120);
+        // Cheap frames, then frames costing forty times as much, then cheap
+        // again. A machine falling off a cliff and climbing back on.
+        const cheap = run(40, 0.002);
+        const dear = run(40, 0.08);
+        const back = run(40, 0.002);
 
-        const dear = run(30, PANE_MILLISECONDS / 120);
-        const cheap = run(900, PANE_MILLISECONDS / 1200);
+        const all = [...cheap, ...dear, ...back];
+        let changes = 0;
+
+        for (let n = 1; n < all.length; n++) {
+            if (all[n] !== all[n - 1]) {
+                changes++;
+            }
+        }
 
         process.stdout.write(JSON.stringify({
-            before: dear.at(-1),
-            after: cheap.at(-1),
+            changes,
+            cheap: cheap.at(-1),
+            dear: dear.at(-1),
+            back: back.at(-1),
         }));
         JS);
 
-    // A ceiling that only ever fell would hold a player who walks out of a hall
-    // of mirrors and into a corridor at the hall's depth for the rest of the
-    // level. It lifts on evidence that the room has changed — the cost under
-    // half its allowance for three seconds running — which is nothing ordinary
-    // noise can look like.
-    expect($answer['after'])->toBeGreaterThan($answer['before']);
+    // **Nothing about how long a frame took can reach how deep the next one
+    // goes**, and that is the whole of why the flicker cannot return.
+    //
+    // Two budgets were tried before this. A running count spent depth-first is
+    // an ordering rather than a budget, and gave *many mirrors straight ahead,
+    // reflections to the side showing as walls*. One depth for the frame, moved
+    // between frames to hold the cost near a target, gave *the walls flicker* —
+    // and, once slowed down, *the walls still flicker when the user is not
+    // moving*, because a controller that can climb back to a depth it has
+    // already failed at oscillates whatever its patience.
+    //
+    // Paul: *what happens when we remove the budget? safety for the engine
+    // should be the level designer's job.* This is that, asserted: the frame
+    // cost swings by a factor of forty and the depth does not move at all.
+    expect($answer['changes'])->toBe(0)
+        ->and($answer['dear'])->toBe($answer['cheap'])
+        ->and($answer['back'])->toBe($answer['cheap']);
+});
+
+it('reaches its full depth on the very first frame', function (): void {
+    $answer = paneDepth(<<<'JS'
+        const first = run(1, 0.001);
+        const later = run(120, 0.001);
+
+        process.stdout.write(JSON.stringify({
+            first: first[0],
+            later: later.at(-1),
+        }));
+        JS);
+
+    // There is no ramp, because there is nothing to ramp. The controller that
+    // used to climb a level at a time took fifteen seconds to reach the depth a
+    // mirror room affords, and over that ramp bare wall covered a fifth of the
+    // screen on the first frame and was still a twentieth after five seconds —
+    // which is what a player actually looked at on walking in.
+    expect($answer['first'])->toBe($answer['later'])
+        ->and($answer['first'])->toBeGreaterThanOrEqual(8);
 });

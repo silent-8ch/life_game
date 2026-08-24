@@ -13,12 +13,7 @@ import {
 } from '@/lib/engine/aperture';
 import type { Aperture } from '@/lib/engine/aperture';
 import type { PropSet } from '@/lib/engine/build/things';
-import {
-    PANE_CLEARANCE,
-    PANE_MILLISECONDS,
-    PORTAL_BOUNCES,
-    PORTAL_RENDER_BUDGET,
-} from '@/lib/engine/constants';
+import { PANE_CLEARANCE, PORTAL_BOUNCES } from '@/lib/engine/constants';
 import type { PortalSurface } from '@/lib/engine/portal-surface';
 import type { SkyDome } from '@/lib/engine/sky';
 import type { SpriteActor } from '@/lib/engine/sprite-actor';
@@ -214,109 +209,6 @@ export function prepareReflections(
     /** Which frame this is, only ever compared with the line above. */
     let frames = 0;
 
-    /**
-     * How many levels deep every pane in the frame is allowed to go.
-     *
-     * One number for the whole frame, carried between frames and moved a level
-     * at a time to hold the cost near what a frame can afford. That it is
-     * **one** number is the point: a room too expensive for sixteen levels gets
-     * shallower everywhere at once, rather than keeping whichever branch the
-     * recursion happened to walk first and walling the rest.
-     *
-     * It starts low and climbs. The alternative — starting at `PORTAL_BOUNCES`
-     * and falling — spends the first frame in a level nobody has measured
-     * drawing the full tree, and the first frame is the one where every texture
-     * and every render target is also being made.
-     */
-    let reach = 2;
-
-    /**
-     * How long the passes took last time, smoothed.
-     *
-     * Counting passes alone is not enough, and the reason is which part of a
-     * pass is expensive. A level deep down is drawn into a target an eighth of
-     * the size, so it costs almost no *pixels* — but it costs a whole scene
-     * traversal and a full set of draw calls like any other, and that part does
-     * not shrink at all. Six hundred passes is a few milliseconds of GPU and
-     * most of a frame of CPU.
-     *
-     * So the depth is held against the clock as well as the count, and the
-     * clock is what makes this fit a machine rather than a guess. A fast one
-     * gets more levels; a slow one gets fewer, instead of a slideshow.
-     *
-     * Smoothed because a single frame is noisy — a texture upload or a
-     * collection lands in one and would otherwise drop a level for no reason.
-     */
-    let took = 0;
-
-    /** Frames running that the cost has been comfortably under, or over. */
-    let patience = 0;
-    let impatience = 0;
-
-    /**
-     * Whether this level has ever cost more than it was allowed.
-     *
-     * Until it has, nothing is known about what the room can afford and the
-     * depth climbs a level a frame. After it has, the ceiling is known and
-     * moving is what shows, so it slows right down.
-     */
-    let hasBeenOver = false;
-
-    /**
-     * The deepest this level is ever allowed to try again.
-     *
-     * **A controller that can climb back to a depth it has already failed at
-     * will oscillate, and no amount of patience fixes that** — patience only
-     * sets the period. Paul, standing perfectly still in the middle of his
-     * four-mirror room: *the walls still flicker when the user is not moving.*
-     *
-     * That report contradicted a measurement of mine that found zero movement
-     * over 239 frames with the camera fixed, and the measurement was the thing
-     * that was wrong: its stub passes cost nothing, so the clock below never
-     * fired and the only thing that could move the depth was the geometry. With
-     * a realistic cost and ordinary frame-to-frame noise — a texture upload, a
-     * collection, another tab waking — the depth swung between six and seven
-     * levels on six frames of 199, about twice a second, with the camera
-     * standing still. Every chain in the level ends at the same depth, so all
-     * of them moved together.
-     *
-     * So once a depth has proved too dear, it stops being on offer. The climb
-     * can get back to the level below it and no further, which makes the swing
-     * impossible rather than slow.
-     */
-    let ceiling = PORTAL_BOUNCES;
-
-    /** Frames running the cost has been far under what it is allowed. */
-    let roomier = 0;
-
-    /**
-     * How many frames running the cost has to stay on one side before the
-     * depth moves. Deeper is slow and shallower is quick, because being a level
-     * too deep costs frame rate and being a level too shallow costs a little
-     * distance at the back of a reflection.
-     *
-     * At sixty a second these are a tenth and half a second.
-     */
-    const IMPATIENCE = 6;
-    const PATIENCE = 30;
-
-    /**
-     * How long the cost has to stay under half its allowance before the ceiling
-     * lifts a level. Three seconds at sixty a frame: long enough that only a
-     * room that has really changed can look like it.
-     */
-    const ROOMIER = 180;
-
-    /**
-     * A brake, not a budget.
-     *
-     * Nothing should reach this: `reach` settles within two or three frames and
-     * holds the count near the budget. It is here so that one frame in a level
-     * nobody has tried cannot hang the tab while that happens. Generous on
-     * purpose — a brake that is really a budget is the thing this replaced.
-     */
-    const PANIC = PORTAL_RENDER_BUDGET * 4;
-
     return (renderer, scene) => {
         // Whatever was pulled in front of the player last frame goes back where
         // it belongs before anything is drawn, or every other pane's camera
@@ -329,11 +221,6 @@ export function prepareReflections(
 
         /** The panes the player can see for themselves this frame. */
         const inView = panes.filter((pane) => inViewOf(pane, camera));
-
-        /** Passes drawn so far this frame, for the depth controller below. */
-        let drawn = 0;
-
-        const began = performance.now();
 
         /**
          * Draws a pane as seen from a viewpoint. Going deeper draws whatever
@@ -359,35 +246,38 @@ export function prepareReflections(
              */
             aperture: Aperture,
         ): void => {
-            // **A branch ends because of its own depth, never because another
-            // branch spent the money first.**
+            // **Nothing but the geometry decides where a chain stops.**
             //
-            // This used to also ask `spent < share` — a running count of passes
-            // for the whole frame — and that one clause is what Paul saw as *I
-            // can see many mirrors straight ahead, but reflections to the side
-            // are showing as walls*. Depth-first, the corridor is drawn first
-            // and drills to sixteen; by the time the recursion unwinds to the
-            // side branches at depth one or two the purse is empty, so they get
-            // no kids, and a pane with no kids draws a room with no mirrors in
-            // it. Measured in `hall-of-mirrors`: **8 of the 12 passes at depth
-            // one rendered bare walls**, 125 of 230 over the whole frame.
+            // There is no budget here at all any more, and that is Paul's call:
+            // *safety for the engine should be the level designer's job.* What
+            // bounds a frame is the opening test below — a branch ends where
+            // its reflection stops overlapping the one showing it — with
+            // `PORTAL_BOUNCES` as a backstop that a mirrored room never
+            // reaches, because the openings close first.
             //
-            // A budget spent depth-first cannot be fair, because depth-first is
-            // exactly an ordering. What bounds the cost now is `allowed`, which
-            // is the same number for every branch in the frame, and the opening
-            // test below, which is a property of the geometry rather than of
-            // the order it was walked in. `reach` moves that number up and down
-            // between frames to hold the pass count near
-            // `PORTAL_RENDER_BUDGET`, so the room gets shallower **all at
-            // once** or not at all.
+            // Everything that used to bound it instead turned out to be a
+            // source of the faults it was meant to prevent, and each was found
+            // by him rather than by a measurement here:
             //
-            // `PANIC` is not a budget, it is a brake: one frame in a level
-            // nobody has tried yet must not be able to hang the tab while
-            // `reach` finds its level. It should never fire twice in a row.
-            // Already in the target, and nothing has overwritten it — so the
-            // subtree that produced it has already run this frame too. See
-            // `written` above for what makes this exact.
-            const goesDeeper = depth < allowed && drawn < PANIC;
+            // - A running count spent depth-first is an **ordering**, not a
+            //   budget. The corridor is walked first and drills to the bottom;
+            //   the branches beside it meet an empty purse and draw a room with
+            //   no mirrors in it. *Many mirrors straight ahead, reflections to
+            //   the side showing as walls* — 8 of the 12 passes at the first
+            //   bounce rendered bare walls.
+            //
+            // - One depth for the whole frame, moved between frames to hold the
+            //   cost near a target, fixes that unfairness and buys a swing:
+            //   every chain ends at that depth, so moving it moves every ending
+            //   at once. *The walls flicker* — and then, once that was slowed,
+            //   *the walls still flicker when the user is not moving*, because
+            //   a controller that can climb back to a depth it has already
+            //   failed at oscillates whatever its patience.
+            //
+            // Both are gone. What is left cannot flicker at all, because there
+            // is nothing left that varies between frames while the room does
+            // not.
+            const goesDeeper = depth < allowed;
 
             /**
              * The panes this pass actually drew one level in.
@@ -831,8 +721,6 @@ export function prepareReflections(
                 }
             }
 
-            drawn++;
-
             drawPane(pane, renderer, scene, from, depth);
 
             for (const other of panes) {
@@ -852,135 +740,7 @@ export function prepareReflections(
             // that chain, at that chain's depth, from that chain's camera.
             const seen = inView.includes(pane);
 
-            deepen(pane, camera, 0, seen ? reach : 0, WHOLE_SCREEN);
-        }
-
-        const spentMs = performance.now() - began;
-
-        // **How deep the next frame goes, decided by what this one cost.**
-        //
-        // The same number for every branch, which is the whole point: a room
-        // that cannot afford sixteen levels gets shallower everywhere at once
-        // rather than keeping one corridor and walling the sides. Paul drew the
-        // room that proves it and reported exactly that failure twice.
-        //
-        // Held against two things, because one is not enough. The **count**
-        // bounds memory and draw calls and is predictable. The **clock** is
-        // what actually fits the machine: a pass deep down draws into a target
-        // an eighth of the size and costs almost no pixels, but it costs a
-        // whole scene traversal like any other, and that is the part that adds
-        // up. Either being over is enough to give a level back.
-        //
-        // It moves one level at a time so the depth cannot flicker as the
-        // player turns, and it grows only when the frame came in comfortably
-        // under both — a controller that grows at its own threshold oscillates
-        // across it for ever, and this one did, between nine levels and ten,
-        // every frame. Three quarters is enough room for the next level, which
-        // costs about a fifth more than the one before it. Two or three frames
-        // to settle, which at sixty a second nobody can see.
-        took = took === 0 ? spentMs : took * 0.9 + spentMs * 0.1;
-
-        const over = drawn > PORTAL_RENDER_BUDGET || took > PANE_MILLISECONDS;
-        const roomToGrow =
-            reach < PORTAL_BOUNCES &&
-            drawn * 5 < PORTAL_RENDER_BUDGET * 4 &&
-            took * 5 < PANE_MILLISECONDS * 4;
-
-        // **Slow, and asymmetric, because moving this at all is visible.**
-        //
-        // Paul, on the first version: *the walls flicker, they all do not show
-        // every frame*. Changing `reach` moves where every chain in the level
-        // ends at once, and the end of a chain is a wall — so a controller
-        // that bobs across its own threshold blinks a wall in and out at the
-        // back of every reflection in the room, together, which is far more
-        // noticeable than one extra level of depth is worth.
-        //
-        // So: a single expensive frame does nothing. Going shallower needs the
-        // cost to stay over for `IMPATIENCE` frames running, and going deeper
-        // needs it to stay under four fifths of the allowance for `PATIENCE`
-        // of them. A dead band between the two is the point — anywhere
-        // inside it nothing moves at all, and in a room that fits comfortably
-        // (which is now most of them, since the openings end the chains rather
-        // than the budget) this never fires after the first half second.
-        //
-        // Shrinking is quicker than growing on purpose. Being one level too
-        // deep costs frame rate, which is worse than being one level too
-        // shallow.
-        //
-        // Four fifths rather than a half, which was the first try and cost
-        // nine levels of depth for nothing: the counters are what stop the
-        // bobbing, not the width of the band. One more level adds under a
-        // tenth to the count at this depth, so growing at four fifths cannot
-        // land over the line.
-        if (over) {
-            patience = 0;
-            impatience += 1;
-            hasBeenOver = true;
-        } else if (roomToGrow) {
-            impatience = 0;
-            patience += 1;
-        } else {
-            patience = 0;
-            impatience = 0;
-        }
-
-        // **Climb fast until the ceiling is found, then hold still.**
-        //
-        // Half a second of patience per level is right for keeping the depth
-        // still and hopeless for arriving at it: from a standing start of two,
-        // thirty frames a level is **fifteen seconds** to reach the twenty-odd
-        // a room of mirrors can afford. Measured over that ramp in
-        // `hall-of-mirrors`, bare wall covers 20.7% of the screen on the first
-        // frame, 12.4% after a second, 2.9% after five and 1.1% once it
-        // settles — so for the whole of that a player is looking at a room
-        // with walls in it, which is exactly what Paul reported after the
-        // flicker was fixed.
-        //
-        // Nothing is known about what a room costs until a frame has been over
-        // budget, so until then there is nothing to be careful of: climb a
-        // level a frame and find out, which takes well under a second. Once a
-        // frame *has* been over, the ceiling is known and every move from then
-        // on is visible, so patience applies.
-        //
-        // A room that never goes over never becomes patient and simply climbs
-        // to `PORTAL_BOUNCES`, which is right: it can afford it.
-        if (impatience >= IMPATIENCE) {
-            reach = Math.max(1, reach - 1);
-            impatience = 0;
-            hasBeenOver = true;
-
-            // The level that has just been given up on is not offered again.
-            ceiling = reach;
-        } else if (
-            reach < ceiling &&
-            patience >= (hasBeenOver ? PATIENCE : 1)
-        ) {
-            reach += 1;
-            patience = 0;
-        }
-
-        // **Except that a room can genuinely get cheaper.**
-        //
-        // A ceiling that only ever falls would hold a player who walks out of a
-        // hall of mirrors and into a corridor at the hall's depth for the rest
-        // of the level. So it lifts — but only on evidence that the room has
-        // actually changed rather than that this frame was a good one: the cost
-        // has to stay under **half** of what it is allowed, for three seconds
-        // running. Nothing about ordinary noise looks like that, which is what
-        // keeps the swing shut.
-        if (
-            drawn * 2 < PORTAL_RENDER_BUDGET &&
-            took * 2 < PANE_MILLISECONDS &&
-            ceiling < PORTAL_BOUNCES
-        ) {
-            roomier += 1;
-
-            if (roomier >= ROOMIER) {
-                ceiling += 1;
-                roomier = 0;
-            }
-        } else {
-            roomier = 0;
+            deepen(pane, camera, 0, seen ? PORTAL_BOUNCES : 0, WHOLE_SCREEN);
         }
 
         // Back around the player, for the view they actually get.

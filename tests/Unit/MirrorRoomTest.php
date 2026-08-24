@@ -450,17 +450,24 @@ it('sends every wall of a square room the same distance', function (): void {
     // the other three met an exhausted purse, so one wall looked right and
     // three did not. Paul found that with four captures ninety degrees apart
     // from one spot, and no geometry can produce it.
-    // Within a level of each other, not identical to the texel.
+    // **Comparable, not identical — and the difference is the geometry
+    // talking.**
     //
-    // The opening test has hysteresis — a chain already being followed carries
-    // on past the point where a new one would be started — and that makes how
-    // deep a chain runs depend a little on what ran last frame. Two walls of a
-    // symmetric room can therefore settle a level apart, which is nothing:
-    // what this test exists to catch is the old failure, where one wall got a
-    // full corridor and the other three got a single bounce because the draw
-    // budget was spent depth-first in array order.
-    expect(max($answer['deepest']) - min($answer['deepest']))
-        ->toBeLessThanOrEqual(1);
+    // This asked for identical once, and then for within one level. Both were
+    // asserting the old draw budget rather than the room: while one number
+    // capped every chain in the frame, four walls came out the same depth
+    // whatever the room actually looked like. With nothing but the openings
+    // deciding, a viewer standing off-centre is a different distance from each
+    // wall, so each corridor is a different length and closes at a different
+    // depth. Measured from the middle-ish: 38, 37, 36, 35 — and in the octagon
+    // 34, 31, 32, 32, 32, 33, 31, 31.
+    //
+    // So the test is proportional now, which is what it always meant. The
+    // failure it exists to catch is one wall with a full corridor and the
+    // others with a single bounce — sixteen against one, decided by nothing but
+    // position in an array — and no amount of honest geometry looks like that.
+    expect(min($answer['deepest']) * 2)
+        ->toBeGreaterThanOrEqual(max($answer['deepest']));
 
     // Low, and on purpose. How deep this gets depends on how loaded the machine
     // is, because the depth is held against the frame's own clock — so a number

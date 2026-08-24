@@ -391,3 +391,17 @@ Assert the invariant instead of the value:
 - **Never climbs back** to a depth already given up on (`ups === 0`). Going shallower is the controller working; climbing back is the swing Paul saw.
 - Depth at least 3, not at least 8 — enough to say a room of mirrors got a corridor rather than a single bounce.
 - The exact "never moves at all" claim belongs only in `PaneDepthTest`, where the cost per pass is set deliberately rather than observed.
+
+## There is no draw budget, and there must not be one
+Paul: *what happens when we remove the budget? safety for the engine should be the level designer's job.* What bounds a frame is `aperture.ts` and nothing else — a branch ends where its reflection stops overlapping the one showing it — with `PORTAL_BOUNCES` (48) as a backstop the geometry reaches first: measured, the square room's chains close at 38 and the octagon's at 33, and raising the constant to 64 changes nothing.
+
+**Both budgets that came before were sources of the faults they were meant to prevent**, and each was found by him rather than by a measurement here:
+
+- A running count of passes spent depth-first is an *ordering*. The corridor is walked first and drills to the bottom; the branches beside it meet an empty purse and draw a room with no mirrors in it. 8 of the 12 passes at the first bounce rendered bare walls.
+- One depth for the whole frame, moved between frames to hold the cost near a target, fixes that and buys a swing: every chain ends at that depth, so moving it moves every ending at once. That is *the walls flicker*, and then — after patience was added — *the walls still flicker when the user is not moving*, because a controller that can climb back to a depth it has already failed at oscillates whatever its patience.
+
+What removing it costs, measured in his four-mirror room: 636 passes a frame against 520, for depth 38 against 20 and slightly less bare wall. Full depth on the **first** frame with no ramp — the old controller took fifteen seconds to climb, and over that ramp bare wall covered a fifth of the screen on the first frame and a twentieth after five seconds, which is what a player actually walked in on.
+
+The property worth protecting: **nothing that varies between frames while the room does not may reach how deep a chain goes.** That is why the flicker cannot come back. `PaneDepthTest` swings the frame cost by a factor of forty and asserts the depth does not move at all.
+
+A consequence to expect rather than fix: with nothing capping every chain to one number, four walls of a room settle at *different* depths — 38, 37, 36, 35 from an off-centre spot — because each corridor is a different length. That is the geometry talking, and the old uniform cap was hiding it. `MirrorRoomTest` asserts the depths are within a factor of two of each other, which still catches the real failure (one wall with a corridor, the others with a single bounce) and no longer asserts a budget that is gone.

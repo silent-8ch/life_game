@@ -55,7 +55,8 @@ export type Topology = {
      *
      * Keeping the work down is now left to the two things that are actually
      * about work: the frustum test in `reflections.ts`, which is what visibility
-     * really is, and `PORTAL_RENDER_BUDGET`, which is what a budget really is.
+     * really is, and the opening test in `aperture.ts`, which is what bounds a
+     * frame now that there is no budget at all.
      * This stays as a filter rather than being deleted because reachability
      * still excludes something real — a room in a different connected piece of
      * the plan, or one that can only be got to through a portal, is genuinely
