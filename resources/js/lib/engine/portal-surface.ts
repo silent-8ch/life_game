@@ -920,12 +920,6 @@ export function createPortalSurface(
 
             options.aim(camera, beyond);
 
-            beyond.projectionMatrix.copy(camera.projectionMatrix);
-            beyond.projectionMatrixInverse
-                .copy(beyond.projectionMatrix)
-                .invert();
-            beyond.far = camera.far;
-
             exitPlane.setFromNormalAndCoplanarPoint(
                 options.exitNormal,
                 options.exitPoint,
@@ -933,13 +927,48 @@ export function createPortalSurface(
 
             const off = Math.abs(exitPlane.distanceToPoint(beyond.position));
 
+            // **The far plane has to reach the room, and down a tunnel that is
+            // a long way further than the player's own does.**
+            //
+            // A chain of reflections marches its camera away from the room by
+            // the width of the room per bounce: in Paul's eight-metre pair of
+            // facing mirrors the camera stands 96 m off at twelve levels and
+            // 192 m at twenty-four, while `FAR_PLANE` is 100. Everything it is
+            // meant to draw is then **past its own far plane** and cut away,
+            // and what is left is the far end of the tunnel dissolving.
+            //
+            // He found it by building the one room that could show it: *it only
+            // has two mirrors, each facing each other... i see the same
+            // distortion as the facing portals.* A facing pair and a
+            // wrap-around portal are the same shape — a single chain that goes
+            // straight out — and nothing else in the game marches a camera like
+            // that. Four mirrors branch, so the deep chains there are short.
+            //
+            // It only started showing when the draw budget went and the depth
+            // went from about sixteen to the mid thirties, which took most of
+            // the tunnel past the line.
+            //
+            // Only the third row of a projection depends on the far plane, so
+            // this leaves x and y exactly as the player's own — which is the
+            // identity the whole screen-space read rests on, and is why this
+            // can be rebuilt rather than copied.
+            beyond.fov = camera.fov;
+            beyond.aspect = camera.aspect;
+            beyond.near = camera.near;
+            beyond.far = camera.far + off;
+            beyond.updateProjectionMatrix();
+
+            beyond.projectionMatrixInverse
+                .copy(beyond.projectionMatrix)
+                .invert();
+
             if (off > CLIP_MINIMUM) {
                 tiltNearPlaneOnto(
                     beyond.projectionMatrix,
                     exitPlane,
                     beyond.matrixWorldInverse,
                     scratch,
-                    biasFor(off, camera.far),
+                    biasFor(off, beyond.far),
                 );
             }
 

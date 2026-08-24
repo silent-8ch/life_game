@@ -433,3 +433,12 @@ Cropping a projection onto a window divides by that window's span, and the openi
 The second way is `setSize`, which throws a texture away and makes another. The window moves with the player, so a target size tracking it exactly reallocates every frame for every level of every pane — hundreds of textures a frame, which a driver will not forgive. Target sizes therefore **grow and never shrink**, and are rounded to powers of two on top of that.
 
 `APERTURE_FLOOR` is also a playability lever and not only a quality one: with targets sized to their opening, raising it costs nothing in sharpness and cuts passes hard. Measured in a four-mirror room — 0.01: 693 passes, depth 38. 0.015: 390 passes, depth 25. 0.02: 249 passes, depth 18. 0.03: 139 passes, depth 12. It sits at 0.015, which is deeper *and* cheaper than the draw-budget era ever managed (depth 20 at 520 passes).
+
+## A tunnel walks its camera away, and the far plane must follow
+Every bounce of a chain stands the pane camera one room-width further out. In an 8 m room the camera is 96 m off at twelve levels and 192 m at twenty-four, while `FAR_PLANE` is 100 — so past about twelve, everything the pass is meant to draw is **beyond its own far plane** and cut away. `aim` therefore rebuilds the projection with `far = camera.far + off` rather than copying the player's.
+
+Only the third row of a perspective projection depends on near/far, so x and y come out bit-identical to the player's — which is the identity the whole screen-space read rests on, and is why rebuilding is safe where changing the fov or aspect would not be. Pinned by `TunnelReachTest`.
+
+**Use `2-mirrors-oposite` to test anything about tunnels.** Paul built it and it is the fixture that found this: a facing pair is a single chain going straight out, with no branching, no commuting pairs, and no opening clipped by a third surface — and a wrap-around portal (`new-level`'s `one`) is the same shape by a different mechanism. Every four-mirror room *branches*, so its deep chains wander sideways rather than marching, and none of them travels far enough to cross the line. Four mirrors give 3^n chains and every confound at once; two give one chain n levels deep and a fault you can attribute.
+
+This only appeared once the draw budget went and the depth rose from ~16 to the mid thirties, which took most of the tunnel past the line. Expect the same shape of thing from any future change that buys depth: **a deeper tunnel is a longer journey, not just more bounces.**
