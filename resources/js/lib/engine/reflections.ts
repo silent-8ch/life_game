@@ -263,6 +263,33 @@ export function prepareReflections(
     let hasBeenOver = false;
 
     /**
+     * The deepest this level is ever allowed to try again.
+     *
+     * **A controller that can climb back to a depth it has already failed at
+     * will oscillate, and no amount of patience fixes that** — patience only
+     * sets the period. Paul, standing perfectly still in the middle of his
+     * four-mirror room: *the walls still flicker when the user is not moving.*
+     *
+     * That report contradicted a measurement of mine that found zero movement
+     * over 239 frames with the camera fixed, and the measurement was the thing
+     * that was wrong: its stub passes cost nothing, so the clock below never
+     * fired and the only thing that could move the depth was the geometry. With
+     * a realistic cost and ordinary frame-to-frame noise — a texture upload, a
+     * collection, another tab waking — the depth swung between six and seven
+     * levels on six frames of 199, about twice a second, with the camera
+     * standing still. Every chain in the level ends at the same depth, so all
+     * of them moved together.
+     *
+     * So once a depth has proved too dear, it stops being on offer. The climb
+     * can get back to the level below it and no further, which makes the swing
+     * impossible rather than slow.
+     */
+    let ceiling = PORTAL_BOUNCES;
+
+    /** Frames running the cost has been far under what it is allowed. */
+    let roomier = 0;
+
+    /**
      * How many frames running the cost has to stay on one side before the
      * depth moves. Deeper is slow and shallower is quick, because being a level
      * too deep costs frame rate and being a level too shallow costs a little
@@ -272,6 +299,13 @@ export function prepareReflections(
      */
     const IMPATIENCE = 6;
     const PATIENCE = 30;
+
+    /**
+     * How long the cost has to stay under half its allowance before the ceiling
+     * lifts a level. Three seconds at sixty a frame: long enough that only a
+     * room that has really changed can look like it.
+     */
+    const ROOMIER = 180;
 
     /**
      * A brake, not a budget.
@@ -911,9 +945,39 @@ export function prepareReflections(
             reach = Math.max(1, reach - 1);
             impatience = 0;
             hasBeenOver = true;
-        } else if (patience >= (hasBeenOver ? PATIENCE : 1)) {
+
+            // The level that has just been given up on is not offered again.
+            ceiling = reach;
+        } else if (
+            reach < ceiling &&
+            patience >= (hasBeenOver ? PATIENCE : 1)
+        ) {
             reach += 1;
             patience = 0;
+        }
+
+        // **Except that a room can genuinely get cheaper.**
+        //
+        // A ceiling that only ever falls would hold a player who walks out of a
+        // hall of mirrors and into a corridor at the hall's depth for the rest
+        // of the level. So it lifts — but only on evidence that the room has
+        // actually changed rather than that this frame was a good one: the cost
+        // has to stay under **half** of what it is allowed, for three seconds
+        // running. Nothing about ordinary noise looks like that, which is what
+        // keeps the swing shut.
+        if (
+            drawn * 2 < PORTAL_RENDER_BUDGET &&
+            took * 2 < PANE_MILLISECONDS &&
+            ceiling < PORTAL_BOUNCES
+        ) {
+            roomier += 1;
+
+            if (roomier >= ROOMIER) {
+                ceiling += 1;
+                roomier = 0;
+            }
+        } else {
+            roomier = 0;
         }
 
         // Back around the player, for the view they actually get.

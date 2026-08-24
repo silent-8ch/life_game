@@ -317,6 +317,17 @@ The symptom is a pane a level or two in with a **large** opening and no candidat
 
 Measure `partner`, not `mesh`. A mirror's camera stands behind its own glass so its outline in its own target is itself, and `buildMirrorPane` sets `partner` to its own mesh — so this reads correctly for both kinds. A portal's camera stands at the **far** mouth, and it is that mouth the view is bounded by.
 
+## A depth the level has failed at is never offered again
+`ceiling` in reflections.ts. Once a frame goes over budget, `reach` drops a level and **that level stops being on offer** — the climb can reach one below it and no further.
+
+Patience does not fix oscillation, it only sets the period. Paul, standing perfectly still in the middle of his four-mirror room: *the walls still flicker when the user is not moving.* Every chain in a level ends at the same depth, so moving `reach` moves every ending at once, and that is every reflection in the room changing together about twice a second.
+
+**That report contradicted a measurement here that found zero movement over 239 frames with the camera fixed, and the measurement was what was wrong.** Its stub panes rendered nothing, so a pass cost no time, so the clock half of the controller never fired — it measured a machine on which the budget can never bind, which is not a machine anybody plays on. `tests/Unit/PaneDepthTest.php` burns real time per pass with noise on top, and that is the only way this class of fault shows. **Any harness for the depth controller must cost time, or it is measuring nothing.** With a realistic cost the old controller swung between six levels and seven on six frames of 199.
+
+The ceiling lifts again, or a player walking out of a hall of mirrors into a corridor would be held at the hall's depth for the rest of the level — but only on evidence the room has really changed: cost under **half** its allowance for three seconds running (`ROOMIER`). Ordinary noise cannot look like that.
+
+Also ruled out cheaply and worth not re-checking: `input.running()` reports the shift key, not motion, and it feeds only the hand pose. It never reaches the camera or the pane pipeline, so the run state cannot affect what the mirrors draw.
+
 ## The depth must climb fast and settle slow
 `reach` starts at 2. Half a second of patience per level is right for holding it still and hopeless for arriving at it: thirty frames a level is **fifteen seconds** to reach the twenty-odd a mirror room affords. Over that ramp in `hall-of-mirrors`, bare wall covers 20.7% of the screen on the first frame, 12.4% after a second, 2.9% after five and 1.1% once settled — so a player spends the whole ramp looking at a room with walls in it, which is what Paul reported after the flicker was fixed.
 
