@@ -160,6 +160,14 @@ export function prepareReflections(
         { length: PORTAL_BOUNCES + 2 },
         anAperture,
     );
+    const own: Aperture[] = Array.from(
+        { length: PORTAL_BOUNCES + 2 },
+        anAperture,
+    );
+    const overlap: Aperture[] = Array.from(
+        { length: PORTAL_BOUNCES + 2 },
+        anAperture,
+    );
 
     /**
      * Somewhere to keep each candidate's own opening while its siblings are
@@ -215,6 +223,15 @@ export function prepareReflections(
     /** Frames running that the cost has been comfortably under, or over. */
     let patience = 0;
     let impatience = 0;
+
+    /**
+     * Whether this level has ever cost more than it was allowed.
+     *
+     * Until it has, nothing is known about what the room can afford and the
+     * depth climbs a level a frame. After it has, the ceiling is known and
+     * moving is what shows, so it slows right down.
+     */
+    let hasBeenOver = false;
 
     /**
      * How many frames running the cost has to stay on one side before the
@@ -351,9 +368,44 @@ export function prepareReflections(
                 // is the turn keeping its basis right-handed — so the
                 // rectangle has to be flipped to match, or every chain hunts
                 // for its reflections down the wrong side of the picture.
-                const through = pane.mirrored
+                const shown = pane.mirrored
                     ? flipAcross(aperture, roomFor(inside, depth))
                     : copyAperture(aperture, roomFor(inside, depth));
+
+                // **And clipped to the pane's own outline, which is the part
+                // that was missing.**
+                //
+                // A chain is bounded by every opening along it including the
+                // first, and the first was never applied: the top-level call
+                // starts from `WHOLE_SCREEN` because that is what the player
+                // can see, not what this mirror can. So at the first bounce
+                // any pane anywhere on screen was accepted, whether or not it
+                // was inside the mirror being looked into, and it went down
+                // the chain carrying an opening that was in the wrong place.
+                //
+                // What that looks like: a pane a level in with a large opening
+                // and no candidates overlapping it at all, so it draws a room
+                // with no mirrors in it. In Paul's mirrored **octagon**, one
+                // of those covered a quarter of the screen at the first
+                // bounce, and bare wall came to 16 to 43 per cent of the view
+                // depending on where he stood. A square room hid it: every
+                // wall is in view from the middle and the openings are
+                // symmetric about the screen, so clipping to them changed
+                // almost nothing.
+                //
+                // `partner` is the right mesh to measure rather than `mesh`. A
+                // mirror's camera stands behind its own glass, so its outline
+                // in its own target is itself — and `buildMirrorPane` sets
+                // `partner` to its own mesh, so this reads correctly for both.
+                // A portal's camera stands at the **far** mouth, and it is
+                // that mouth the view is bounded by.
+                const mouth = pane.partner ?? pane.mesh;
+                const outline = apertureOf(mouth, inner, roomFor(own, depth));
+
+                const through =
+                    outline === null
+                        ? null
+                        : narrow(shown, outline, roomFor(kept, depth));
 
                 // Where each candidate's own opening is kept while the rest are
                 // measured. One slot per pane at this level of nesting, handed
@@ -362,7 +414,9 @@ export function prepareReflections(
                 const slots = held[Math.min(depth, held.length - 1)];
                 let taken = 0;
 
-                const kids = tunnelFirst(panes, pane)
+                const kids = (
+                    through === null ? NONE : tunnelFirst(panes, pane)
+                )
                     .slice()
                     .sort(
                         (a, b) =>
@@ -409,9 +463,9 @@ export function prepareReflections(
                         }
 
                         const left = narrow(
-                            through,
+                            through as Aperture,
                             rect,
-                            roomFor(kept, depth),
+                            roomFor(overlap, depth),
                         );
 
                         if (left === null || !worthDrawing(left)) {
@@ -745,6 +799,7 @@ export function prepareReflections(
         if (over) {
             patience = 0;
             impatience += 1;
+            hasBeenOver = true;
         } else if (roomToGrow) {
             impatience = 0;
             patience += 1;
@@ -753,10 +808,31 @@ export function prepareReflections(
             impatience = 0;
         }
 
+        // **Climb fast until the ceiling is found, then hold still.**
+        //
+        // Half a second of patience per level is right for keeping the depth
+        // still and hopeless for arriving at it: from a standing start of two,
+        // thirty frames a level is **fifteen seconds** to reach the twenty-odd
+        // a room of mirrors can afford. Measured over that ramp in
+        // `hall-of-mirrors`, bare wall covers 20.7% of the screen on the first
+        // frame, 12.4% after a second, 2.9% after five and 1.1% once it
+        // settles — so for the whole of that a player is looking at a room
+        // with walls in it, which is exactly what Paul reported after the
+        // flicker was fixed.
+        //
+        // Nothing is known about what a room costs until a frame has been over
+        // budget, so until then there is nothing to be careful of: climb a
+        // level a frame and find out, which takes well under a second. Once a
+        // frame *has* been over, the ceiling is known and every move from then
+        // on is visible, so patience applies.
+        //
+        // A room that never goes over never becomes patient and simply climbs
+        // to `PORTAL_BOUNCES`, which is right: it can afford it.
         if (impatience >= IMPATIENCE) {
             reach = Math.max(1, reach - 1);
             impatience = 0;
-        } else if (patience >= PATIENCE) {
+            hasBeenOver = true;
+        } else if (patience >= (hasBeenOver ? PATIENCE : 1)) {
             reach += 1;
             patience = 0;
         }

@@ -307,3 +307,17 @@ The first controller grew whenever a frame came in under three quarters of its a
 Widening the dead band is *not* the fix and costs real depth: growing only below half the allowance capped the room nine levels short. The counters are what stop the bobbing.
 
 Pinned by `it holds the depth still once it has found it` in MirrorRoomTest, which runs 200 frames after it has settled and asserts the draw count never changes. Any test touching this must run enough frames to settle — 900 from a standing start, since `reach` begins at 2 and climbs one level per 30 frames.
+
+## A chain is bounded by every opening along it, including the first
+`deepen` clips the running aperture against the pane's **own** outline at each level (`narrow(shown, apertureOf(pane.partner ?? pane.mesh, inner))`), not just against what the parent passed down. The top-level call starts from `WHOLE_SCREEN`, because that is what the *player* can see rather than what the mirror can, so without this the first bounce accepted any pane anywhere on screen whether or not it was inside the mirror being looked into — and it went down the chain carrying an opening in the wrong place.
+
+The symptom is a pane a level or two in with a **large** opening and no candidates overlapping it at all, so it draws a room with no mirrors and reads as a wall.
+
+**A square room cannot find this.** Measured byte for byte, clipping to the outline changes nothing there: the opposite wall's image exactly fills the mirror showing it, so the candidates already lie inside the outline. In the mirrored octagon one bare pass covered a quarter of the screen at the first bounce, and bare wall came to 16–43% of the view depending on where you stood. With the clip: 2%, worst patch 0.1%, and every spot reaches full depth instead of stopping between 17 and 23. Any future work on the recursion must be checked in the octagon as well as the square room.
+
+Measure `partner`, not `mesh`. A mirror's camera stands behind its own glass so its outline in its own target is itself, and `buildMirrorPane` sets `partner` to its own mesh — so this reads correctly for both kinds. A portal's camera stands at the **far** mouth, and it is that mouth the view is bounded by.
+
+## The depth must climb fast and settle slow
+`reach` starts at 2. Half a second of patience per level is right for holding it still and hopeless for arriving at it: thirty frames a level is **fifteen seconds** to reach the twenty-odd a mirror room affords. Over that ramp in `hall-of-mirrors`, bare wall covers 20.7% of the screen on the first frame, 12.4% after a second, 2.9% after five and 1.1% once settled — so a player spends the whole ramp looking at a room with walls in it, which is what Paul reported after the flicker was fixed.
+
+Nothing is known about what a room costs until a frame has gone over budget, so until then there is nothing to be careful of: climb a level a frame (`hasBeenOver` is false) and find the ceiling in well under a second. After the first overrun, `PATIENCE` applies. A room that never goes over never becomes patient and simply climbs to `PORTAL_BOUNCES`, which is correct — it can afford it.

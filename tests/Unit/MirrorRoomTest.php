@@ -415,6 +415,23 @@ it('sends every wall of a square room the same distance', function (): void {
 it('holds an octagon of mirrors to the same rule', function (): void {
     $answer = mirrorRoomFrame(8);
 
+    // An octagon is where the missing clip showed, and a square room could not
+    // have found it. A chain is bounded by every opening along it including the
+    // first, and the first was not applied: the top-level call starts from the
+    // whole screen, because that is what the *player* can see rather than what
+    // the mirror can. So at the first bounce any pane anywhere on screen was
+    // accepted, whether or not it was inside the mirror being looked into.
+    //
+    // In a square room that changes nothing at all — measured, byte for byte —
+    // because the opposite wall's image exactly fills the mirror showing it, so
+    // the candidates already lie inside the outline. In an octagon they do not.
+    // One bare-walled pass covered **a quarter of the screen at the first
+    // bounce**, and bare wall came to between 16 and 43 per cent of the view
+    // depending on where you stood. With the outline applied: 2 per cent, worst
+    // single patch a tenth of one per cent, and every spot reaching full depth
+    // instead of stopping between 17 and 23.
+    expect($answer['bareNear'])->toBe(0);
+
     // Paul, when the square room was still broken: *what about an octagon room
     // with mirrors? Our solution needs to be robust.* An octagon has no facing
     // pairs at all — every wall is at 45 degrees to its neighbours — so nothing
