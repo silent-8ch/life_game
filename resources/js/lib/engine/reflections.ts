@@ -34,6 +34,30 @@ import type { SpriteActor } from '@/lib/engine/sprite-actor';
  * @returns a function that refreshes every pane for the coming frame.
  */
 
+/**
+ * The most chains a single frame may enter before the recursion gives up.
+ *
+ * **This does fire in ordinary play, and that is not a bug in it.** Standing in
+ * the corner of a four-mirror room, less than half a metre from two of them, and
+ * tilting up ten degrees, the reflections genuinely fill the view at every
+ * level — so the room really does want thousands of passes and there is nothing
+ * wrong with any of them. Measured at one such spot: 316 passes level, 1,848 at
+ * five degrees of pitch, and past four thousand from ten degrees on. Raising
+ * `APERTURE_FLOOR` does not help, because the openings there are genuinely
+ * large: even at a floor of eighty pixels that spot still runs away.
+ *
+ * So this is the difference between a room that walls up in a corner and a tab
+ * that dies, and Paul reported the second one three builds running.
+ *
+ * What it costs when it fires is fairness. The recursion is depth-first with a
+ * pane's own continuation taken first, so what keeps its depth is the corridors
+ * — the chains the eye follows — and what gets cut is the side chains. That is
+ * the better half of the trade, but it is still a trade, and the honest fix is
+ * to choose how deep the whole frame goes *before* drawing any of it rather
+ * than stopping partway. That is a real piece of work and it is not this.
+ */
+const CHAIN_PANIC = 500;
+
 /** Nothing was drawn one level in, and no array had to be made to say so. */
 const NONE: readonly PortalSurface[] = [];
 
@@ -231,6 +255,9 @@ export function prepareReflections(
         /** The panes the player can see for themselves this frame. */
         const inView = panes.filter((pane) => inViewOf(pane, camera));
 
+        /** Chains entered this frame, which is what the brake below counts. */
+        let entered = 0;
+
         /**
          * Draws a pane as seen from a viewpoint. Going deeper draws whatever
          * panes this one's own camera can see one level further in first, and
@@ -255,6 +282,8 @@ export function prepareReflections(
              */
             aperture: Aperture,
         ): void => {
+            entered++;
+
             // **Nothing but the geometry decides where a chain stops.**
             //
             // There is no budget here at all any more, and that is Paul's call:
@@ -286,7 +315,33 @@ export function prepareReflections(
             // Both are gone. What is left cannot flicker at all, because there
             // is nothing left that varies between frames while the room does
             // not.
-            const goesDeeper = depth < allowed;
+            // **A brake, and it counts chains entered rather than passes drawn.**
+            //
+            // There is no draw budget here — Paul's call, and the reasoning is
+            // above. What there has to be is a guard against a frame that never
+            // ends, because the recursion is bounded by the *openings* and an
+            // opening can fail to shrink: `apertureOf` answers "the whole
+            // screen" for anything it cannot measure, and a chain of those
+            // never gets smaller, so it branches at full width until `allowed`
+            // runs out. Three to the power of thirty-two is not a frame.
+            //
+            // That is not hypothetical. Sweeping a four-mirror room over
+            // position, heading **and pitch** found viewpoints that consumed
+            // four gigabytes and died; an earlier sweep of position and heading
+            // alone found nothing, because it is the pitch that does it. Paul,
+            // three builds running: *it freezes.*
+            //
+            // Counting **passes drawn** cannot catch this, which is why the
+            // brake that used to be here did not. The recursion is post-order,
+            // so a frame descends all the way before it draws anything at all,
+            // and an exploding descent is out of memory long before it has
+            // drawn its first pane. What has to be counted is the descent.
+            //
+            // It is a brake and not a dial: an ordinary frame in the worst room
+            // measured enters a few hundred, so this is an order of magnitude
+            // clear of anything real. If it ever fires there is a bug, and the
+            // shape of the bug is an opening that stopped shrinking.
+            const goesDeeper = depth < allowed && entered < CHAIN_PANIC;
 
             /**
              * The panes this pass actually drew one level in.

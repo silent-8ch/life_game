@@ -531,3 +531,24 @@ It was built and measured, and it does the opposite. **Passes went from 392 to 1
 The reason is `followed`, the hysteresis that stops panes popping as the player moves. A chain followed on the previous frame is allowed to carry on at half the floor. Skipping a subtree stops its descendants being marked, so their marks go stale — and the grace then has to be widened to cover the skip interval, or every chain pops back to the full floor on the frame it refreshes. Widening the grace is what costs: it lets chains that have *lapsed* qualify for the half floor too, which is halving the floor globally. Measured on its own, with no amortisation at all, widening the grace from one frame to the refresh interval took the same room from 392 passes to 910.
 
 So the two mechanisms want opposite things and cannot both be naive. Anyone attacking this again needs to keep the marks fresh for a skipped subtree without walking it — which means remembering the subtree, not just widening a window in time.
+
+## The freeze was pitch, and a mirrored corner genuinely wants thousands of passes
+Sweeping position and heading found nothing — the pass count was flat at 700-ish everywhere. Adding **pitch** found it immediately, and it costs four gigabytes of heap to find: standing in the corner of a four-mirror room, less than half a metre from two of them, at one spot —
+
+| pitch | passes |
+| --- | --- |
+| 0° | 316 |
+| 5° | 1,848 |
+| 10–30° | 4,000+ and climbing |
+| 60° | 9 |
+
+Paul's own captures are at pitch 0.4–4.7°, so a few more degrees of looking up is all it took. **Any sweep of this renderer that does not vary pitch is not a sweep.**
+
+**There is nothing wrong with those passes.** Close to two mirrors and tilted, the reflections genuinely fill the view at every level, so the room really does want thousands of them. `APERTURE_FLOOR` cannot help: at a floor of *eighty pixels* that spot still runs away, because the openings there are honestly large. Depth cannot help either — at a cap of 8 bounces it is still 1,400 passes.
+
+So a hard bound is unavoidable, and `CHAIN_PANIC` (500 chains entered) is it. Two things about how it is counted, both learned the hard way:
+
+- It counts **chains entered**, not passes drawn. The recursion is post-order, so a frame descends all the way before drawing anything — an exploding descent is out of memory long before it draws its first pane, and a brake on draws never fires. The old `PANIC` counted draws and was useless.
+- It fires in **ordinary play**, which is not a bug in it. It is the difference between a room that walls up in a corner and a tab that dies.
+
+What it costs when it fires is fairness: depth-first with `tunnelFirst` means the corridors keep their depth and the side chains get cut, which is the better half of the trade but still a trade. The honest fix is to choose how deep the whole frame goes *before* drawing any of it — iterative deepening, or picking the floor per frame from a counting walk — so that it degrades uniformly instead of stopping partway. Not yet done.

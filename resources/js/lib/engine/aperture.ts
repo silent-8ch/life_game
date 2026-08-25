@@ -131,15 +131,6 @@ const BOX_EDGES: ReadonlyArray<readonly [number, number]> = [
     [3, 7],
 ];
 
-/**
- * How far in front of the camera a point has to be to be worth projecting.
- *
- * Not zero: at exactly zero the divide is infinite, and a hair either side of
- * it swings a point from one edge of the screen to the other. Small enough that
- * nothing real is ever cut by it — a camera's own near plane is centimetres.
- */
-const NEAR_ENOUGH = 1e-6;
-
 /** Grows a rectangle to hold a point. */
 function stretch(into: Aperture, x: number, y: number): void {
     into.left = Math.min(into.left, x);
@@ -219,57 +210,61 @@ export function apertureOf(
 
     let any = false;
 
-    // **The twelve edges, each cut at the near plane — not the eight corners.**
+    // **The twelve edges, each cut at the camera's NEAR PLANE.**
     //
-    // Bailing to the whole screen the moment one corner sat behind the camera
-    // was the first version, and it read as "conservative" while being the
-    // thing that stopped this file working. A mirror's camera stands *behind*
-    // its own wall, and the side walls of the room run from well in front of
-    // that point to well behind it — so in a room of mirrors the box of a side
-    // wall straddles the camera nearly every time, and nearly every candidate
-    // came back as the whole screen. With no rectangle to intersect there is no
-    // pruning, and the tree goes back to branching by three per bounce:
-    // measured with the brake off, 42,857 passes to reach nine levels in a
-    // four-mirror room.
+    // Not at `w = 0`, which is the camera's own eye and where a projection
+    // means nothing. A point held a millionth in front of the eye projects to
+    // about a million in NDC, so the box it belongs to measures as the whole
+    // screen — and an opening that measures as the whole screen does not
+    // shrink, so the chain below it branches at full width for as long as it is
+    // allowed to. Three to the power of thirty-two is not a frame.
     //
-    // Clipping each edge to the near plane and taking what survives is the
-    // right answer and costs twelve segments instead of eight points. A box
-    // that genuinely swallows the camera still comes out as the whole screen,
-    // because a vertex held at the plane projects a long way out and the
-    // clamp below catches it — so the conservative case is kept where it is
-    // real, and paid for only there.
+    // That is not a corner case. A mirror's camera stands behind its own glass
+    // and the side walls of the room run past it in both directions, so panes
+    // straddle it constantly — and the moment the player looks up or down,
+    // enough of them do that the recursion explodes. Sweeping position and
+    // heading alone found nothing; adding **pitch** found it at every spot in
+    // the room, and cost four gigabytes doing so. Paul, three builds running:
+    // *it freezes.*
+    //
+    // In clip space the near plane is `z + w = 0`, so that is where an edge is
+    // cut. What comes back sits exactly on the near plane, where `w` is the
+    // camera's own near distance and x and y are ordinary numbers.
     for (const [from, to] of BOX_EDGES) {
         const start = clip[from];
         const end = clip[to];
-        const startAhead = start.w > NEAR_ENOUGH;
-        const endAhead = end.w > NEAR_ENOUGH;
 
-        if (!startAhead && !endAhead) {
+        // How far each end is in front of the near plane.
+        const startBy = start.z + start.w;
+        const endBy = end.z + end.w;
+
+        if (startBy <= 0 && endBy <= 0) {
             continue;
         }
 
         any = true;
 
-        if (startAhead) {
+        if (startBy > 0) {
             stretch(into, start.x / start.w, start.y / start.w);
         }
 
-        if (endAhead) {
+        if (endBy > 0) {
             stretch(into, end.x / end.w, end.y / end.w);
         }
 
-        if (startAhead !== endAhead) {
-            // Where the edge crosses the near plane, in the one parameter that
-            // matters. `w` is linear along the segment in clip space, so this
-            // is exact rather than an approximation.
-            const along = (NEAR_ENOUGH - start.w) / (end.w - start.w);
-            const w = NEAR_ENOUGH;
+        if (startBy > 0 !== endBy > 0) {
+            // Where the edge crosses. Clip coordinates are linear along a
+            // segment, so this is exact rather than an approximation.
+            const along = startBy / (startBy - endBy);
+            const w = start.w + (end.w - start.w) * along;
 
-            stretch(
-                into,
-                (start.x + (end.x - start.x) * along) / w,
-                (start.y + (end.y - start.y) * along) / w,
-            );
+            if (w > 0) {
+                stretch(
+                    into,
+                    (start.x + (end.x - start.x) * along) / w,
+                    (start.y + (end.y - start.y) * along) / w,
+                );
+            }
         }
     }
 
