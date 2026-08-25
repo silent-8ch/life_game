@@ -522,3 +522,12 @@ Two related measurements from the same hunt, both of which pointed away from the
 It is steady-state cost, and the only lever is fewer passes. Raising the floor from 0.015 to 0.02 takes a four-mirror room from 638 passes to **392 with no loss of depth at all** (32 either way), because what it prunes is the side chains and not the corridors. It costs a corridor five bounces (20 → 15) and it costs an octagon two more shallow endings, since a higher floor means every chain reaches its ending sooner and an octagon reaches one first.
 
 This is a dial and not a budget: it depends only on the geometry and where the player stands, so it cannot bob between frames the way a per-frame purse did — which is the whole reason the flicker cannot come back.
+
+## Amortising deep levels across frames does not work while the opening test has hysteresis
+The idea is sound on its face and the arithmetic is inviting: in a four-mirror room, depths 0–4 are **12%** of the passes and everything from 5 down is the other 88%, and a reflection five levels in is small and moves slowly. Redrawing the deep ones every second, fourth or eighth frame should cut the frame to a third with nothing visible changing — the tunnel stays the same length and only the contents of the far levels are a few frames old. The window design even makes staleness safe: a target carries the window it was drawn through, so an old picture is in the right *place* and merely old.
+
+It was built and measured, and it does the opposite. **Passes went from 392 to 1287.**
+
+The reason is `followed`, the hysteresis that stops panes popping as the player moves. A chain followed on the previous frame is allowed to carry on at half the floor. Skipping a subtree stops its descendants being marked, so their marks go stale — and the grace then has to be widened to cover the skip interval, or every chain pops back to the full floor on the frame it refreshes. Widening the grace is what costs: it lets chains that have *lapsed* qualify for the half floor too, which is halving the floor globally. Measured on its own, with no amortisation at all, widening the grace from one frame to the refresh interval took the same room from 392 passes to 910.
+
+So the two mechanisms want opposite things and cannot both be naive. Anyone attacking this again needs to keep the marks fresh for a skipped subtree without walking it — which means remembering the subtree, not just widening a window in time.
