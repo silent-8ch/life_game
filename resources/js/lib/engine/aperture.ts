@@ -71,28 +71,40 @@ export const WHOLE_SCREEN: Aperture = {
  * A **corridor** — two mirrors facing each other, or a wrap-around portal — is a
  * single chain, so it costs one pass per bounce. A room that **branches** costs
  * about the square of its depth, because the reflections of a four-mirror room
- * are a lattice and there are more of them the further out you look. The same
- * number therefore buys wildly different things:
+ * are a lattice and there are more of them the further out you look. So this
+ * number buys very different things depending on the room, and what it mostly
+ * prunes is **breadth**:
  *
- * | floor | two mirrors      | four mirrors        |
- * | ----- | ---------------- | ------------------- |
- * | 0.015 | 22 passes, 20 deep | 657 passes, 42 deep |
- * | 0.012 | 27 passes, 25 deep | 1021 passes, 48 deep |
- * | 0.010 | 33 passes, 31 deep | 1396 passes, 48 deep |
+ * | floor | four mirrors        | two mirrors        |
+ * | ----- | ------------------- | ------------------ |
+ * | 0.015 | 638 passes, 32 deep | 22 passes, 20 deep |
+ * | 0.020 | 392 passes, 32 deep | 17 passes, 15 deep |
+ * | 0.025 | 264 passes, 26 deep | 14 passes, 12 deep |
+ * | 0.030 | 186 passes, 22 deep | 12 passes, 10 deep |
  *
- * So this is the lever for how far a reflection goes, and lowering it is cheap
- * in a corridor and expensive in anything that branches. It sits where a
- * four-mirror room costs about what Paul has said runs smoothly.
+ * Note the first two rows: a fifth off the floor costs the four-mirror room
+ * **nothing in depth** and saves it 40 per cent of its passes, because what
+ * goes is the side chains rather than the corridors. That is where it sits.
  *
- * **What it cannot buy is a vanishing point.** The last patch is always about
- * `floor` by `floor` — some twenty pixels square here — because that is what the
- * floor means. Getting it down to something the eye cannot find would take a
- * floor near a single pixel, and the branching cost grows as the square of the
- * depth, so there is no setting where a room of four mirrors reaches it. That
- * is a limit of drawing reflections by recursion, not a number that wants
- * tuning.
+ * ## Why it is not lower, which is the honest answer to "how deep can it go"
+ *
+ * Seven hundred pane passes in a frame is more than a browser will sustain —
+ * each one is a scene traversal and a render target bind, and the work is
+ * submitted faster than it drains. Paul, at 0.015: *i can move for a little bit,
+ * then it freezes.* This is the dial for that, and it is a dial rather than a
+ * budget: it depends only on the geometry and where the player is standing, so
+ * it cannot bob about between frames the way a per-frame purse did.
+ *
+ * **What it cannot buy at any setting is a vanishing point.** The last patch of
+ * a chain is always about `floor` by `floor` — some twenty-five pixels square
+ * here — because that is what the floor means. Getting it under what the eye can
+ * find needs a floor near a single pixel, and the branching cost grows as the
+ * square of the depth. If that ending has to disappear rather than shrink, the
+ * lever is geometry and not passes: `build/images.ts` already hangs one
+ * reflected copy of the room behind each mirror for free, and nesting those
+ * would push the ending back at no cost in passes at all.
  */
-export const APERTURE_FLOOR = 0.015;
+export const APERTURE_FLOOR = 0.02;
 
 const viewProjection = new THREE.Matrix4();
 

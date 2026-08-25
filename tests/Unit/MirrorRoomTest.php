@@ -510,7 +510,14 @@ it('holds an octagon of mirrors to the same rule', function (): void {
     // guarding is the old failure — a pane with a *large* opening and nothing
     // in it, which was a quarter of the screen and is a different thing
     // entirely from a chain that has honestly run out.
-    expect($answer['bareNear'])->toBeLessThanOrEqual(2);
+    //
+    // The number is what the current `APERTURE_FLOOR` produces, and it moves
+    // with it: a higher floor means every chain reaches its ending sooner, and
+    // an octagon reaches one first. At 0.015 this was two; at 0.02, which is
+    // where the floor sits so that a four-mirror room can be walked around
+    // without the page seizing, it is four. That is the cost of the setting
+    // rather than a fault, and it is the honest place to see it.
+    expect($answer['bareNear'])->toBeLessThanOrEqual(4);
 
     // Paul, when the square room was still broken: *what about an octagon room
     // with mirrors? Our solution needs to be robust.* An octagon has no facing

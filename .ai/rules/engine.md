@@ -508,3 +508,17 @@ It is a plain `Map` with a last-wanted stamp now, pruned by `tidy` on the same r
 **The shape to remember, because it will recur:** anything keyed by a per-chain object is keyed by something whose lifetime is the whole level, since chains are rooted at a camera that never dies. Weak references do not help. What helps is a stamp and a sweep.
 
 Two related measurements from the same hunt, both of which pointed away from the real cause and are worth not repeating: the **pass count** was flat at 700–723 across 25 spots and 24 headings, and lower than the build that ran smoothly; and **colour memory plateaued** at 78 MB rather than climbing. When a fault gets worse the longer you play, look for something counted per chain, not per frame and not per pixel.
+
+## Seven hundred pane passes a frame is more than a browser sustains
+`APERTURE_FLOOR` is the cost dial, and it sits at 0.02 for that reason rather than a visual one. At 0.015 a four-mirror room costs about 670 passes a frame and Paul reported *i can move for a little bit, then it freezes* — the work is submitted faster than it drains, so standing still is fine and moving builds a backlog that never catches up.
+
+**What that freeze was not**, all measured before touching the dial, and each ruled out something I would otherwise have chased:
+
+- Not a JS leak. Heap flat at 17–18 MB over 3000 frames of smooth movement, once the camera pool was pruned.
+- Not render-target churn. 146 targets made over those 3000 frames, 15 freed, 303 resizes — all in the first few hundred frames, then nothing. No dispose-and-recreate thrash.
+- Not accumulation of any kind. Colour memory plateaued at 78 MB and target count settled.
+- Not the pass count *rising* — it is flat across position and heading, and was flat before.
+
+It is steady-state cost, and the only lever is fewer passes. Raising the floor from 0.015 to 0.02 takes a four-mirror room from 638 passes to **392 with no loss of depth at all** (32 either way), because what it prunes is the side chains and not the corridors. It costs a corridor five bounces (20 → 15) and it costs an octagon two more shallow endings, since a higher floor means every chain reaches its ending sooner and an octagon reaches one first.
+
+This is a dial and not a budget: it depends only on the geometry and where the player stands, so it cannot bob between frames the way a per-frame purse did — which is the whole reason the flicker cannot come back.
