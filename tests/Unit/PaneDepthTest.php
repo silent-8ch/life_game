@@ -120,6 +120,7 @@ function paneDepth(string $body): array
                     .applyMatrix4(mesh.matrixWorld),
                 mesh,
                 settle: () => {},
+                tidy: () => {},
                 release: () => {},
                 hug: () => {},
                 aim: (from) => {

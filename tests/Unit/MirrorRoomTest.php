@@ -180,6 +180,8 @@ function mirrorRoomFrame(int $sides): array
                     .applyMatrix4(mesh.matrixWorld),
                 mesh,
                 settle: () => {},
+                tidy: () => {},
+            tidy: () => {},
                 release: () => {},
                 hug: () => {},
                 aim: (from) => {

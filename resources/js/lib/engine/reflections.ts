@@ -220,6 +220,14 @@ export function prepareReflections(
 
         frames++;
 
+        // Before anything is drawn: let go of any level nothing has looked at
+        // for a while. A room of four mirrors reaches forty-odd levels and
+        // holds a target for each of them, and turning on the spot changes
+        // which chains exist — so without this the buffers only ever accrue.
+        for (const pane of panes) {
+            pane.tidy(frames);
+        }
+
         /** The panes the player can see for themselves this frame. */
         const inView = panes.filter((pane) => inViewOf(pane, camera));
 

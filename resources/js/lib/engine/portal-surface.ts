@@ -91,6 +91,15 @@ export type PaneWindow = {
     top: number;
 };
 
+/**
+ * How many frames a level's target is kept after nothing has drawn it.
+ *
+ * Generous on purpose: a chain that comes and goes as the player turns must not
+ * free and remake its buffers every second, which is the reallocation churn
+ * that stopped the page painting once already. Five seconds at sixty a frame.
+ */
+const KEPT_FOR = 300;
+
 /** The whole picture: what the player's own camera is drawn through. */
 const WHOLE_VIEW: PaneWindow = { left: -1, right: 1, bottom: -1, top: 1 };
 
@@ -443,6 +452,11 @@ export type PortalSurface = {
     blocking: THREE.Object3D[];
     /** Where in the world the pane is, for judging whether it is worth drawing. */
     bounds: THREE.Sphere;
+    /**
+     * Lets go of any depth nothing has drawn for a while, and tells the surface
+     * which frame it is. Called once a frame per pane, before anything draws.
+     */
+    tidy: (now: number) => void;
     /** Takes the pane's present position as the one it belongs in. */
     settle: () => void;
     /**
@@ -739,6 +753,26 @@ export function createPortalSurface(
      */
     const drawn: boolean[] = new Array(depths).fill(false);
 
+    /**
+     * The frame each depth was last drawn on, and which frame it is now.
+     *
+     * A target is made the first time a depth is reached and, until this, was
+     * kept until the level was torn down. That is fine while a pane goes eight
+     * levels deep and is not fine now: a room of four mirrors reaches
+     * forty-odd, so it holds forty-odd targets a pane, each grown to the
+     * largest window that level has ever needed. Measured by walking that room
+     * — twenty-five spots, twenty-four headings — 172 targets and 79 MB of
+     * colour, and as much again in depth buffers. Paul: *4 mirrors room
+     * crashes now.*
+     *
+     * Nothing about that memory is being looked at. Turning on the spot changes
+     * which chains exist, and the ones that have gone are still holding their
+     * buffers. So a depth nobody has drawn for a while gives its target back.
+     */
+    const drawnOn = new Int32Array(depths).fill(-1);
+
+    let clock = 0;
+
     const targetAt = (depth: number): THREE.WebGLRenderTarget => {
         const at = indexOf(depth);
         const size = sizeFor(at);
@@ -966,6 +1000,47 @@ export function createPortalSurface(
             }
 
             return beyond;
+        },
+
+        /**
+         * Lets go of any depth nothing has drawn for a while.
+         *
+         * Called once a frame per pane, before anything is drawn, so `clock` is
+         * this frame's number for the passes that follow.
+         *
+         * `KEPT_FOR` is generous on purpose. A chain that comes and goes as the
+         * player turns should not be freeing and remaking buffers every second —
+         * that is the reallocation churn that made the page stop painting once
+         * already. Several seconds of not being looked at is a chain that has
+         * really gone.
+         */
+        tidy: (now) => {
+            clock = now;
+
+            for (let at = 0; at < depths; at++) {
+                const held = targets[at];
+
+                if (
+                    held === null ||
+                    held === undefined ||
+                    drawnOn[at] < 0 ||
+                    now - drawnOn[at] < KEPT_FOR
+                ) {
+                    continue;
+                }
+
+                // Never the one the player is being shown, whatever the clock
+                // says: it is drawn every frame, so it cannot be stale, and
+                // taking it would be a black pane for a frame.
+                if (at === 0) {
+                    continue;
+                }
+
+                held.dispose();
+                targets[at] = null;
+                drawn[at] = false;
+                drawnOn[at] = -1;
+            }
         },
 
         settle: () => {
@@ -1220,6 +1295,7 @@ export function createPortalSurface(
             // This level has a picture in it now, so `show` may read it back
             // rather than falling forward to one that has.
             drawn[indexOf(depth)] = true;
+            drawnOn[indexOf(depth)] = clock;
 
             renderer.shadowMap.autoUpdate = wasShadowAutoUpdate;
             renderer.setRenderTarget(wasTarget);

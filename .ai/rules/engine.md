@@ -485,3 +485,15 @@ A **corridor** costs one pass per bounce; a room that **branches** costs about t
 **A vanishing point is not reachable this way, and that is a limit rather than a tuning problem.** The last patch of any chain is always about `floor` by `floor` — twenty pixels square at the current setting — because that is what the floor means. Getting it below what the eye can find needs a floor near one pixel, and the branching cost grows as the square of the depth, so no setting reaches it in a room of four mirrors. If that ending has to disappear rather than shrink, the lever is geometry and not passes: `build/images.ts` already hangs one reflected copy of the room behind each mirror for free, and nesting those would push the ending back further at no cost in passes.
 
 An ending is the same size wherever it lands, so **how soon** a room reaches one differs: an octagon has no parallel walls, so a chain turning a corner can be under the floor by the second bounce, where a square room's chains run straight and take twenty. `MirrorRoomTest` therefore counts shallow endings rather than forbidding them — what it guards is the old failure, a pane with a *large* opening and nothing in it.
+
+## Pane targets are freed when nothing has drawn them, or a mirror room runs out of memory
+`tidy(now)` on a `PortalSurface` disposes any depth nothing has drawn for `KEPT_FOR` frames (300, five seconds), and `prepareReflections` calls it once a frame per pane before anything draws. Depth 0 is never freed: it is drawn every frame and taking it would be a black pane.
+
+Without it, a target is made the first time a depth is reached and kept until the level is torn down. That was fine at eight bounces and is not at forty: measured by walking a four-mirror room over 25 spots and 24 headings, **172 targets and 79 MB of colour, and as much again in depth buffers** — against 123 targets and 48 MB live in the worst single frame. Turning on the spot changes which chains exist, and the ones that have gone were still holding their buffers. Paul: *4 mirrors room crashes now.*
+
+Two things that measurement also settles, and both are counter-intuitive enough to be worth keeping:
+
+- **The deep tail is nearly free.** Of those 172 targets, the 132 at depth ≥10 came to **3 MB** between them, because a target is sized to its own opening. The memory is all in the first few levels, where the openings are most of the screen. Cutting `PORTAL_BOUNCES` to save memory does almost nothing.
+- **Cutting depth barely cuts passes either.** 4 mirrors at bounce cap 48 → 656 passes; at 16 → 496. The cost is the *breadth* of the lattice at shallow depths, not the tail, so paying for depth is cheap and paying for breadth is not. `APERTURE_FLOOR` is the lever for breadth; `PORTAL_BOUNCES` is nearly useless as one.
+
+`KEPT_FOR` is generous on purpose: a chain that comes and goes as the player turns must not free and remake its buffers every second, which is the reallocation churn that stopped the page painting once already.

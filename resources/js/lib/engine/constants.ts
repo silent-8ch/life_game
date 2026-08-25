@@ -152,7 +152,7 @@ export const PANE_TEXELS_DOWN = 1152;
  * `scaleAt` in portal-surface.ts, which drops a target to a sixteenth beyond
  * the first few levels and is what makes this many affordable.
  */
-export const PORTAL_BOUNCES = 48;
+export const PORTAL_BOUNCES = 32;
 
 /**
  * **There is no draw budget any more, and this records why rather than being
