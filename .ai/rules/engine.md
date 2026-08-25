@@ -497,3 +497,14 @@ Two things that measurement also settles, and both are counter-intuitive enough 
 - **Cutting depth barely cuts passes either.** 4 mirrors at bounce cap 48 → 656 passes; at 16 → 496. The cost is the *breadth* of the lattice at shallow depths, not the tail, so paying for depth is cheap and paying for breadth is not. `APERTURE_FLOOR` is the lever for breadth; `PORTAL_BOUNCES` is nearly useless as one.
 
 `KEPT_FOR` is generous on purpose: a chain that comes and goes as the player turns must not free and remake its buffers every second, which is the reallocation churn that stopped the page painting once already.
+
+## A WeakMap keyed by the camera one level out is a leak, not a cache
+`beyondCameras` in portal-surface.ts holds one camera per viewpoint a pane is ever aimed from. It was a `WeakMap` keyed by the incoming camera, which reads as self-cleaning and is the opposite: **a WeakMap keeps its value alive for as long as its key lives.** Follow the keys back and the root of every chain is the player's own camera, which lives for the whole level — so a depth-one camera never dies, and it is the key for depth two, which never dies, and so on. Every camera ever made for any chain was retained until the level was torn down.
+
+That would be harmless if the set of chains were fixed. It is not: the opening test picks different chains as the player moves, so every step walks chains that have never been walked before and each leaves its cameras behind. Measured in a four-mirror room — 7,000 cameras after a second of movement, 21,000 after ten, climbing about a thousand a second and never coming down. Paul: *it freezes after moving a little while.*
+
+It is a plain `Map` with a last-wanted stamp now, pruned by `tidy` on the same rule as the render targets (five seconds unwanted), swept every sixty frames rather than every frame because there can be thousands of entries and walking them all to find a handful is its own waste. Retention is then bounded by what has been walked recently rather than by everything ever walked.
+
+**The shape to remember, because it will recur:** anything keyed by a per-chain object is keyed by something whose lifetime is the whole level, since chains are rooted at a camera that never dies. Weak references do not help. What helps is a stamp and a sweep.
+
+Two related measurements from the same hunt, both of which pointed away from the real cause and are worth not repeating: the **pass count** was flat at 700–723 across 25 spots and 24 headings, and lower than the build that ran smoothly; and **colour memory plateaued** at 78 MB rather than climbing. When a fault gets worse the longer you play, look for something counted per chain, not per frame and not per pixel.

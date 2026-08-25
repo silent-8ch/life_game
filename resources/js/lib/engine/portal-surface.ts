@@ -100,6 +100,9 @@ export type PaneWindow = {
  */
 const KEPT_FOR = 300;
 
+/** How often the camera pool is walked looking for viewpoints nobody wants. */
+const SWEEP_EVERY = 60;
+
 /** The whole picture: what the player's own camera is drawn through. */
 const WHOLE_VIEW: PaneWindow = { left: -1, right: 1, bottom: -1, top: 1 };
 
@@ -881,26 +884,53 @@ export function createPortalSurface(
 
     const mesh = new THREE.Mesh(options.geometry, material);
 
-    const beyondCameras = new WeakMap<
+    /**
+     * One camera per viewpoint this pane is ever aimed from, and when it was
+     * last wanted.
+     *
+     * ## Why this cannot be a WeakMap, which is what it was
+     *
+     * A WeakMap keeps its **value** alive for as long as its **key** lives, and
+     * the key here is the camera one level out. Follow that back and the root of
+     * every chain is the player's own camera, which lives for the whole level —
+     * so a depth-one camera never dies, and it is the key for depth two, which
+     * never dies, and so on. **Every camera ever made for any chain was retained
+     * until the level was torn down.**
+     *
+     * That would be harmless if the set of chains were fixed. It is not: the
+     * opening test picks different ones as the player moves, so every step makes
+     * chains that have never been walked before and each leaves its cameras
+     * behind. Measured by walking a four-mirror room: seven thousand cameras
+     * after a second of movement, twenty-one thousand after ten, climbing by
+     * about a thousand a second and never coming down. Paul: *it freezes after
+     * moving a little while.*
+     *
+     * A plain Map holds its keys too, so this leaks in the same way until
+     * something prunes it — which `tidy` does, on the same rule as the render
+     * targets: a viewpoint nothing has asked for in five seconds is a chain that
+     * is no longer being walked.
+     */
+    const beyondCameras = new Map<
         THREE.PerspectiveCamera,
-        THREE.PerspectiveCamera
+        { camera: THREE.PerspectiveCamera; wantedOn: number }
     >();
 
     const beyondFor = (
         camera: THREE.PerspectiveCamera,
     ): THREE.PerspectiveCamera => {
-        const held = beyondCameras.get(camera);
+        let held = beyondCameras.get(camera);
 
-        if (held !== undefined) {
-            return held;
+        if (held === undefined) {
+            const made = new THREE.PerspectiveCamera();
+            made.matrixAutoUpdate = false;
+            made.matrixWorldAutoUpdate = false;
+            held = { camera: made, wantedOn: clock };
+            beyondCameras.set(camera, held);
         }
 
-        const made = new THREE.PerspectiveCamera();
-        made.matrixAutoUpdate = false;
-        made.matrixWorldAutoUpdate = false;
-        beyondCameras.set(camera, made);
+        held.wantedOn = clock;
 
-        return made;
+        return held.camera;
     };
 
     const exitPlane = new THREE.Plane();
@@ -1016,6 +1046,18 @@ export function createPortalSurface(
          */
         tidy: (now) => {
             clock = now;
+
+            // Viewpoints nobody has aimed from in a while. Swept now and then
+            // rather than every frame: there can be thousands of them, and
+            // walking the whole map sixty times a second to find a handful is
+            // its own kind of waste.
+            if (now % SWEEP_EVERY === 0) {
+                for (const [from, held] of beyondCameras) {
+                    if (now - held.wantedOn >= KEPT_FOR) {
+                        beyondCameras.delete(from);
+                    }
+                }
+            }
 
             for (let at = 0; at < depths; at++) {
                 const held = targets[at];
