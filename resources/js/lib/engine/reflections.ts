@@ -633,6 +633,16 @@ export function prepareReflections(
             // corridor went from two levels of content to none.
             const deepest = !goesDeeper;
 
+            // A counting walk draws nothing, so none of the bookkeeping that
+            // exists to set a picture up is worth doing: no visibility to
+            // change, no target to point a pane at, nothing to put back
+            // afterwards. It is a third of the work of a real walk saved, and
+            // it stops the counting walks leaving the panes pointed at
+            // something the frame never drew.
+            if (counting) {
+                return;
+            }
+
             for (const other of panes) {
                 if (!deepest) {
                     // **Only what this pass drew, and this is the whole of
