@@ -104,7 +104,7 @@ export const WHOLE_SCREEN: Aperture = {
  * reflected copy of the room behind each mirror for free, and nesting those
  * would push the ending back at no cost in passes at all.
  */
-export const APERTURE_FLOOR = 0.02;
+export const APERTURE_FLOOR = 0.012;
 
 const viewProjection = new THREE.Matrix4();
 

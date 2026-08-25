@@ -552,3 +552,16 @@ So a hard bound is unavoidable, and `CHAIN_PANIC` (500 chains entered) is it. Tw
 - It fires in **ordinary play**, which is not a bug in it. It is the difference between a room that walls up in a corner and a tab that dies.
 
 What it costs when it fires is fairness: depth-first with `tunnelFirst` means the corridors keep their depth and the side chains get cut, which is the better half of the trade but still a trade. The honest fix is to choose how deep the whole frame goes *before* drawing any of it — iterative deepening, or picking the floor per frame from a counting walk — so that it degrades uniformly instead of stopping partway. Not yet done.
+
+## How deep a frame goes is decided before it draws anything
+`prepareReflections` walks the frame two to seven times before drawing it. The walks are counting only — matrices and rectangles, no passes — so several together cost a fraction of the one real walk that follows. It raises `APERTURE_FLOOR` a step at a time (`TRIES`, `COARSER`) until the tree fits `CHAIN_PANIC`; if no floor is coarse enough it then goes shallower a step at a time (`SHALLOWER`) until it does.
+
+That order is deliberate. Raising the floor gives up the **smallest** reflections, wherever they are, which is barely visible. Going shallower gives up the far end of the tunnel, which is the thing Paul has been asking for all along. So the cheap sacrifice is made first.
+
+**Why this exists at all: a brake that stops a frame partway cuts unfairly.** The recursion is depth-first, so what a brake takes is whatever it reached last — the side chains. That is the failure Paul has reported twice in those words (*reflections to the side are showing as walls*), and a symmetric room cannot survive being cut by the order it was walked in. Deciding first means every chain in the frame lives under the same rule.
+
+Measured: an ordinary four-mirror view 336 passes at 28 bounces; the two-mirror corridor 27 passes at 25; a mirrored octagon 318 at 15. The corner of a four-mirror room, half a metre from two of them and tilted up — which used to consume four gigabytes and die — now costs 348 passes at 6 bounces, uniformly.
+
+**The counting walk must not use the hysteresis, and this is the trap in it.** `followed` makes a chain's survival depend on whether it survived last frame, which is right while drawing and poison while deciding: a bigger tree asks for a coarser floor, a coarser floor leaves fewer marks, fewer marks make the next tree smaller, and the frame after asks for a finer floor. That is a limit cycle, and with the camera standing perfectly still it changed the picture on **every one of 200 frames**. Counting therefore asks the plain question — would this chain start from nothing — which depends only on where the player is standing. Drawing keeps the hysteresis, which can only let a few more chains through than were counted, and the brake covers that.
+
+Same shape as the amortisation dead end above: anything that makes the tree depend on history fights anything that has to predict the tree. If you add a third such mechanism, work out which of the two it is first.

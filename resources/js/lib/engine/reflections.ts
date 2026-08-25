@@ -58,6 +58,29 @@ import type { SpriteActor } from '@/lib/engine/sprite-actor';
  */
 const CHAIN_PANIC = 500;
 
+/**
+ * How many times a frame may try a coarser floor before it settles for one, and
+ * how much coarser each try is.
+ *
+ * Four tries at a third coarser each reaches about two and a half times the
+ * starting floor, which is enough to bring the worst spot measured — the corner
+ * of a four-mirror room, tilted up — inside the brake. If it is not enough the
+ * brake still catches it, so this cannot fail unsafely; it can only fail to be
+ * even.
+ */
+const TRIES = 5;
+const COARSER = 1.35;
+
+/**
+ * How much shallower a frame goes on each try, once no floor is coarse enough.
+ *
+ * Gently, because overshooting costs the illusion. A seventh off at a time
+ * lands a tilted corner at six to nine levels for two to four hundred passes; a
+ * third off at a time overshot to four levels and a hundred, which is a good
+ * deal darker a room for no gain.
+ */
+const SHALLOWER = 0.85;
+
 /** Nothing was drawn one level in, and no array had to be made to say so. */
 const NONE: readonly PortalSurface[] = [];
 
@@ -255,8 +278,35 @@ export function prepareReflections(
         /** The panes the player can see for themselves this frame. */
         const inView = panes.filter((pane) => inViewOf(pane, camera));
 
-        /** Chains entered this frame, which is what the brake below counts. */
+        /** Chains entered this walk, which is what the brake below counts. */
         let entered = 0;
+
+        /**
+         * Whether this walk is only counting, and the floor it is counting at.
+         *
+         * **The frame decides how fine it can afford to be before it draws
+         * anything.** A walk with no rendering in it costs a fraction of a real
+         * one — matrices and rectangles, no passes — so the frame is walked a
+         * few times with the opening floor raised a step each time until the
+         * tree fits, and only then drawn.
+         *
+         * That is the difference between a room that degrades **evenly** and
+         * one that stops partway. Stopping partway is what a brake does, and
+         * depth-first means what it cuts is whatever the recursion reached
+         * last: the side chains. Paul has reported that failure twice, in those
+         * words — *reflections to the side are showing as walls* — and it is
+         * the one thing this renderer must not do, because a symmetric room
+         * cannot survive being cut by the order it was walked in.
+         *
+         * Raising the floor cuts the **smallest** reflections instead,
+         * wherever they are, which is the honest thing to give up first and is
+         * the same everywhere in the room.
+         *
+         * Deterministic: the same viewpoint always produces the same floor, so
+         * this cannot bob between frames the way a measured-cost budget did.
+         */
+        let counting = false;
+        let floorNow = APERTURE_FLOOR;
 
         /**
          * Draws a pane as seen from a viewpoint. Going deeper draws whatever
@@ -485,20 +535,42 @@ export function prepareReflections(
                         const slot =
                             (numbered.get(other) as number) * levels +
                             Math.min(depth + 1, levels - 1);
-                        const carryOn = followed[slot] === frames - 1;
+                        // **Never while counting**, or the frame cannot decide
+                        // anything.
+                        //
+                        // The hysteresis makes a chain's survival depend on
+                        // whether it survived last frame. That is exactly what
+                        // is wanted while drawing — it is what stops panes
+                        // popping as the player moves — and it is poison in the
+                        // walk that picks the floor, because it makes the count
+                        // depend on the previous frame's answer. A bigger tree
+                        // asks for a coarser floor, a coarser floor leaves
+                        // fewer marks, fewer marks make the next tree smaller,
+                        // and the frame after that asks for a finer floor. That
+                        // is a limit cycle, and with a camera standing perfectly
+                        // still it changed the picture on **every one of 200
+                        // frames**.
+                        //
+                        // So counting asks the plain question — would this
+                        // chain start from nothing — which depends only on
+                        // where the player is standing. Drawing then keeps the
+                        // hysteresis, which can only let a few more chains
+                        // through than were counted, and the brake covers that.
+                        const carryOn =
+                            !counting && followed[slot] === frames - 1;
 
                         if (
                             !worthDrawing(
                                 left,
-                                carryOn
-                                    ? APERTURE_FLOOR * APERTURE_HOLD
-                                    : APERTURE_FLOOR,
+                                carryOn ? floorNow * APERTURE_HOLD : floorNow,
                             )
                         ) {
                             return false;
                         }
 
-                        followed[slot] = frames;
+                        if (!counting) {
+                            followed[slot] = frames;
+                        }
 
                         copyAperture(left, slots[taken]);
                         taken++;
@@ -770,7 +842,9 @@ export function prepareReflections(
                 }
             }
 
-            drawPane(pane, renderer, scene, from, depth, window);
+            if (!counting) {
+                drawPane(pane, renderer, scene, from, depth, window);
+            }
 
             for (const other of panes) {
                 other.mesh.visible = true;
@@ -781,6 +855,68 @@ export function prepareReflections(
             }
         };
 
+        /** Walks the whole frame at the current floor and counts the chains. */
+        const walk = (allowed: number = PORTAL_BOUNCES): number => {
+            entered = 0;
+
+            for (const pane of panes) {
+                deepen(
+                    pane,
+                    camera,
+                    0,
+                    inView.includes(pane) ? allowed : 0,
+                    WHOLE_SCREEN,
+                );
+            }
+
+            return entered;
+        };
+
+        // **How fine this frame can afford to be, decided before it draws.**
+        //
+        // The floor starts where the picture wants it and is raised a step at a
+        // time until the tree fits. Each try is a walk with no rendering in it,
+        // which is matrices and rectangles and no passes at all, so several of
+        // them together cost a fraction of the one real walk that follows.
+        //
+        // Fixed number of tries and always from the same starting floor, so the
+        // answer depends on where the player is standing and on nothing else —
+        // no memory between frames, and so nothing that can oscillate.
+        counting = true;
+
+        let deepAs = PORTAL_BOUNCES;
+        let fits = false;
+
+        for (let attempt = 0; attempt < TRIES && !fits; attempt++) {
+            floorNow = APERTURE_FLOOR * COARSER ** attempt;
+            fits = walk() <= CHAIN_PANIC;
+        }
+
+        // **And if no floor is coarse enough, the whole frame goes shallower.**
+        //
+        // There are rooms where raising the floor cannot help, because the
+        // reflections in them are genuinely large: stand in the corner of a
+        // four-mirror room, closer to two of them than half a metre, and tilt
+        // up, and every level fills the view. Measured there, even a floor of
+        // eighty pixels still ran away.
+        //
+        // Depth is the other thing to give up, and it is the fairer of the two
+        // when it comes to it: **one number for the whole frame**, so every
+        // chain ends at the same distance rather than whichever ones the
+        // recursion reached last. That is what a room needs to degrade in a way
+        // that looks deliberate rather than broken.
+        //
+        // Tried second because it costs more of the illusion. Giving up the
+        // smallest reflections is barely visible; giving up the far end of the
+        // tunnel is the thing Paul has been asking for all along.
+        while (!fits && deepAs > 1) {
+            deepAs = Math.max(1, Math.floor(deepAs * SHALLOWER));
+            fits = walk(deepAs) <= CHAIN_PANIC;
+        }
+
+        counting = false;
+        entered = 0;
+
         for (const pane of panes) {
             // A pane the player cannot see still needs its own view drawn, in
             // case another pane is looking at it, but it is not worth any depth.
@@ -789,7 +925,7 @@ export function prepareReflections(
             // that chain, at that chain's depth, from that chain's camera.
             const seen = inView.includes(pane);
 
-            deepen(pane, camera, 0, seen ? PORTAL_BOUNCES : 0, WHOLE_SCREEN);
+            deepen(pane, camera, 0, seen ? deepAs : 0, WHOLE_SCREEN);
         }
 
         // Back around the player, for the view they actually get.
