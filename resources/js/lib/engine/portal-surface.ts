@@ -121,33 +121,48 @@ const WHOLE_VIEW: PaneWindow = { left: -1, right: 1, bottom: -1, top: 1 };
  * clip plane forward, and the note left then says the same thing.
  *
  * A fiftieth of NDC is about twenty pixels across a 1080p screen, which is also
- * about the smallest buffer worth allocating. Below it the window is widened
- * about its own middle: the pass then draws a little more than will be read,
- * which costs nothing and cannot divide by nearly nothing.
+ * about the smallest buffer worth allocating.
  */
 const NARROWEST = 0.02;
 
-/** A window widened to something a projection can safely be cropped onto. */
+/**
+ * A window a projection can safely be cropped onto — or the whole view, when it
+ * cannot.
+ *
+ * **Widening a sliver to `NARROWEST` was wrong, and it was Paul's streak.** The
+ * read undoes the crop, so a window of 0.02 across means a scale of two over
+ * 0.02 — a **hundredfold magnification**. Everything the pane draws then has to
+ * land inside a band one per cent of the screen wide, and whatever does not
+ * falls outside the texture and is smeared across the rest of it by the clamp.
+ * Measured at his own viewpoint and screen: `paneScale.x` of −100, with
+ * fragments reading 39 target-widths out. His words: *a streak caused by
+ * something being stretched across it.*
+ *
+ * It also explains why it came and went from the same place. A pane has to be
+ * thin enough for the widening to fire at all, so a fraction of a degree of yaw
+ * turns it on and off — which is exactly *two snaps from the same spot, the
+ * first one has a streak and the second does not*.
+ *
+ * So a window too thin to crop onto is not cropped: the pass draws its whole
+ * view and the read is one to one, with nothing to magnify and nowhere to land
+ * outside. What that costs is resolution, and only for a pane already too thin
+ * to see — the buffer is still sized for the sliver, so it reads a few texels of
+ * a small picture rather than a few texels of a huge one.
+ */
 function safely(window: PaneWindow, into: PaneWindow): PaneWindow {
-    const spread = (low: number, high: number): [number, number] => {
-        const span = high - low;
+    const tooThin =
+        window.right - window.left < NARROWEST ||
+        window.top - window.bottom < NARROWEST;
 
-        if (span >= NARROWEST) {
-            return [low, high];
-        }
+    return copyWindow(tooThin ? WHOLE_VIEW : window, into);
+}
 
-        const middle = (low + high) / 2;
-
-        return [middle - NARROWEST / 2, middle + NARROWEST / 2];
-    };
-
-    const [left, right] = spread(window.left, window.right);
-    const [bottom, top] = spread(window.bottom, window.top);
-
-    into.left = left;
-    into.right = right;
-    into.bottom = bottom;
-    into.top = top;
+/** Copies one window over another. */
+function copyWindow(from: PaneWindow, into: PaneWindow): PaneWindow {
+    into.left = from.left;
+    into.right = from.right;
+    into.bottom = from.bottom;
+    into.top = from.top;
 
     return into;
 }
@@ -739,8 +754,21 @@ export function createPortalSurface(
         top: 1,
     }));
 
+    /**
+     * What each level's opening really was, before `safely` gave up on cropping
+     * it. Only ever used to size the buffer: a pane a hundredth of the screen
+     * wide wants a hundredth of the screen's texels whether or not a projection
+     * could be cropped onto it.
+     */
+    const asked: PaneWindow[] = Array.from({ length: depths }, () => ({
+        left: -1,
+        right: 1,
+        bottom: -1,
+        top: 1,
+    }));
+
     const sizeFor = (depth: number): { width: number; height: number } =>
-        texelsFor(windows[Math.min(Math.max(depth, 0), depths - 1)]);
+        texelsFor(asked[Math.min(Math.max(depth, 0), depths - 1)]);
 
     /** Which depth a level of nesting actually reads, once clamped. */
     const indexOf = (depth: number): number =>
@@ -1286,6 +1314,8 @@ export function createPortalSurface(
             // hand the pane the mapping to read it back by, and so that
             // `targetAt` sizes the buffer for it.
             const held = safely(window, windows[indexOf(depth)]);
+
+            copyWindow(window, asked[indexOf(depth)]);
 
             const beyond = surface.aim(camera);
             const target = targetAt(depth);

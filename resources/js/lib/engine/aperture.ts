@@ -161,6 +161,24 @@ export function apertureOf(
     mesh: THREE.Mesh,
     camera: THREE.Camera,
     into: Aperture,
+    /**
+     * What to answer when the mesh crosses the camera's near plane.
+     *
+     * `measure` cuts it there and reports what is left, which is what the
+     * pruning needs: a conservative answer would say "the whole screen" for
+     * nearly every side wall in a room of mirrors and nothing would ever be
+     * pruned.
+     *
+     * `whole` gives up and says the whole view, which is what measuring a
+     * pane's **own outline** needs. That outline decides the window its target
+     * is drawn and read through, and the identity it relies on — a point on the
+     * mirror's plane lands on the same pixel for the viewer and for the
+     * viewer's reflection — **only holds in front of both cameras**. Where the
+     * pane crosses one of them the two measurements are of different things, so
+     * the window comes out narrower than the pane really is and every fragment
+     * outside it reads off the end of the texture. That is Paul's streak.
+     */
+    whenClipped: 'measure' | 'whole' = 'measure',
 ): Aperture | null {
     // Nothing to measure is not the same as nothing there. A surface with no
     // geometry to ask — a stub, or a pane whose shape is decided later — is
@@ -238,8 +256,14 @@ export function apertureOf(
         const startBy = start.z + start.w;
         const endBy = end.z + end.w;
 
-        if (startBy <= 0 && endBy <= 0) {
-            continue;
+        if (startBy <= 0 || endBy <= 0) {
+            if (whenClipped === 'whole') {
+                return copyAperture(WHOLE_SCREEN, into);
+            }
+
+            if (startBy <= 0 && endBy <= 0) {
+                continue;
+            }
         }
 
         any = true;

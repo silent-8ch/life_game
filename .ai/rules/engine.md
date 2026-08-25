@@ -572,3 +572,18 @@ The walks that choose the frame's floor and depth return as soon as they have co
 Three things wrong with that, and the third is the one that bites: it is about a third of the work of a real walk, repeated up to seven times a frame; `targetAt` can **allocate a render target** for a depth the frame never renders; and it leaves the panes pointed at mappings computed for a tree that was never drawn. Only the last walk's state survives to the main render, so most of it is invisible — but "most" is not a thing to leave in a renderer, and it made the read audit unreadable: at Paul's own viewpoint it reported reads landing 52 target-widths outside their texture, all of them from counting walks, and zero once counting stopped touching anything.
 
 The rule generalises: if a pass exists to *decide* rather than to draw, it must not touch anything the drawing depends on. Same shape as the counting walk having to ignore the pane hysteresis.
+
+## The mirror identity only holds in front of BOTH cameras, and that was the streak
+A point on a mirror's plane lands on the same pixel for the viewer and for the viewer's reflection. Everything the screen-space read rests on is that identity — and it stops being true where the pane crosses one camera's near plane, because the two measurements are then of differently-clipped things.
+
+That matters because a pane's **own outline**, measured through its own camera, is what its window is built from. At a grazing angle the outline came out a sliver where the pane really spanned a third of the screen, so the window covered a fraction of the fragments and everything outside it read off the end of the texture and was smeared across the rest by the clamp. Paul: *a streak caused by something being stretched across it… looks like a sprite.* Measured at his viewpoint: outline `[0.306, 0.333]` against a screen rect of `[-1, -0.306]`, a read scale of −72, and fragments landing 25 target-widths out.
+
+So `apertureOf` takes a `whenClipped` argument, and the two callers want opposite things:
+- **Pruning** wants `measure` — cut the box at the near plane and report what is left. A conservative answer says "the whole screen" for nearly every side wall in a room of mirrors, and then nothing is ever pruned (42,857 passes to reach nine levels, measured).
+- **A pane's own outline** wants `whole` — give up and take the whole view. Being too generous costs the crop and some resolution for one pane; being too mean costs a streak across all of it.
+
+**And do not widen a sliver window to a minimum instead.** That was the first attempt and it is worse: the read undoes the crop, so a window 0.02 across means a scale of 100, and everything has to land inside a band one per cent of the screen wide. Measured `paneScale.x` of −100 at his spot. A window too thin to crop onto must simply not be cropped — the buffer is still sized for the sliver (`asked`), so it costs resolution only for a pane already too thin to see.
+
+**Why it came and went from the same place**: a pane has to be at a grazing angle for any of this to fire, so a fraction of a degree of yaw turns it on and off. His words: *two snaps from the same spot, the first has a streak and the second does not.* An intermittent artefact at a fixed viewpoint means a threshold, not a race.
+
+Swept afterwards over seven headings and six pitches at his own 3440x1440: zero reads outside their target anywhere.

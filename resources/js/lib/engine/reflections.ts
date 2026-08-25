@@ -421,7 +421,17 @@ export function prepareReflections(
             // camera stands at the **far** mouth, and it is that mouth the view
             // is bounded by.
             const mouth = pane.partner ?? pane.mesh;
-            const outline = apertureOf(mouth, inner, roomFor(own, depth));
+            const outline = apertureOf(
+                mouth,
+                inner,
+                roomFor(own, depth),
+                // Conservative for the pane's **own** outline, because this is
+                // what its window is built from — see `whenClipped`. Being too
+                // generous costs the crop, and so some resolution, for a pane
+                // that straddles a near plane. Being too mean costs a streak
+                // across the whole of it.
+                'whole',
+            );
 
             const through =
                 outline === null
