@@ -13,6 +13,7 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Unique;
 
@@ -39,14 +40,19 @@ class LevelForm
                             ->default($game)
                             ->required(),
 
-                        // Nullable on purpose. A level with nobody against it
-                        // is an orphan, which is a real state — everything
-                        // drawn before there were accounts is one, and an
-                        // orphan stays editable by anybody rather than being
-                        // locked away from everybody.
+                        // Yours by default, because drawing one is how a
+                        // level is normally made and claiming it afterwards is
+                        // a step nobody remembers.
+                        //
+                        // Still nullable, and still clearable. A level with
+                        // nobody against it is an orphan, which is a real
+                        // state — everything drawn before there were accounts
+                        // is one, and an orphan stays editable by anybody
+                        // rather than being locked away from everybody.
                         Select::make('owner_id')
                             ->label('Drawn by')
                             ->relationship('owner', 'name')
+                            ->default(Auth::id())
                             ->placeholder('Nobody')
                             ->searchable()
                             ->preload(),

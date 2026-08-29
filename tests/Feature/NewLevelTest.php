@@ -17,7 +17,8 @@ use Livewire\Livewire;
 beforeEach(function (): void {
     $this->seed(LifeSeeder::class);
     $this->game = Game::query()->where('slug', 'life')->sole();
-    $this->actingAs(User::factory()->create());
+    $this->me = User::factory()->create();
+    $this->actingAs($this->me);
 });
 
 it('fills the whole create form in', function (): void {
@@ -36,6 +37,41 @@ it('fills the whole create form in', function (): void {
             'backdrop_layers' => [1, 2, 3],
             'description' => 'A level waiting to be drawn.',
         ]);
+});
+
+it('puts your name against a level you draw', function (): void {
+    Livewire::test(CreateLevel::class)
+        ->assertSchemaStateSet(['owner_id' => $this->me->id])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    expect(Level::query()->where('slug', 'new-level')->sole()->owner_id)
+        ->toBe($this->me->id);
+});
+
+it('still lets a level be left against nobody', function (): void {
+    // An orphan is a real state and the form has to be able to make one:
+    // everything drawn before there were accounts is one, and an orphan stays
+    // editable by anybody rather than locked away from everybody.
+    Livewire::test(CreateLevel::class)
+        ->fillForm(['owner_id' => null])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    expect(Level::query()->where('slug', 'new-level')->sole()->owner_id)
+        ->toBeNull();
+});
+
+it('names whoever is signed in, not whoever drew the last one', function (): void {
+    Livewire::test(CreateLevel::class)->call('create')->assertHasNoFormErrors();
+
+    $someoneElse = User::factory()->create();
+    $this->actingAs($someoneElse);
+
+    Livewire::test(CreateLevel::class)->call('create')->assertHasNoFormErrors();
+
+    expect(Level::query()->where('slug', 'new-level-2')->sole()->owner_id)
+        ->toBe($someoneElse->id);
 });
 
 it('creates a level without anything being typed', function (): void {
