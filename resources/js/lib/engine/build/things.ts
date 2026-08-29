@@ -95,6 +95,18 @@ export type MovedThings = {
      * never about doors.
      */
     block: (slug: string, blocking: boolean) => boolean;
+    /**
+     * Slides a thing, in metres from where it was drawn.
+     *
+     * Relative to the drawn spot rather than to wherever it currently is, for
+     * the same reason `turn` is absolute: firing it twice must leave the thing
+     * where firing it once did. It eases there, like the swing does.
+     */
+    move: (slug: string, x: number, z: number, up: number) => boolean;
+    /** Shows a thing's alternate picture, the same one a flag would show. */
+    swap: (slug: string, alternate: boolean) => boolean;
+    /** Whether it is drawn. Collision is `block`, and deliberately separate. */
+    show: (slug: string, shown: boolean) => boolean;
     /** What a save should be told, for everything anything has moved. */
     moved: () => Record<string, { turned: number; blocking: boolean }>;
 };
@@ -122,6 +134,12 @@ type Movable = {
     collider: BoxCollider | null;
     /** Where it is going, in degrees. */
     want: number;
+    holder: THREE.Object3D;
+    /** Where it has been slid to, and where it is heading, from where drawn. */
+    shifted: THREE.Vector3;
+    heading: THREE.Vector3;
+    /** Where it was drawn, so an offset is always measured from the same spot. */
+    drawnAt: THREE.Vector3;
     /** Where it has got to. */
     at: number;
 };
@@ -161,6 +179,9 @@ function crossAngles(planes: number, angle: number): number[] {
 
 /** How fast a hinged thing swings, in degrees a second. */
 const TURN_RATE = 220;
+
+/** How fast a thing slides when a binding moves it, in metres a second. */
+const SLIDE_RATE = 1.6;
 
 export function buildThings(ctx: BuildContext): PropSet {
     const { level, scene, materials, textures } = ctx;
@@ -419,11 +440,15 @@ export function buildThings(ctx: BuildContext): PropSet {
         if (hinged) {
             movable.set(thing.slug, {
                 thing,
+                holder,
                 leaf,
                 swings,
                 collider,
                 want: 0,
                 at: 0,
+                shifted: new THREE.Vector3(),
+                heading: new THREE.Vector3(),
+                drawnAt: holder.position.clone(),
             });
         }
     }
@@ -484,6 +509,66 @@ export function buildThings(ctx: BuildContext): PropSet {
             return true;
         },
 
+        move: (slug, x, z, up) => {
+            const moving = movable.get(slug);
+
+            if (moving === undefined) {
+                return false;
+            }
+
+            if (
+                moving.heading.x === x &&
+                moving.heading.y === up &&
+                moving.heading.z === z
+            ) {
+                return false;
+            }
+
+            moving.heading.set(x, up, z);
+
+            return true;
+        },
+
+        swap: (slug, alternate) => {
+            const moving = movable.get(slug);
+            const material = thingMaterials.get(slug);
+
+            if (moving === undefined || material === undefined) {
+                return false;
+            }
+
+            // The same alternate a flag would show. A thing with no
+            // `textureAlt` has nothing to swap to and is left alone rather
+            // than blanked.
+            const map = textures.prop(
+                alternate && moving.thing.textureAlt !== null
+                    ? moving.thing.textureAlt
+                    : moving.thing.texture,
+                1,
+            );
+
+            if (map === null || material.map === map) {
+                return false;
+            }
+
+            material.map = map;
+            material.needsUpdate = true;
+
+            return true;
+        },
+
+        show: (slug, shown) => {
+            const moving = movable.get(slug);
+
+            if (moving === undefined || moving.holder.visible === shown) {
+                return false;
+            }
+
+            moving.holder.visible = shown;
+
+            return true;
+        },
+
         moved: () =>
             Object.fromEntries(
                 [...movable.entries()].map(([slug, moving]) => [
@@ -526,6 +611,31 @@ export function buildThings(ctx: BuildContext): PropSet {
                     : Math.max(moving.want, moving.at - step);
 
             place(moving);
+        }
+
+        // Sliding, eased the same way and for the same reason: a thing that
+        // changes place between two frames reads as a glitch, not as a door.
+        for (const moving of movable.values()) {
+            if (moving.shifted.equals(moving.heading)) {
+                continue;
+            }
+
+            const step = SLIDE_RATE * seconds;
+            const left = moving.heading.distanceTo(moving.shifted);
+
+            if (left <= step) {
+                moving.shifted.copy(moving.heading);
+            } else {
+                moving.shifted.addScaledVector(
+                    moving.heading
+                        .clone()
+                        .sub(moving.shifted)
+                        .divideScalar(left),
+                    step,
+                );
+            }
+
+            moving.holder.position.copy(moving.drawnAt).add(moving.shifted);
         }
 
         for (const running of animated) {

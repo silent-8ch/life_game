@@ -2,15 +2,20 @@ import { Field, inputClass } from '@/components/editor/inspector/controls';
 import type { LevelThing, ThingBinding } from '@/types';
 
 /**
- * What a thing does while its input is on, and while it is off.
+ * What a thing does while it is on, and while it is off.
  *
- * The responding half of Paul's redstone idea. There is no line to name here
- * any more: a thing answers **its own input**, and what feeds that input is the
- * lines somebody drew into it in the map view. A thing with two lines drawn in
- * answers whichever of them its logic says to.
+ * The responding half of Paul's redstone idea. There is no line to name here: a
+ * thing answers **its own on**, and there are two ways to have one.
  *
- * That is the whole of what the second slice changed, and it is why this panel
- * lost a field rather than gaining one.
+ * - Lines drawn into it in the map view. A thing with two lines in answers
+ *   whichever of them its logic says to.
+ * - Being a source itself — set to a lever or a plate under *Emits*. That is a
+ *   door which is its own handle, and needs no line at all.
+ *
+ * The second used to be broken: a thing answered `inputOf`, which counts only
+ * the lines drawn in, so a self-operating door applied its `off` value for ever
+ * however often it was used. It answers its output now, which is the same
+ * number for a wired thing and the thing's own state for a source.
  *
  * **Both sides are always authored.** *On and off each say what they do* — an
  * on-value with an implied resting position is the same thing with a worse
@@ -44,8 +49,9 @@ export default function BindingsPanel({
 
             {bindings.length === 0 && (
                 <p className="text-xs leading-relaxed text-slate-500">
-                    Nothing yet. Add one and it moves whenever a line drawn into
-                    it comes on.
+                    Nothing yet, so this thing does nothing when it turns on.
+                    Add one to say what it should do — swing, slide, block the
+                    way, change picture or disappear.
                 </p>
             )}
 
@@ -67,7 +73,12 @@ export default function BindingsPanel({
                                 className={inputClass}
                             >
                                 <option value="rotate">Turns to</option>
+                                <option value="move">Slides to</option>
                                 <option value="blocking">Blocks the way</option>
+                                <option value="texture">
+                                    Shows alt picture
+                                </option>
+                                <option value="visible">Is visible</option>
                             </select>
                         </Field>
                     </div>

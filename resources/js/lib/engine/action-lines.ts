@@ -21,7 +21,9 @@ import type { Level, LevelThing } from '@/types';
  *
  * - A **plate** has no lines in and an output that follows who is standing on
  *   it.
- * - A **door** has lines in and bindings that answer them.
+ * - A **door** has bindings that answer whether it is on. Usually that is
+ *   lines drawn in; a door that is its own handle is a source as well, and
+ *   answers itself with no line at all.
  * - A **relay** has lines in and lines out and nothing else, so its output is
  *   its input and a chain passes through it.
  * - A **gate** is a thing with an opinion about how its inputs combine: `all`
@@ -52,6 +54,9 @@ export type Stander = {
 export type Responders = {
     turn: (slug: string, degrees: number) => void;
     block: (slug: string, blocking: boolean) => void;
+    move: (slug: string, x: number, z: number, up: number) => void;
+    swap: (slug: string, alternate: boolean) => void;
+    show: (slug: string, shown: boolean) => void;
 };
 
 export type ActionLines = {
@@ -181,23 +186,45 @@ export function createActionLines(level: Level): ActionLines {
         return inputOf(node);
     };
 
-    /** Puts one thing where its input being on or off asks it to be. */
+    /** How a binding's `on`/`off` text reads as a yes or a no. */
+    const yes = (value: string): boolean => value === '1' || value === 'true';
+
+    /**
+     * How a binding's `on`/`off` text reads as an offset in metres.
+     *
+     * `x,z,up`, and anything missing or unreadable is nought — a half-typed offset
+     * should leave the thing where it was drawn rather than fling it to the origin
+     * on one axis and not the others.
+     */
+    const offset = (value: string): [number, number, number] => {
+        const parts = value.split(',').map((at) => Number(at.trim()));
+
+        return [0, 1, 2].map((at) =>
+            Number.isFinite(parts[at]) ? parts[at] : 0,
+        ) as [number, number, number];
+    };
+
+    /** Puts one thing where its being on or off asks it to be. */
     const answer = (node: Node, on: boolean, responders: Responders): void => {
         for (const binding of node.thing.bindings ?? []) {
             const value = on ? binding.on : binding.off;
 
             if (binding.response === 'rotate') {
                 responders.turn(node.thing.slug, Number(value));
-
-                continue;
+            } else if (binding.response === 'move') {
+                responders.move(node.thing.slug, ...offset(value));
+            } else if (binding.response === 'texture') {
+                responders.swap(node.thing.slug, yes(value));
+            } else if (binding.response === 'visible') {
+                responders.show(node.thing.slug, yes(value));
+            } else {
+                responders.block(node.thing.slug, yes(value));
             }
-
-            responders.block(
-                node.thing.slug,
-                value === '1' || value === 'true',
-            );
         }
     };
+
+    /** Whether anything has ever been put where its wiring asks. */
+    let told = false;
 
     return {
         isOn: (slug) => nodes.get(slug)?.out === true,
@@ -231,6 +258,8 @@ export function createActionLines(level: Level): ActionLines {
             // on purpose, and the honest answer is to stop after a fixed number
             // of passes and let it oscillate rather than to hang the tab
             // looking for a rest it does not have.
+            let changed = false;
+
             for (let pass = 0; pass < ACTION_LINE_PASSES; pass++) {
                 let moved = false;
 
@@ -247,15 +276,43 @@ export function createActionLines(level: Level): ActionLines {
                 }
 
                 if (!moved) {
-                    return;
+                    break;
                 }
 
-                // Only things whose own input changed are told, and a thing
-                // with no bindings is told nothing whatever its input does.
-                for (const node of nodes.values()) {
-                    if ((node.thing.bindings ?? []).length > 0) {
-                        answer(node, inputOf(node), responders);
-                    }
+                changed = true;
+            }
+
+            // Nothing moved and everything has been put where it belongs at
+            // least once, so there is nothing to say. A level with no wiring in
+            // it costs one comparison a frame, which is the whole reason this
+            // can be left running.
+            if (!changed && told) {
+                return;
+            }
+
+            told = true;
+
+            // **A thing answers to its own output, not to its input.**
+            //
+            // This read `inputOf(node)` and that is why a door that is its own
+            // button could never open: with no lines drawn into it its input is
+            // false for ever, so its binding applied the `off` value on every
+            // frame however often it was used. Paul: *the system should be
+            // basic on and off from the lines **or itself being used as a
+            // button**.*
+            //
+            // The output is already the right answer for both halves of that
+            // sentence. A thing with no opinion of its own passes its input
+            // straight through, so a wired door is unaffected; a lever or a
+            // plate answers for itself, which is the case that was broken.
+            //
+            // Run once the passes have settled rather than inside them, and at
+            // least once ever — a level has to open with its doors in the pose
+            // its wiring asks for rather than the one they were drawn in, and
+            // on the first frame nothing has changed yet.
+            for (const node of nodes.values()) {
+                if ((node.thing.bindings ?? []).length > 0) {
+                    answer(node, node.out, responders);
                 }
             }
         },

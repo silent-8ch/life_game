@@ -280,7 +280,7 @@ export type ActionLine = {
  * sense field and no inversion to build.
  */
 export type ThingBinding = {
-    response: 'rotate' | 'blocking';
+    response: 'rotate' | 'blocking' | 'move' | 'texture' | 'visible';
     on: string;
     off: string;
 };

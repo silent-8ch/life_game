@@ -51,6 +51,9 @@ function actionLines(string $things, string $lines, string $body): array
         const responders = {
             turn: (slug, degrees) => told.push(['turn', slug, degrees]),
             block: (slug, blocking) => told.push(['block', slug, blocking]),
+            move: (slug, x, z, up) => told.push(['move', slug, x, z, up]),
+            swap: (slug, alternate) => told.push(['swap', slug, alternate]),
+            show: (slug, shown) => told.push(['show', slug, shown]),
         };
 
         const at = (x, z, isPlayer = true) => [{ x, z, isPlayer }];
@@ -85,6 +88,9 @@ it('runs a drawn line from a plate to a door, with nothing named', function (): 
         <<<'JS'
         const walk = [];
 
+        // The first settle places everything, even though nothing has changed
+        // yet: a level has to open with its doors in the pose its wiring asks
+        // for rather than the one they happened to be drawn in.
         lines.settle(nobody, responders);
         walk.push(['away', lines.isOn('door'), told.length]);
 
@@ -108,15 +114,22 @@ it('runs a drawn line from a plate to a door, with nothing named', function (): 
     // without being told to be one — which is what makes a chain possible at
     // all.
     expect($answer['walk'])->toEqual([
-        ['away', false, 0],
-        ['on it', true, 2],
-        ['still', true, 2],
-        ['off', false, 4],
+        // Two: the door is told to be shut and solid on the opening frame.
+        ['away', false, 2],
+        ['on it', true, 4],
+        // Still standing there, and told nothing further. That economy is what
+        // makes this safe to run every frame, and it survives the opening
+        // placement above.
+        ['still', true, 4],
+        ['off', false, 6],
     ]);
 
     // Both sides authored, so the door shuts behind you rather than staying
     // open because nobody said what off meant.
     expect($answer['told'])->toEqual([
+        // Shut and solid on the opening frame, before anybody has moved.
+        ['turn', 'door', 0],
+        ['block', 'door', true],
         ['turn', 'door', 90],
         ['block', 'door', false],
         ['turn', 'door', 0],
@@ -349,4 +362,105 @@ it('remembers a lever both ways, and puts it back where it was left', function (
     // drawn rather than swinging open a moment after somebody walks in.
     expect($answer['restored'])->toBeTrue()
         ->and($answer['told'])->toBe([['turn', 'door', 90]]);
+});
+
+it('opens a door that is its own handle, with no line drawn at all', function (): void {
+    // Paul, on level 27: *i have created a door that turns on like a lever* —
+    // and it did nothing. It was a lever, so it emitted; it had no lines drawn
+    // into it, because it is its own handle and needs none.
+    //
+    // Bindings answered `inputOf`, which counts only the lines drawn in. With
+    // none, the input is false for ever, so the binding applied its `off` value
+    // on every frame however often the door was used. It answers the thing's
+    // **output** now, which is the same number for a wired thing and the
+    // thing's own state for a lever or a plate.
+    $answer = actionLines(
+        "[thing({ slug: 'door', emitWhen: 'used', bindings: [{ response: 'rotate', on: '90', off: '0' }] })]",
+        '[]',
+        <<<'JS'
+        lines.settle(nobody, responders);
+        const shut = told.slice();
+
+        told.length = 0;
+        lines.use('door');
+        lines.settle(nobody, responders);
+        const opened = told.slice();
+
+        told.length = 0;
+        lines.use('door');
+        lines.settle(nobody, responders);
+
+        process.stdout.write(JSON.stringify({ shut, opened, again: told }));
+        JS
+    );
+
+    expect($answer['shut'])->toBe([['turn', 'door', 0]])
+        ->and($answer['opened'])->toBe([['turn', 'door', 90]])
+        ->and($answer['again'])->toBe([['turn', 'door', 0]]);
+});
+
+it('still answers the lines drawn into it, which never broke', function (): void {
+    // The other half of the same sentence, and the case that did work. A door
+    // with a lever wired to it must be unaffected by the fix: a thing with no
+    // opinion of its own passes its input straight through, so its output and
+    // its input are the same number.
+    $answer = actionLines(
+        "[thing({ slug: 'lever', emitWhen: 'used' }), thing({ slug: 'door', bindings: [{ response: 'rotate', on: '90', off: '0' }] })]",
+        "[wire('lever', 'door')]",
+        <<<'JS'
+        lines.use('lever');
+        lines.settle(nobody, responders);
+
+        process.stdout.write(JSON.stringify({ told }));
+        JS
+    );
+
+    expect($answer['told'])->toBe([['turn', 'door', 90]]);
+});
+
+it('slides, swaps a picture and disappears as well as swinging', function (): void {
+    // Paul's list: a door swinging open, changing texture, changing position or
+    // solidness. Swing and solidness already existed; these are the other two,
+    // plus visibility.
+    //
+    // An offset is `x,z,up` in metres from where the thing was drawn, so moving
+    // it on the plan later cannot silently break the binding.
+    $answer = actionLines(
+        "[thing({ slug: 'gate', emitWhen: 'used', bindings: [
+            { response: 'move', on: '0,0,3', off: '0,0,0' },
+            { response: 'texture', on: '1', off: '0' },
+            { response: 'visible', on: '0', off: '1' },
+            { response: 'blocking', on: '0', off: '1' },
+        ] })]",
+        '[]',
+        <<<'JS'
+        lines.use('gate');
+        lines.settle(nobody, responders);
+
+        process.stdout.write(JSON.stringify({ told }));
+        JS
+    );
+
+    expect($answer['told'])->toBe([
+        ['move', 'gate', 0, 0, 3],
+        ['swap', 'gate', true],
+        ['show', 'gate', false],
+        ['block', 'gate', false],
+    ]);
+});
+
+it('reads a half-typed offset as nought rather than flinging the thing', function (): void {
+    $answer = actionLines(
+        "[thing({ slug: 'gate', emitWhen: 'used', bindings: [{ response: 'move', on: '2', off: '' }] })]",
+        '[]',
+        <<<'JS'
+        lines.use('gate');
+        lines.settle(nobody, responders);
+
+        process.stdout.write(JSON.stringify({ told }));
+        JS
+    );
+
+    // `2` means two metres east and nothing else, not two east and NaN up.
+    expect($answer['told'])->toBe([['move', 'gate', 2, 0, 0]]);
 });
