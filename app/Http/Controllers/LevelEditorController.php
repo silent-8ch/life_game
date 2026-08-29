@@ -33,8 +33,7 @@ class LevelEditorController extends Controller
             'assets' => [
                 'textures' => $assets->textures(),
                 'props' => $assets->props(),
-                'skies' => $assets->skies(),
-                'backdrops' => $assets->backdrops(),
+                'skies' => $assets->skyChoices(),
                 'sprites' => $assets->roster(),
                 'styles' => $assets->styles(),
                 // The game's items, for the interaction panel's pickers: what a

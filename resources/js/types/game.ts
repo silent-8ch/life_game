@@ -205,10 +205,17 @@ export type Sky = {
     image: string;
     /** Which of the four cells in the sky strip. */
     variant: number;
-    /** hills, skyline, forest, and so on. */
-    theme: string | null;
-    /** Which numbered layers of the theme to stack, furthest first. */
-    layers: number[];
+};
+
+/**
+ * One sky as it is offered: a panorama, not a file. `value` is the two halves
+ * the level stores, joined, and is what a picker's option is worth.
+ */
+export type SkyChoice = {
+    value: string;
+    image: string;
+    variant: number;
+    label: string;
 };
 
 /**
@@ -496,9 +503,8 @@ export type LevelAssets = {
      * are a different kind of picture and belong in a different picker.
      */
     props: string[];
-    skies: string[];
-    /** Backdrop themes, and the numbered layers each one has. */
-    backdrops: Record<string, number[]>;
+    /** Every sky that can be picked, one entry per panorama. */
+    skies: SkyChoice[];
     /** The people who can be placed in a level, tallest first. */
     sprites: string[];
     /** The art styles a level can be drawn in, one per sprites/<style> folder. */

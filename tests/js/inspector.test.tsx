@@ -95,7 +95,6 @@ const assets: LevelAssets = {
     textures: ['oak-floor'],
     props: [],
     skies: [],
-    backdrops: {},
     sprites: ['paul'],
     styles: ['realistic'],
     items: [],

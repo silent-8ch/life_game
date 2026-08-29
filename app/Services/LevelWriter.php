@@ -36,10 +36,11 @@ class LevelWriter
                 'spawn_z' => $map['spawn']['z'],
                 'spawn_angle' => $map['spawn']['angle'],
                 'ceiling_height' => $map['ceilingHeight'],
+                // `backdrop_theme` and `backdrop_layers` are deliberately
+                // untouched. Nothing draws a horizon any more, so a save has
+                // no opinion about one and should not wipe what is stored.
                 'sky_image' => $sky['image'] ?? null,
                 'sky_variant' => $sky['variant'] ?? 0,
-                'backdrop_theme' => $sky === null ? null : ($sky['theme'] ?? null),
-                'backdrop_layers' => $sky === null ? null : ($sky['layers'] ?? []),
             ]);
 
             $this->writeThings($level, $map['things'] ?? []);

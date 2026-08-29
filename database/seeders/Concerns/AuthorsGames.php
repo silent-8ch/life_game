@@ -55,6 +55,11 @@ trait AuthorsGames
     /**
      * A first-person room. Metres, +X east, +Z south, spawn angle in degrees from -Z.
      *
+     * `$backdrop` and `$backdropLayers` are inert. Nothing draws a horizon any
+     * more — Paul had the parallax layers taken out, they did not look good —
+     * and the columns were kept so the decision stays reversible. They are
+     * still written so an exported level round-trips as it was drawn.
+     *
      * @param  list<int>  $backdropLayers  Which layers of the backdrop theme to stack.
      */
     protected function level(

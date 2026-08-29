@@ -6,9 +6,9 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 
 /**
- * What the level editor has to work with: the textures, skies and backdrop
- * themes that are actually sitting in public/sprites. Nothing is registered by
- * hand — drop a file in the folder and it turns up in the editor.
+ * What the level editor has to work with: the textures, skies and props that
+ * are actually sitting in public/sprites. Nothing is registered by hand — drop
+ * a file in the folder and it turns up in the editor.
  */
 class LevelAssets
 {
@@ -53,6 +53,9 @@ class LevelAssets
 
     /** Who a level gets if nobody has said who the player is. */
     public const PLAYER = 'paul';
+
+    /** How many panoramas are packed side by side into one sky strip. */
+    public const SKY_VARIANTS = 4;
 
     /**
      * The residents a new level is populated with, tallest first. The player is
@@ -120,9 +123,12 @@ class LevelAssets
     }
 
     /**
-     * Skies, each a strip of four variants. A variant is one equirectangular
-     * panorama: it wraps the whole dome, so the horizon sits at eye level
-     * rather than underfoot the way a plain gradient's did.
+     * The sky strips, by file. Each is four variants side by side, and a
+     * variant is one equirectangular panorama: it wraps the whole dome, so the
+     * horizon sits at eye level rather than underfoot the way a plain
+     * gradient's did.
+     *
+     * This is the storage, not the menu — see `skyChoices()` for that.
      *
      * @return list<string>
      */
@@ -135,30 +141,34 @@ class LevelAssets
     }
 
     /**
-     * Backdrop themes and the numbered layers each one has, furthest first.
+     * Every sky a level can be given, one entry per panorama rather than one
+     * per file: `Day 1`, `Day 2`, `Night 1`, and so on down one list.
      *
-     * @return array<string, list<int>>
+     * Which strip a panorama is packed into is a fact about the art and not a
+     * decision anybody makes, so it is not asked as a second question. The
+     * `value` carries both halves, `image:variant`, because both halves are
+     * still what gets stored.
+     *
+     * @return list<array{value: string, image: string, variant: int, label: string}>
      */
-    public function backdrops(): array
+    public function skyChoices(): array
     {
-        $themes = [];
+        $choices = [];
 
-        foreach ($this->pngNamesIn(self::BACKDROP_PATH) as $name) {
-            if (! preg_match('/^(?<theme>.+)_(?<layer>\d+)$/', $name, $matches)) {
-                continue;
+        foreach ($this->skies() as $image) {
+            $name = Str::headline(Str::after($image, 'sky-'));
+
+            for ($variant = 0; $variant < self::SKY_VARIANTS; $variant++) {
+                $choices[] = [
+                    'value' => $image.':'.$variant,
+                    'image' => $image,
+                    'variant' => $variant,
+                    'label' => $name.' '.($variant + 1),
+                ];
             }
-
-            $themes[$matches['theme']][] = (int) $matches['layer'];
         }
 
-        foreach ($themes as $theme => $layers) {
-            sort($layers);
-            $themes[$theme] = array_values(array_unique($layers));
-        }
-
-        ksort($themes);
-
-        return $themes;
+        return $choices;
     }
 
     /**

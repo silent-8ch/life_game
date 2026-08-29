@@ -53,8 +53,6 @@ class LevelPayload
             'sky' => $level->sky_image === null ? null : [
                 'image' => $level->sky_image,
                 'variant' => $level->sky_variant,
-                'theme' => $level->backdrop_theme,
-                'layers' => $level->backdrop_layers ?? [],
             ],
             'sectors' => $level->sectors->map(fn (LevelSector $sector): array => [
                 'slug' => $sector->slug,

@@ -104,8 +104,22 @@ export const person = (changes: Partial<LevelThing> = {}): LevelThing =>
 export const assets = {
     textures: ['oak-floor', 'red-brick'],
     props: ['pot-plant'],
-    skies: ['sky-day', 'sky-night'],
-    backdrops: { hills: [1, 2, 3] },
+    skies: [
+        { value: 'sky-day:0', image: 'sky-day', variant: 0, label: 'Day 1' },
+        { value: 'sky-day:1', image: 'sky-day', variant: 1, label: 'Day 2' },
+        {
+            value: 'sky-night:0',
+            image: 'sky-night',
+            variant: 0,
+            label: 'Night 1',
+        },
+        {
+            value: 'sky-night:3',
+            image: 'sky-night',
+            variant: 3,
+            label: 'Night 4',
+        },
+    ],
     sprites: ['paul', 'krystal'],
     styles: ['realistic', 'stylized'],
     items: [{ slug: 'key', name: 'Key' }],

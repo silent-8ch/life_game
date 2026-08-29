@@ -31,10 +31,7 @@ it('fills the whole create form in', function (): void {
             'spawn_x' => 0,
             'spawn_z' => 0,
             'spawn_angle' => 0,
-            'sky_image' => 'sky-day',
-            'sky_variant' => 0,
-            'backdrop_theme' => 'hills',
-            'backdrop_layers' => [1, 2, 3],
+            'sky' => 'sky-day:0',
             'description' => 'A level waiting to be drawn.',
         ]);
 });
@@ -72,6 +69,50 @@ it('names whoever is signed in, not whoever drew the last one', function (): voi
 
     expect(Level::query()->where('slug', 'new-level-2')->sole()->owner_id)
         ->toBe($someoneElse->id);
+});
+
+it('picks a sky from one list of panoramas, not a file and then a cell', function (): void {
+    // Which strip a panorama is packed into is a fact about the art rather
+    // than a decision anybody makes, so it is not asked as a second question.
+    Livewire::test(CreateLevel::class)
+        ->fillForm(['sky' => 'sky-sunset:2'])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    $level = Level::query()->where('slug', 'new-level')->sole();
+
+    expect($level->sky_image)->toBe('sky-sunset')
+        ->and($level->sky_variant)->toBe(2)
+        ->and($level->sky)->toBe('sky-sunset:2');
+});
+
+it('lets a level have no sky at all', function (): void {
+    Livewire::test(CreateLevel::class)
+        ->fillForm(['sky' => null])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    $level = Level::query()->where('slug', 'new-level')->sole();
+
+    expect($level->sky_image)->toBeNull()
+        ->and($level->sky)->toBeNull();
+});
+
+it('offers no horizon or layers to set', function (): void {
+    // Paul's ruling: they did not look good. The columns and the art stayed so
+    // the decision is reversible, but nothing asks for one and nothing draws
+    // one, and a new level is not given one.
+    Livewire::test(CreateLevel::class)
+        ->assertFormFieldDoesNotExist('backdrop_theme')
+        ->assertFormFieldDoesNotExist('backdrop_layers')
+        ->assertFormFieldDoesNotExist('sky_variant')
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    $level = Level::query()->where('slug', 'new-level')->sole();
+
+    expect($level->backdrop_theme)->toBeNull()
+        ->and($level->backdrop_layers)->toBeNull();
 });
 
 it('creates a level without anything being typed', function (): void {

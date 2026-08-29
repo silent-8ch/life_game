@@ -82,10 +82,7 @@ class UpdateLevelMapRequest extends FormRequest
 
             'sky' => ['nullable', 'array'],
             'sky.image' => ['required_with:sky', 'string', Rule::in($assets->skies())],
-            'sky.variant' => ['required_with:sky', 'integer', 'between:0,3'],
-            'sky.theme' => ['nullable', 'string', Rule::in(array_keys($assets->backdrops()))],
-            'sky.layers' => ['nullable', 'array'],
-            'sky.layers.*' => ['integer', 'between:1,9'],
+            'sky.variant' => ['required_with:sky', 'integer', 'between:0,'.(LevelAssets::SKY_VARIANTS - 1)],
 
             'sectors' => ['present', 'array', 'max:200'],
             'sectors.*.slug' => ['required', 'string', 'max:255'],

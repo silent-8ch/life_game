@@ -43,8 +43,6 @@ function drawnMap(): array
         'sky' => [
             'image' => 'sky-night',
             'variant' => 2,
-            'theme' => 'skyline',
-            'layers' => [1, 2],
         ],
         'things' => [
             [
@@ -177,11 +175,10 @@ it('opens a level for editing, with the folder of textures to build from', funct
             ->has('level.sectors', 3)
             ->has('assets.textures')
             ->has('assets.skies')
-            ->has('assets.backdrops')
         );
 });
 
-it('lists only textures and backdrops that are really there', function (): void {
+it('lists only textures that are really there', function (): void {
     $this->actingAs($this->editor)
         ->get(route('levels.editor', $this->level))
         ->assertInertia(function (AssertableInertia $page): void {
@@ -208,8 +205,6 @@ it('saves a drawn map over the one that was there', function (): void {
         ->and($level->spawn_angle)->toBe(90.0)
         ->and($level->sky_image)->toBe('sky-night')
         ->and($level->sky_variant)->toBe(2)
-        ->and($level->backdrop_theme)->toBe('skyline')
-        ->and($level->backdrop_layers)->toBe([1, 2])
         ->and($level->sectors)->toHaveCount(2)
         ->and($level->sectors->pluck('slug')->all())->toBe(['west', 'east'])
         ->and($level->sectors->firstWhere('slug', 'east')->is_sky)->toBeTrue()
@@ -361,8 +356,47 @@ it('clears the sky when a level is saved without one', function (): void {
     $level = $this->level->fresh();
 
     expect($level->sky_image)->toBeNull()
-        ->and($level->backdrop_theme)->toBeNull()
-        ->and($level->backdrop_layers)->toBeNull();
+        ->and($level->sky_variant)->toBe(0);
+});
+
+it('leaves the retired horizon columns alone rather than wiping them', function (): void {
+    // Paul had the parallax horizon layers taken out: they did not look good.
+    // The columns and the art stayed, so the decision is reversible and the
+    // levels that were given one have not quietly lost it — which means a save
+    // must have no opinion about a horizon rather than nulling one.
+    $this->level->update(['backdrop_theme' => 'hills', 'backdrop_layers' => [1, 2, 3]]);
+
+    $this->actingAs($this->editor)
+        ->put(route('levels.editor.update', $this->level), drawnMap())
+        ->assertRedirect();
+
+    $level = $this->level->fresh();
+
+    expect($level->backdrop_theme)->toBe('hills')
+        ->and($level->backdrop_layers)->toBe([1, 2, 3]);
+});
+
+it('offers every panorama as its own choice rather than a file and a cell', function (): void {
+    $this->actingAs($this->editor)
+        ->get(route('levels.editor', $this->level))
+        ->assertInertia(function (AssertableInertia $page): void {
+            /** @var list<array{value: string, image: string, variant: int, label: string}> $skies */
+            $skies = $page->toArray()['props']['assets']['skies'];
+
+            expect($skies)->toHaveCount(12)
+                ->and($skies[0])->toBe([
+                    'value' => 'sky-day:0',
+                    'image' => 'sky-day',
+                    'variant' => 0,
+                    'label' => 'Day 1',
+                ])
+                ->and(array_column($skies, 'label'))
+                ->toContain('Day 4', 'Night 1', 'Sunset 4');
+
+            foreach ($skies as $sky) {
+                expect(public_path("sprites/bg/{$sky['image']}.png"))->toBeFile();
+            }
+        });
 });
 
 it('saves a map the game can be played from straight away', function (): void {

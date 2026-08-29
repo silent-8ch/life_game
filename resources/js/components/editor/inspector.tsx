@@ -67,12 +67,6 @@ export default function Inspector({
         selection,
     );
 
-    const themes = Object.keys(assets.backdrops);
-    const layers =
-        level.sky?.theme === null
-            ? []
-            : (assets.backdrops[level.sky?.theme ?? ''] ?? []);
-
     // More than one room picked: work on what they have in common.
     if (rooms.length > 1 && thing === null) {
         return (
@@ -104,8 +98,6 @@ export default function Inspector({
                 <LevelPanel
                     level={level}
                     assets={assets}
-                    themes={themes}
-                    layers={layers}
                     onChangeLevel={onChangeLevel}
                 />
             ) : (

@@ -2,28 +2,54 @@ import {
     Field,
     inputClass,
     NumberInput,
-    Toggle,
 } from '@/components/editor/inspector/controls';
-import type { Level, LevelAssets } from '@/types';
+import type { Level, LevelAssets, Sky } from '@/types';
 
 /**
  * The level itself, which is what shows when nothing is picked.
  *
  * Mostly plain fields. The sky is the part with behaviour: it is a whole object
- * or nothing at all, and its three settings only mean anything once there is
- * one, so they appear with it rather than writing into something absent.
+ * or nothing at all, and it is picked from one list of panoramas rather than
+ * from a file and then a cell within it.
  */
+/** How many panoramas are packed side by side into one sky strip. */
+const SKY_VARIANTS = 4;
+
+/**
+ * The chosen panorama, laid out flat and as wide as the panel is.
+ *
+ * A cell is equirectangular and 2:1, so this is very nearly what you would see
+ * turning a full circle on the spot — the left edge and the right edge are the
+ * same direction. The strip holds four cells side by side, so the box is given
+ * a background four times too wide and slid along: in CSS percentages that is
+ * `variant / (cells - 1)`, since 100% means the image's right edge against the
+ * box's right edge rather than anything about the image's own width.
+ */
+function SkyPreview({ sky }: { sky: Sky }) {
+    return (
+        <div
+            className="w-full overflow-hidden rounded border border-slate-700 bg-slate-900"
+            style={{
+                aspectRatio: '2 / 1',
+                backgroundImage: `url(/sprites/bg/${sky.image}.png)`,
+                backgroundSize: `${SKY_VARIANTS * 100}% 100%`,
+                backgroundPosition: `${(
+                    (sky.variant * 100) /
+                    (SKY_VARIANTS - 1)
+                ).toFixed(4)}% 50%`,
+                backgroundRepeat: 'no-repeat',
+            }}
+        />
+    );
+}
+
 export default function LevelPanel({
     level,
     assets,
-    themes,
-    layers,
     onChangeLevel,
 }: {
     level: Level;
     assets: LevelAssets;
-    themes: string[];
-    layers: number[];
     onChangeLevel: (change: Partial<Level>) => void;
 }) {
     return (
@@ -169,120 +195,32 @@ export default function LevelPanel({
 
                 <Field label="Sky">
                     <select
-                        value={level.sky?.image ?? ''}
+                        value={
+                            level.sky === null
+                                ? ''
+                                : `${level.sky.image}:${level.sky.variant}`
+                        }
                         onChange={(event) =>
                             onChangeLevel({
                                 sky:
-                                    event.target.value === ''
-                                        ? null
-                                        : {
-                                              image: event.target.value,
-                                              variant: level.sky?.variant ?? 0,
-                                              theme: level.sky?.theme ?? null,
-                                              layers: level.sky?.layers ?? [],
-                                          },
+                                    assets.skies.find(
+                                        (sky) =>
+                                            sky.value === event.target.value,
+                                    ) ?? null,
                             })
                         }
                         className={inputClass}
                     >
                         <option value="">Indoors, no sky</option>
                         {assets.skies.map((sky) => (
-                            <option key={sky} value={sky}>
-                                {sky.replace('sky-', '')}
+                            <option key={sky.value} value={sky.value}>
+                                {sky.label}
                             </option>
                         ))}
                     </select>
                 </Field>
 
-                {level.sky !== null && (
-                    <>
-                        <Field label="Variant">
-                            <select
-                                value={level.sky.variant}
-                                onChange={(event) =>
-                                    onChangeLevel({
-                                        sky: {
-                                            ...level.sky!,
-                                            variant: Number(event.target.value),
-                                        },
-                                    })
-                                }
-                                className={inputClass}
-                            >
-                                {[0, 1, 2, 3].map((variant) => (
-                                    <option key={variant} value={variant}>
-                                        {variant + 1}
-                                    </option>
-                                ))}
-                            </select>
-                        </Field>
-
-                        <Field label="Horizon">
-                            <select
-                                value={level.sky.theme ?? ''}
-                                onChange={(event) =>
-                                    onChangeLevel({
-                                        sky: {
-                                            ...level.sky!,
-                                            theme:
-                                                event.target.value === ''
-                                                    ? null
-                                                    : event.target.value,
-                                            layers:
-                                                assets.backdrops[
-                                                    event.target.value
-                                                ] ?? [],
-                                        },
-                                    })
-                                }
-                                className={inputClass}
-                            >
-                                <option value="">Bare sky</option>
-                                {themes.map((theme) => (
-                                    <option key={theme} value={theme}>
-                                        {theme}
-                                    </option>
-                                ))}
-                            </select>
-                        </Field>
-
-                        {layers.length > 0 && (
-                            <div className="flex gap-2">
-                                {layers.map((layer) => (
-                                    <Toggle
-                                        key={layer}
-                                        label={`Layer ${layer}`}
-                                        checked={
-                                            level.sky?.layers.includes(layer) ??
-                                            false
-                                        }
-                                        onChange={(on) =>
-                                            onChangeLevel({
-                                                sky: {
-                                                    ...level.sky!,
-                                                    layers: on
-                                                        ? [
-                                                              ...(level.sky
-                                                                  ?.layers ??
-                                                                  []),
-                                                              layer,
-                                                          ].sort()
-                                                        : (
-                                                              level.sky
-                                                                  ?.layers ?? []
-                                                          ).filter(
-                                                              (at) =>
-                                                                  at !== layer,
-                                                          ),
-                                                },
-                                            })
-                                        }
-                                    />
-                                ))}
-                            </div>
-                        )}
-                    </>
-                )}
+                {level.sky !== null && <SkyPreview sky={level.sky} />}
             </section>
 
             <p className="text-xs leading-relaxed text-slate-500">

@@ -62,12 +62,17 @@ it('tells the engine which set of sprite sheets to draw people from', function (
         });
 });
 
-it('sends the sky and its backdrop layers', function (): void {
+it('sends the sky, and nothing about a horizon', function (): void {
+    // The parallax horizon layers are gone — Paul's ruling, they did not look
+    // good. `backdrop_theme` still holds what this level was given, and the
+    // point of this is that it no longer goes over the wire: an engine that
+    // cannot see it cannot draw it.
     $this->get(route('games.show', $this->game))
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->where('level.sky.image', 'sky-day')
-            ->where('level.sky.theme', 'hills')
-            ->has('level.sky.layers', 3)
+            ->where('level.sky.variant', 0)
+            ->missing('level.sky.theme')
+            ->missing('level.sky.layers')
         );
 });
 

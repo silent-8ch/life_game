@@ -6,12 +6,14 @@ use Database\Factories\LevelFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 
 /**
  * A room you walk around in. Its slug is unique within its game, not globally.
@@ -29,6 +31,7 @@ use Illuminate\Support\Carbon;
  * @property float $ceiling_height
  * @property string|null $sky_image
  * @property int $sky_variant
+ * @property string|null $sky
  * @property string|null $backdrop_theme
  * @property list<int>|null $backdrop_layers
  * @property string $wall_color
@@ -52,6 +55,7 @@ use Illuminate\Support\Carbon;
     'spawn_z',
     'spawn_angle',
     'ceiling_height',
+    'sky',
     'sky_image',
     'sky_variant',
     'backdrop_theme',
@@ -65,6 +69,40 @@ class Level extends Model
 {
     /** @use HasFactory<LevelFactory> */
     use HasFactory;
+
+    /**
+     * `sky` is not a column. It is appended so the level form can offer the
+     * twelve panoramas as one list, which is how anybody thinks about them.
+     *
+     * @var list<string>
+     */
+    protected $appends = ['sky'];
+
+    /**
+     * The sky as the one choice it actually is.
+     *
+     * A strip holds four panoramas side by side, so which file and which cell
+     * are two facts about how the art is packed and between them one decision:
+     * `sky-day:2` is that decision, and null is a level with no sky at all.
+     * The two columns underneath are left as they are, because the engine and
+     * every level already drawn read them.
+     *
+     * @return Attribute<string|null, string|null>
+     */
+    protected function sky(): Attribute
+    {
+        return Attribute::make(
+            get: fn (): ?string => $this->sky_image === null
+                ? null
+                : $this->sky_image.':'.$this->sky_variant,
+            set: fn (?string $sky): array => $sky === null
+                ? ['sky_image' => null, 'sky_variant' => 0]
+                : [
+                    'sky_image' => Str::before($sky, ':'),
+                    'sky_variant' => (int) Str::after($sky, ':'),
+                ],
+        );
+    }
 
     /**
      * @return array<string, string>
