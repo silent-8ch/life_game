@@ -114,6 +114,7 @@ class LevelForm
                             ->default('sky-day-1')
                             ->live(),
                         Html::make(fn (Get $get): Htmlable => self::skyPreview(
+                            $assets,
                             is_string($get('sky_image')) ? $get('sky_image') : null,
                         )),
                     ]),
@@ -138,7 +139,7 @@ class LevelForm
      * edge and the right edge are the same direction. That is worth more than
      * a thumbnail, which at postage-stamp size cannot tell dusk from night.
      */
-    private static function skyPreview(?string $image): Htmlable
+    private static function skyPreview(LevelAssets $assets, ?string $image): Htmlable
     {
         if ($image === null) {
             return new HtmlString('');
@@ -146,7 +147,7 @@ class LevelForm
 
         return new HtmlString(sprintf(
             '<div class="w-full overflow-hidden rounded-lg ring-1 ring-gray-950/10 dark:ring-white/20" style="aspect-ratio:2/1;background-image:url(%s);background-size:100%% 100%%;background-repeat:no-repeat;"></div>',
-            e(asset('sprites/bg/'.$image.'.png')),
+            e(asset($assets->skyPath($image))),
         ));
     }
 }

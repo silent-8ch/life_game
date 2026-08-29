@@ -98,16 +98,6 @@ export const TERMINAL_FALL = 55;
  */
 export const JUMP_SPEED = 4.2;
 
-/** Radius of the sky drum. Far enough to read as distance, near enough to draw. */
-export const SKY_RADIUS = 90;
-
-/**
- * How far each horizon layer trails behind the player as they walk, as a
- * fraction of the distance travelled. Nearer layers trail further, which is
- * what makes them read as nearer.
- */
-export const BACKDROP_LAG = 0.12;
-
 /** Reflections render into a buffer this size, kept small to stay coarse. */
 export const MIRROR_TEXTURE_WIDTH = 512;
 export const MIRROR_TEXTURE_HEIGHT = 288;

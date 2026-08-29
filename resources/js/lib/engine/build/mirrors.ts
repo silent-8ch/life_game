@@ -123,8 +123,14 @@ export function buildMirrorPane(
                 // single-sided material in the level is then culled inside
                 // out — the panes first of all, so a mirror's view contains no
                 // mirrors and there is nothing for the next level to nest in;
-                // the sky, which is `BackSide`, so it goes black; and any prop
-                // that did not ask for two sides.
+                // and any prop that did not ask for two sides.
+                //
+                // The sky used to be on that list, as a `BackSide` dome that
+                // went black. It is `scene.background` now and three draws it
+                // through a box of its own, so the sky is no longer the
+                // symptom. **Do not read that as a reason to drop the flip.**
+                // The panes were always the load-bearing case, and they have
+                // not changed: without this, mirrors stop nesting.
                 //
                 // Flipping x in the camera's own space makes the basis
                 // right-handed again. The picture it draws is the same picture

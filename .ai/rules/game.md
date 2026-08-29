@@ -5,16 +5,18 @@ paths:
 
 # Game
 
-## The sky must follow whichever camera is drawing, not just the player
-`SkyDome.follow(x, y, z)` centres the dome. `step()` calls it once a frame for the player — but the pane passes run afterwards with cameras somewhere else entirely (a portal's camera is the player carried through the transform, which in level 8 is 68 m away in x).
+## The sky is a background, and no longer has to follow anything
+`scene.background` has no position. Three draws it from the camera's orientation with the translation dropped, so it is right for every camera without being told — the player's, a portal's, a mirror's at the thirty-second bounce. `SkyDome.follow` is gone and so is `SKY_RADIUS`.
 
-The dome is `SKY_RADIUS` (90 m) across, not infinite, so a dome parked at the player is a sphere of sky sitting off to one side of the pane's camera: a wall of it across part of the view and the rest of the level showing past its edge.
+**This was the hardest-won rule in this file and it is now history.** Keeping the story because the failure it describes is the one a future sky change would reintroduce:
 
-This bit first: back when there were parallax horizon bands inside the dome, the same bug read far worse, because a band is close enough to have a near side. Left parked at the player they appeared in the pane's view as slabs of hillside a few metres across, in front of everything the far room contained — a portal full of grass, a portal full of sky, and torn vertical panels, one per band offset by its own lag. **The bands are gone** (see below); the rule survives them because the dome alone still breaks.
+The sky used to be a 90m sphere with the panorama on the inside. Being finite, it had a position, and `step()` set it to the player once a frame — but the pane passes run afterwards from cameras somewhere else entirely (a portal's camera is the player carried through the transform, which in level 8 is 68m away in x). Left parked at the player, the dome appeared in a pane's view as a ball of sky off to one side: a wall of it across part of the view with the level showing past its edge. Back when there were parallax horizon bands inside it, it read worse still — slabs of hillside a few metres across in front of everything the far room contained. A portal full of grass, a portal full of sky, and torn vertical panels, one per band offset by its own lag.
 
-`drawPane` in `prepareReflections` now calls `sky.follow(at.x, from.position.y, at.z)` using the pane's own `viewerAt`, and the refresh puts it back around the player before the main render. Any new pass that renders the scene from a different viewpoint has to do the same.
+The fix was `drawPane` calling `sky.follow` with the pane's own `viewerAt`, and the refresh putting it back around the player before the main render. It worked, and it was a workaround for the sky being a thing rather than a direction.
 
-`prepareReflections` is `resources/js/lib/engine/reflections.ts` now, not a closure in this file, so the node harness can load it. `tests/Unit/ReflectionsTest.php` pins the sky moving to whoever is looking and back to the player last, along with the rest of the order of a frame. The viewport imports it and calls it once a frame; nothing else should.
+**What still needs this treatment: billboards.** `props.faceViewer` and `actors.faceViewer` sit exactly where `sky.follow` used to, in `drawPane`, for exactly the reason the sky used to. They are at a finite distance and genuinely do have to be turned per drawing camera. `tests/Unit/ReflectionsTest.php` pins the sequence — it used to assert the sky's and the props' as the same list, and now asserts only the props'. Any new pass that renders the scene from a different viewpoint has to turn them.
+
+`prepareReflections` is `resources/js/lib/engine/reflections.ts`, not a closure in the viewport, so the node harness can load it. The viewport imports it and calls it once a frame; nothing else should.
 
 ## There are no horizon layers, and the columns that held them stay anyway
 Paul, on the parallax bands of hills and rooftops that used to stand inside the sky dome: *remove the layers and horizons bits. they do not look good.* They are out of both editors and out of `sky.ts`, which is now a textured sphere and nothing else.

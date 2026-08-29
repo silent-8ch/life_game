@@ -3,6 +3,7 @@ import {
     inputClass,
     NumberInput,
 } from '@/components/editor/inspector/controls';
+import { skyUrl } from '@/lib/engine/sky';
 import type { Level, LevelAssets, Sky } from '@/types';
 
 /**
@@ -25,7 +26,7 @@ function SkyPreview({ sky }: { sky: Sky }) {
             className="w-full overflow-hidden rounded border border-slate-700 bg-slate-900"
             style={{
                 aspectRatio: '2 / 1',
-                backgroundImage: `url(/sprites/bg/${sky.image}.png)`,
+                backgroundImage: `url(${skyUrl(sky.image)})`,
                 backgroundSize: '100% 100%',
                 backgroundRepeat: 'no-repeat',
             }}

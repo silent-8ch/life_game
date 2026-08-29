@@ -16,6 +16,10 @@ use Symfony\Component\Process\Process;
  * 2. `LevelAssets::HEIGHTS` is mirrored in `sprite-actor.ts`.
  *    `.ai/rules/services.md` already says "change one, change the other" — this
  *    is what makes forgetting fail loudly instead of half-working.
+ * 3. The sky files' extension. PHP builds the editor's preview URL from it and
+ *    the engine builds the texture URL from it, and a change of image format
+ *    that reaches only one of them leaves the other loading a file that is not
+ *    there — with nothing to show for it but a sky that does not appear.
  *
  * The check imports the real modules and prints their values rather than
  * parsing them. Parsing TypeScript to find out what a number is would be a
@@ -111,4 +115,22 @@ it('keeps everybody in the level assets tallest first, as the heights claim', fu
     rsort($sorted);
 
     expect($heights)->toBe($sorted);
+});
+
+it('keeps the sky file extension the same on both sides of the wire', function (): void {
+    // PHP builds the Filament preview's URL and the engine builds the texture's,
+    // from a constant each. They were four hardcoded `.png`s until the art was
+    // re-sourced; one constant per language is only an improvement while
+    // something holds the two together.
+    $engine = engineValues(<<<'JS'
+        const sky = await import('@/lib/engine/sky.ts');
+
+        process.stdout.write(JSON.stringify({
+            extension: sky.SKY_EXTENSION,
+            url: sky.skyUrl('sky-day-1'),
+        }));
+        JS);
+
+    expect($engine['extension'])->toBe(LevelAssets::SKY_EXTENSION)
+        ->and($engine['url'])->toBe('/'.app(LevelAssets::class)->skyPath('sky-day-1'));
 });

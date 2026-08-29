@@ -84,17 +84,12 @@ function reflectionFrame(string $scene, string $body): array
             faceViewer: (x, z) => log.push('actors at ' + x + ',' + z),
         };
 
-        // Billboards are turned per drawing camera, exactly as the sky is, and
-        // for the same reason: a prop left facing the player is edge-on or
-        // backwards in every pane that holds it.
+        // Billboards are turned per drawing camera: a prop left facing the
+        // player is edge-on or backwards in every pane that holds it.
         const props = {
             faceViewer: (x, z) => log.push('props at ' + x + ',' + z),
         };
 
-        const sky = {
-            object: { visible: true },
-            follow: (x, y, z) => log.push('sky at ' + x + ',' + z),
-        };
 
         const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 100);
         camera.updateMatrixWorld(true);
@@ -110,7 +105,6 @@ function reflectionFrame(string $scene, string $body): array
             actors,
             props,
             camera,
-            sky,
         )(
             { name: 'renderer' },
             { name: 'scene' },
@@ -235,25 +229,6 @@ it('shows the player their own view last, and hugs only for their camera', funct
         ->and($answer['lastShownAtZero'])->toBeLessThan($answer['firstHug']);
 });
 
-it('draws the sky around whoever is looking, and puts it back', function (): void {
-    $answer = reflectionFrame(REFLECTION_SCENE, <<<'JS'
-        process.stdout.write(JSON.stringify({ sky: only('sky') }));
-        JS);
-
-    // Each pane's pass is looked at from somewhere else entirely, so the dome
-    // goes there for the length of it — left at the player it hangs in the far
-    // room as slabs of hillside a few metres across, in front of everything.
-    // The last one puts it back around the player for the main render.
-    expect($answer['sky'])->toBe([
-        'sky at 5,-5',
-        'sky at 4,-4',
-        'sky at 3,-3',
-        'sky at 5,-5',
-        'sky at 9,-9',
-        'sky at 0,0',
-    ]);
-});
-
 it('shows the player inside a pane and nowhere else', function (): void {
     $answer = reflectionFrame(REFLECTION_SCENE, <<<'JS'
         process.stdout.write(JSON.stringify({
@@ -304,11 +279,13 @@ it('turns a billboard to face whoever is drawing, not the player', function (): 
         process.stdout.write(JSON.stringify({ props: only('props') }));
         JS);
 
-    // The same list, in the same order, as the sky's — because it is the same
-    // trap. `.ai/rules/game.md` records it for the dome: a pane pass is looked
-    // at from somewhere else entirely, and anything parked facing the player is
-    // wrong in every portal and every mirror. A billboard has no excuse to be
-    // the second thing that learns this.
+    // A pane pass is looked at from somewhere else entirely, so anything
+    // parked facing the player is wrong in every portal and every mirror.
+    //
+    // The sky was the first thing to learn this and used to be asserted here
+    // beside the props, in exactly this order. It no longer needs to be: it is
+    // `scene.background` now, which has no position for a pass to get wrong.
+    // Billboards are at a finite distance and still do.
     expect($answer['props'])->toBe([
         'props at 5,-5',
         'props at 4,-4',

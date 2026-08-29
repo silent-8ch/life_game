@@ -15,7 +15,6 @@ import type { Aperture } from '@/lib/engine/aperture';
 import type { PropSet } from '@/lib/engine/build/things';
 import { PANE_CLEARANCE, PORTAL_BOUNCES } from '@/lib/engine/constants';
 import type { PortalSurface } from '@/lib/engine/portal-surface';
-import type { SkyDome } from '@/lib/engine/sky';
 import type { SpriteActor } from '@/lib/engine/sprite-actor';
 
 /**
@@ -123,7 +122,6 @@ export function prepareReflections(
     actors: Actors,
     props: PropSet,
     camera: THREE.PerspectiveCamera,
-    sky: SkyDome | null,
     /**
      * Whether the player's own body should be drawn at all this frame.
      *
@@ -153,17 +151,18 @@ export function prepareReflections(
 
         playerSprite.faceViewer(at.x, at.z, at.yaw);
         actors.faceViewer(at.x, at.z, at.yaw);
-        // The same trap as the sky, and for the same reason: this pass is
-        // looked at from somewhere else entirely, and a billboard left facing
-        // the player is edge-on or backwards in every pane that holds it.
+        // This pass is looked at from somewhere else entirely, and a billboard
+        // left facing the player is edge-on or backwards in every pane that
+        // holds it.
+        //
+        // The sky used to need the same treatment and no longer does. It was a
+        // 90m dome, so it had a position, and a dome parked at the player hung
+        // in the far room as slabs of hillside a few metres across in front of
+        // everything — a portal full of grass. It is `scene.background` now,
+        // which is a direction rather than a place, and three re-seats it on
+        // whichever camera is drawing. There is nothing left to move.
         props.faceViewer(at.x, at.z);
         playerSprite.object.visible = playerSeen();
-
-        // The sky is drawn around whoever is looking, and this pass is looked
-        // at from somewhere else entirely. Left where the player is, it hangs
-        // in the far room as slabs of hillside a few metres across, in front of
-        // everything — which is what a portal full of grass was.
-        sky?.follow(at.x, from.position.y, at.z);
 
         pane.render(renderer, scene, from, depth, window);
 
@@ -947,9 +946,6 @@ export function prepareReflections(
 
             deepen(pane, camera, 0, seen ? deepAs : 0, WHOLE_SCREEN);
         }
-
-        // Back around the player, for the view they actually get.
-        sky?.follow(camera.position.x, camera.position.y, camera.position.z);
 
         // What the player is about to be shown.
         for (const pane of panes) {

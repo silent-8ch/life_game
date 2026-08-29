@@ -55,6 +55,16 @@ class LevelAssets
     public const PLAYER = 'paul';
 
     /**
+     * The extension every sky file has.
+     *
+     * Written down once here and once as `SKY_EXTENSION` in
+     * `resources/js/lib/engine/sky.ts`, because both sides of the wire build a
+     * URL from it: this one for the editor's preview, the engine's for the
+     * texture. `ConstantsMatchTest` holds the two together.
+     */
+    public const SKY_EXTENSION = 'png';
+
+    /**
      * The residents a new level is populated with, tallest first. The player is
      * one of them: which is being played is a matter for the level, and there
      * is nothing to stop the rest of you wandering about while you are at it.
@@ -135,7 +145,7 @@ class LevelAssets
      * A sky must be **2:1**, because that is what equirectangular means — 360
      * degrees across against 180 up and down. Anything else in the folder is
      * not a sky and is left out rather than stretched over the dome and shown
-     * to somebody as one. `sky-city.png` is the case that taught us: 4096x512,
+     * to somebody as one. `sky-city` is the case that taught us: 4096x512,
      * a single flat photograph that does not even join up with itself.
      *
      * The check is the file's own shape rather than a list, so re-exporting a
@@ -146,17 +156,26 @@ class LevelAssets
     public function skies(): array
     {
         return $this->skies ??= array_values(array_filter(
-            $this->pngNamesIn(self::BACKDROP_PATH),
+            $this->namesIn(self::BACKDROP_PATH, self::SKY_EXTENSION),
             function (string $name): bool {
                 if (! Str::startsWith($name, 'sky-')) {
                     return false;
                 }
 
-                $size = getimagesize(public_path(self::BACKDROP_PATH."/{$name}.png"));
+                $size = getimagesize(public_path($this->skyPath($name)));
 
                 return $size !== false && $size[0] === $size[1] * 2;
             },
         ));
+    }
+
+    /**
+     * Where a sky's art lives, under the public folder. The one place a sky
+     * path is spelled out on this side of the wire.
+     */
+    public function skyPath(string $image): string
+    {
+        return self::BACKDROP_PATH.'/'.$image.'.'.self::SKY_EXTENSION;
     }
 
     /**
@@ -253,9 +272,21 @@ class LevelAssets
     }
 
     /**
+     * PNG names in a folder. Sprite sheets, prop cutouts and tiling textures
+     * all carry alpha and are all PNG; only the skies are asked about by
+     * extension, because only they are photographs.
+     *
      * @return list<string>
      */
     private function pngNamesIn(string $path): array
+    {
+        return $this->namesIn($path, 'png');
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function namesIn(string $path, string $extension): array
     {
         $directory = public_path($path);
 
@@ -264,7 +295,7 @@ class LevelAssets
         }
 
         $names = collect(File::files($directory))
-            ->filter(fn ($file): bool => $file->getExtension() === 'png')
+            ->filter(fn ($file): bool => $file->getExtension() === $extension)
             ->map(fn ($file): string => $file->getFilenameWithoutExtension())
             ->values()
             ->all();

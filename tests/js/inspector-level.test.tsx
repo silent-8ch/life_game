@@ -67,7 +67,7 @@ describe('the level', () => {
         // The whole file, not a slice of one. Slicing is what turned a
         // single-image sky into four stretched quarters of itself.
         expect(preview?.style.backgroundImage).toContain(
-            '/sprites/bg/sky-day-2.png',
+            '/sprites/bg/sky-day-2.',
         );
         expect(preview?.style.backgroundSize).toBe('100% 100%');
     });

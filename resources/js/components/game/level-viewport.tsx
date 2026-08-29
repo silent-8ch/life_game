@@ -400,12 +400,19 @@ export default function LevelViewport({
             armConsoleScan(renderer.domElement, legend);
         }
 
+        // No sky in debug: the probe backdrop owns the background there, and
+        // it reserves two colours that a readback reads as "you are looking out
+        // of the level". A sky texture behind that would poison the scan.
         const sky =
             level.sky === null || probe !== null ? null : createSky(level.sky);
 
-        if (sky !== null) {
-            scene.add(sky.object);
-        }
+        // Only once it has actually loaded. Three cannot convert a texture with
+        // no height yet, and hands back nothing at all while it waits — which
+        // would show as a black frame or two on walking in, rather than the
+        // background colour that is already sitting there.
+        void sky?.ready.then((panorama) => {
+            scene.background = panorama;
+        });
 
         const actors = createActors(level);
 
@@ -434,7 +441,6 @@ export default function LevelViewport({
             actors,
             built.props,
             camera,
-            sky,
             () => standingIn?.isInvisible !== true,
         );
 
@@ -587,8 +593,6 @@ export default function LevelViewport({
             built.props.faceViewer(player.x, player.z);
 
             aimCamera(camera, player);
-
-            sky?.follow(player.x, player.eye, player.z);
 
             textures.tick(seconds);
             magic?.update(moving, built.colliders);

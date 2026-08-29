@@ -98,7 +98,6 @@ function mirrorBacking(string $body): array
             noop,
             noop,
             camera,
-            null,
         );
 
         // Enough frames for the depth to settle, because it is settled rather

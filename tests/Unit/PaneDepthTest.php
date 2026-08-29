@@ -172,7 +172,6 @@ function paneDepth(string $body): array
             { faceViewer: () => {} },
             { faceViewer: () => {} },
             camera,
-            null,
         );
 
         /** Runs frames at a given cost per pass and returns the depth of each. */

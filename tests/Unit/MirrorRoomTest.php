@@ -241,7 +241,6 @@ function mirrorRoomFrame(int $sides): array
             { faceViewer: () => {} },
             { faceViewer: () => {} },
             camera,
-            null,
         );
 
         // Enough frames for the depth to settle, and only the last one is

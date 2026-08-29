@@ -118,19 +118,23 @@ Without it the pane is still parked in front of the player while the render pass
 
 So the order within a frame is: release everything, run the passes deepest-first, `show(0)`, then hug for the player's camera alone.
 
-## The deepest portal pass hides the sky as well as the panes
-At `depth >= allowed` the panes are taken out of the view (they would otherwise read the very target being written) — and the sky group has to go with them. A portal mouth is an opening with nothing behind it, so leaving the sky up puts a bright patch of daylight exactly where the next opening should be, at the end of the corridor. That reads as a hole in the illusion far more than darkness does. `prepareReflections` takes the sky object for this and restores its visibility straight after the pass.
+## The deepest pass hides the panes. It has never hidden the sky
+At `depth >= allowed` the panes are taken out of the view — they would otherwise read the very target being written.
 
-Targets are made on demand (`targetAt`), not up front: `PORTAL_BOUNCES` is 8, so a pane that is never seen through another would otherwise hold nine render targets of several megabytes for depth it never reaches. Depth costs nothing until it is used.
+This section used to claim the sky went with them, and that `prepareReflections` took the sky object to hide it and restored its visibility after the pass. **None of that was ever true.** Nothing hides the sky, `reflections.ts` has no `visible` write on any sky object, and the sky exposes no way to be hidden. The only residue was a vestigial `object: { visible: true }` in a test mock that nothing read. It was written as a plan and left standing as though it were a description. If the bright patch of daylight it describes ever turns up at the end of a corridor, this is unimplemented rather than broken.
 
-`PORTAL_RENDER_BUDGET` bounds the passes per frame, so raising the bounces cannot on its own cost frame rate — it runs out of budget instead, and the tunnel ends shallower.
+Targets are made on demand (`targetAt`), not up front: `PORTAL_BOUNCES` is 32, so a pane that is never seen through another would otherwise hold thirty-three render targets of several megabytes for depth it never reaches. Depth costs nothing until it is used.
+
+There is no pass budget. `PORTAL_RENDER_BUDGET` and `PANE_MILLISECONDS` are **deleted** — Paul's call that safety for the engine is the level designer's job. What bounds a frame is the aperture: a branch ends where its reflection stops overlapping the one showing it.
 
 ## A room open to the sky still needs a lid
-`is_sky` means no ceiling texture, not no ceiling. `buildSkyCeiling` puts a flat over the sector at its ceiling height with `colorWrite: false` — it writes depth and paints nothing, so the pixels keep whatever the sky dome laid down and everything beyond is cut away. It is not added to `targets`, so the look-at ray passes through it.
+`is_sky` means no ceiling texture, not no ceiling. `buildSkyCeiling` puts a flat over the sector at its ceiling height with `colorWrite: false` — it writes depth and paints nothing, so the pixels keep whatever the background laid down and everything beyond is cut away. It is not added to `targets`, so the look-at ray passes through it.
 
 Without one, a sky sector is a room with a hole in the roof: sight-lines run out over its walls into whatever else is on the plan. In a level using the Doom trick that is the floor above, sitting right next door in x/z — walk into the yard and you can see the bedrooms.
 
-Draw order matters and is why `SKY_CEILING_ORDER` is -0.5: the sky dome is at -1 and lays down no depth of its own (`depthWrite: false`), the lids go next, and the rooms are at 0. Put the lids after the rooms and the rooms are already painted before anything hides them.
+Draw order matters and is why `SKY_CEILING_ORDER` is -0.5: the sky goes down first and lays down no depth of its own, the lids go next, and the rooms are at 0. Put the lids after the rooms and the rooms are already painted before anything hides them.
+
+The sky used to be a dome at `renderOrder -1`, holding that first slot by sorting. It is `scene.background` now, which three unshifts to the front of the opaque list **after** sorting and draws with `depthTest: false, depthWrite: false` — so the slot is held by construction rather than by a number something else could out-compete. Strictly safer, and the same contract.
 
 ## A ceiling is turned over by reversing its winding, never by rotating it the other way
 A floor and a ceiling are the same polygon: `shapeOf` lays the sector out flat and `buildFlat` rotates it a quarter turn about x. Done for both, that leaves a ceiling's normal pointing **up**, exactly like a floor's — free while nothing is lit and every surface is `DoubleSide`, and fatal the moment anything is, because every ceiling in the level then lights as though it were the floor.
@@ -157,7 +161,7 @@ The numbers live in the wedge sweep in `tests/Unit/CollisionLimitsTest.php`, whi
 
 With a single room the filter was too tight. A mirror one doorway on from a portal's exit never got redrawn for that view, so it kept whatever was last put in it and its reflection sat frozen while the player moved. The same gap is why a mirror could show a stale portal.
 
-One hop only. Two would be more correct and costs another fan-out of passes against `PORTAL_RENDER_BUDGET`; if something two rooms away is visibly stale, that is the knob, not a bug.
+One hop only. Two would be more correct and costs another fan-out of passes; if something two rooms away is visibly stale, that is the knob, not a bug.
 
 ## A sky lid is only shown to somebody standing in its own room
 `BuiltLevel.skyLids` carries each lid with the slug of the room it covers, and the viewport shows only the one whose room the player is standing in (`sectorAt`).
@@ -270,13 +274,15 @@ A pane is a hole, not a screen. Two mirrors facing each other keep nearly all of
 Uncapped, `hall-of-mirrors` costs 662 passes for all sixteen levels and the mirrored octagon 980, and the count per level climbs 4, 5, 8, 12, 17, 23 — near enough linear, which is the ring of virtual rooms the method of images predicts.
 
 ## How deep is one number for the whole frame, and it settles
-`reach` in reflections.ts is the depth every branch gets, carried between frames and moved one level at a time to hold the cost near `PORTAL_RENDER_BUDGET` (a pass count) and `PANE_MILLISECONDS` (the frame's own wall clock). Being **one** number is the point: a room that cannot afford sixteen levels goes shallower everywhere at once.
+**Historical. There is no controller and no budget any more** — `PaneDepthTest` pins their absence. Kept because both dead ends below cost real debugging and both are tempting to retry.
+
+`reach` was the depth every branch got, carried between frames and moved one level at a time to hold the cost near `PORTAL_RENDER_BUDGET` (a pass count) and `PANE_MILLISECONDS` (the frame's own wall clock). Being **one** number was the point: a room that cannot afford sixteen levels goes shallower everywhere at once.
 
 The budget used to gate the recursion directly, as a running counter checked at every node. Depth-first, that is an ordering and not a budget: the corridor straight ahead is walked first and drills to `PORTAL_BOUNCES`, and by the time the recursion unwinds to the branches beside it there is nothing left, so they get no kids — and a pane with no kids draws a room with no mirrors in it. Paul: *I can see many mirrors straight ahead, but reflections to the side are showing as walls.* Measured at his spot: 8 of the 12 passes at the first bounce rendered bare walls, 125 of 230 over the frame. **Do not put a per-node budget check back.**
 
 Two things about the controller that were got wrong first: it must start low and climb (starting at `PORTAL_BOUNCES` spends the worst frame on the frame that is also building every texture), and it must only grow when the frame came in **comfortably** under, not merely under — a level costs about a fifth more than the one before it, so growing at the threshold oscillates across it every frame. It did, between nine levels and ten.
 
-Both `PORTAL_RENDER_BUDGET` and `PANE_MILLISECONDS` exist because they bound different things. The count bounds draw calls and memory and is predictable. The clock is what fits the machine: `scaleAt` shrinks a deep target to an eighth so it costs almost no pixels, but it costs a whole scene traversal like any other pass, and that is the part that adds up over six hundred of them.
+The two knobs bounded different things, which is why there were two. The count bounded draw calls and memory and was predictable. The clock was what fit the machine: `scaleAt` shrinks a deep target to an eighth so it costs almost no pixels, but it costs a whole scene traversal like any other pass, and that is the part that adds up over six hundred of them. Both are deleted; the reasoning is here only in case a budget is ever wanted again.
 
 ## No pane ever shows a picture taken from a camera other than the one looking at it
 The single rule the pane renderer keeps, and three separate things used to break it. It sounds like a tautology and is not, because a pane samples by screen position: a picture drawn from the wrong viewpoint is not merely stale, it is a different view of the room pasted onto a wall at the wrong angle. Down a corridor of portals two adjacent viewpoints are nearly the same picture and it passes; between two mirrors at right angles it does not, and Paul's word for it both times was *super stretched*.
