@@ -36,6 +36,9 @@ class LevelWriter
                 'spawn_z' => $map['spawn']['z'],
                 'spawn_angle' => $map['spawn']['angle'],
                 'ceiling_height' => $map['ceilingHeight'],
+                'wall_color' => $map['wallColor'] ?? $level->wall_color,
+                'floor_color' => $map['floorColor'] ?? $level->floor_color,
+                'accent_color' => $map['accentColor'] ?? $level->accent_color,
                 // `backdrop_theme` and `backdrop_layers` are deliberately
                 // untouched. Nothing draws a horizon any more, so a save has
                 // no opinion about one and should not wipe what is stored.

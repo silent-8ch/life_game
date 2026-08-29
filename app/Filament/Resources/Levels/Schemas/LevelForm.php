@@ -5,9 +5,12 @@ namespace App\Filament\Resources\Levels\Schemas;
 use App\Models\Game;
 use App\Services\LevelAssets;
 use App\Services\LevelStarter;
+use App\Services\WireframePreview;
+use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Html;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
@@ -121,12 +124,35 @@ class LevelForm
 
                 Section::make('Wireframe colours')
                     ->description('Used for any surface that has no texture yet.')
-                    ->columns(3)
                     ->collapsed()
                     ->schema([
-                        TextInput::make('wall_color')->required()->default('#7fe0c9'),
-                        TextInput::make('floor_color')->required()->default('#2f6f5e'),
-                        TextInput::make('accent_color')->required()->default('#fbbf24'),
+                        Grid::make(3)->schema([
+                            ColorPicker::make('wall_color')
+                                ->label('Wall')
+                                ->required()
+                                ->default('#7fe0c9')
+                                ->live(onBlur: true),
+                            ColorPicker::make('floor_color')
+                                ->label('Floor')
+                                ->required()
+                                ->default('#2f6f5e')
+                                ->live(onBlur: true),
+                            ColorPicker::make('accent_color')
+                                ->label('Accent')
+                                ->required()
+                                ->default('#fbbf24')
+                                ->live(onBlur: true),
+                        ]),
+                        // Not three swatches. The engine dims a solid fill to a
+                        // ninth of its brightness and draws the grid over it at
+                        // full strength, so a swatch shows a colour the game
+                        // never paints — and how the three read against each
+                        // other is the whole decision.
+                        Html::make(fn (Get $get): Htmlable => app(WireframePreview::class)->render(
+                            is_string($get('wall_color')) ? $get('wall_color') : '#000000',
+                            is_string($get('floor_color')) ? $get('floor_color') : '#000000',
+                            is_string($get('accent_color')) ? $get('accent_color') : '#000000',
+                        )),
                     ]),
             ]);
     }

@@ -1,6 +1,7 @@
 <?php
 
 use App\Services\LevelAssets;
+use App\Services\WireframePreview;
 use Symfony\Component\Process\Process;
 
 /**
@@ -16,7 +17,10 @@ use Symfony\Component\Process\Process;
  * 2. `LevelAssets::HEIGHTS` is mirrored in `sprite-actor.ts`.
  *    `.ai/rules/services.md` already says "change one, change the other" — this
  *    is what makes forgetting fail loudly instead of half-working.
- * 3. The sky files' extension. PHP builds the editor's preview URL from it and
+ * 3. `SOLID_TINT`, which decides how dark an untextured surface is drawn, and
+ *    is mirrored so the editors can preview a colour before it is saved. A
+ *    preview that disagrees with the engine is worse than none.
+ * 4. The sky files' extension. PHP builds the editor's preview URL from it and
  *    the engine builds the texture URL from it, and a change of image format
  *    that reaches only one of them leaves the other loading a file that is not
  *    there — with nothing to show for it but a sky that does not appear.
@@ -133,4 +137,31 @@ it('keeps the sky file extension the same on both sides of the wire', function (
 
     expect($engine['extension'])->toBe(LevelAssets::SKY_EXTENSION)
         ->and($engine['url'])->toBe('/'.app(LevelAssets::class)->skyPath('sky-day-1'));
+});
+
+it('dims a wireframe colour exactly the way the engine does', function (): void {
+    // Both editors preview the wireframe colours, and a preview is only worth
+    // having if it matches. Two things have to agree: how much brightness a
+    // solid fill keeps, and that the multiply happens in linear light rather
+    // than on the hex. Three converts a colour to linear on the way in and
+    // encodes back to sRGB on the way out, so `#7fe0c9` lands on `#2a5148` and
+    // not on the near-black `#0d1714` a naive multiply gives.
+    $engine = engineValues(<<<'JS'
+        const constants = await import('@/lib/engine/build/constants.ts');
+        const { dimmed } = await import('@/lib/wireframe.ts');
+
+        process.stdout.write(JSON.stringify({
+            tint: constants.SOLID_TINT,
+            dimmed: ['#7fe0c9', '#2f6f5e', '#fbbf24', '#ffffff', '#000000']
+                .map((color) => dimmed(color)),
+        }));
+        JS);
+
+    $preview = app(WireframePreview::class);
+
+    expect($engine['tint'])->toBe(WireframePreview::SOLID_TINT)
+        ->and($engine['dimmed'])->toBe(array_map(
+            fn (string $color): string => $preview->dimmed($color),
+            ['#7fe0c9', '#2f6f5e', '#fbbf24', '#ffffff', '#000000'],
+        ));
 });

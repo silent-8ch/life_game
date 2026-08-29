@@ -94,6 +94,50 @@ describe('the level', () => {
         expect(handlers.onChangeLevel).toHaveBeenCalledWith({ sky: null });
     });
 
+    it('picks a wireframe colour with a swatch or a hex', () => {
+        // Both, because a colour is as often copied from somewhere else as it
+        // is chosen. The swatch is a native colour input so the browser's own
+        // picker opens.
+        const { handlers } = showLevel();
+
+        fireEvent.change(screen.getByLabelText('Wall swatch'), {
+            target: { value: '#112233' },
+        });
+
+        expect(handlers.onChangeLevel).toHaveBeenCalledWith({
+            wallColor: '#112233',
+        });
+    });
+
+    it('shows the colours as the engine will actually paint them', () => {
+        // Not as swatches. An untextured surface is the colour dimmed to a
+        // ninth with the grid over it at full strength, so a swatch would show
+        // a colour the game never paints. `#ffffff` fills at `#5d5d5d`, and
+        // that number comes from the same function the engine's own preview
+        // uses -- ConstantsMatchTest holds it against the PHP copy.
+        showLevel({
+            wallColor: '#ffffff',
+            floorColor: '#ffffff',
+            accentColor: '#fbbf24',
+        });
+
+        const preview = screen.getByRole('img', {
+            name: 'How untextured surfaces will look',
+        });
+
+        const fills = [...preview.querySelectorAll('polygon')].map((at) =>
+            at.getAttribute('fill'),
+        );
+
+        expect(fills.length).toBeGreaterThan(0);
+        expect(new Set(fills)).toEqual(new Set(['#5d5d5d']));
+
+        // The accent rides the edges where surfaces meet, at full strength.
+        expect(preview.querySelector('rect')?.getAttribute('stroke')).toBe(
+            '#fbbf24',
+        );
+    });
+
     it('changes the level rather than any room', () => {
         // There is a room in the level and none of it is picked. Writing
         // through the sector path here would edit whichever room happened to

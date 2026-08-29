@@ -80,6 +80,18 @@ class UpdateLevelMapRequest extends FormRequest
             'spawn.angle' => ['required', 'numeric'],
             'ceilingHeight' => ['required', 'numeric', 'min:0.5', 'max:64'],
 
+            // Hex, with or without the leading hash, three or six digits.
+            //
+            // `sometimes` rather than `required`: a save that says nothing
+            // about the wireframe colours leaves them as they are. They are the
+            // level's least interesting property and a caller that is not the
+            // colour picker has no business being made to repeat them — the
+            // same reasoning as `backdrop_theme`, which a save also leaves
+            // alone rather than nulling.
+            'wallColor' => ['sometimes', 'string', 'regex:/^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/'],
+            'floorColor' => ['sometimes', 'string', 'regex:/^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/'],
+            'accentColor' => ['sometimes', 'string', 'regex:/^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/'],
+
             'sky' => ['nullable', 'array'],
             'sky.image' => ['required_with:sky', 'string', Rule::in($assets->skies())],
 

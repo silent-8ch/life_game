@@ -43,6 +43,9 @@ function drawnMap(): array
         'spawn' => ['x' => 1.0, 'z' => 1.0, 'angle' => 90],
         'ceilingHeight' => 3.0,
         'sky' => ['image' => 'sky-night-3'],
+        'wallColor' => '#112233',
+        'floorColor' => '#445566',
+        'accentColor' => '#778899',
         'things' => [
             [
                 'slug' => 'krystal',
@@ -203,6 +206,9 @@ it('saves a drawn map over the one that was there', function (): void {
     expect($level->name)->toBe('Drawn')
         ->and($level->spawn_angle)->toBe(90.0)
         ->and($level->sky_image)->toBe('sky-night-3')
+        ->and($level->wall_color)->toBe('#112233')
+        ->and($level->floor_color)->toBe('#445566')
+        ->and($level->accent_color)->toBe('#778899')
         ->and($level->sectors)->toHaveCount(2)
         ->and($level->sectors->pluck('slug')->all())->toBe(['west', 'east'])
         ->and($level->sectors->firstWhere('slug', 'east')->is_sky)->toBeTrue()
@@ -716,4 +722,31 @@ it('still refuses a speed past the cap', function (): void {
     $this->actingAs($this->editor)
         ->put(route('levels.editor.update', $this->level), $map)
         ->assertSessionHasErrors('things.0.speed');
+});
+
+it('turns away a wireframe colour that is not a colour', function (): void {
+    // The map editor writes these now, so they are user input rather than
+    // something only a seeder ever set.
+    $map = drawnMap();
+    $map['wallColor'] = 'chartreuse';
+
+    $this->actingAs($this->editor)
+        ->put(route('levels.editor.update', $this->level), $map)
+        ->assertSessionHasErrors('wallColor');
+});
+
+it('hands the wireframe colours back to the editor to draw with', function (): void {
+    $this->level->update([
+        'wall_color' => '#123456',
+        'floor_color' => '#654321',
+        'accent_color' => '#abcdef',
+    ]);
+
+    $this->actingAs($this->editor)
+        ->get(route('levels.editor', $this->level))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('level.wallColor', '#123456')
+            ->where('level.floorColor', '#654321')
+            ->where('level.accentColor', '#abcdef')
+        );
 });

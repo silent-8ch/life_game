@@ -3,6 +3,7 @@ import {
     inputClass,
     NumberInput,
 } from '@/components/editor/inspector/controls';
+import WireframePreview from '@/components/editor/wireframe-preview';
 import { skyUrl } from '@/lib/engine/sky';
 import type { Level, LevelAssets, Sky } from '@/types';
 
@@ -31,6 +32,41 @@ function SkyPreview({ sky }: { sky: Sky }) {
                 backgroundRepeat: 'no-repeat',
             }}
         />
+    );
+}
+
+/**
+ * One wireframe colour. The swatch is a native colour input, which is the one
+ * control every browser already knows how to open; the hex beside it is there
+ * because a colour is often copied from somewhere else rather than chosen.
+ */
+function ColorField({
+    label,
+    value,
+    onChange,
+}: {
+    label: string;
+    value: string;
+    onChange: (next: string) => void;
+}) {
+    return (
+        <Field label={label}>
+            <div className="flex items-center gap-2">
+                <input
+                    type="color"
+                    aria-label={`${label} swatch`}
+                    value={value}
+                    onChange={(event) => onChange(event.target.value)}
+                    className="h-8 w-10 shrink-0 cursor-pointer rounded border border-slate-700 bg-slate-900 p-0.5"
+                />
+                <input
+                    value={value}
+                    onChange={(event) => onChange(event.target.value)}
+                    spellCheck={false}
+                    className={inputClass}
+                />
+            </div>
+        </Field>
     );
 }
 
@@ -207,6 +243,42 @@ export default function LevelPanel({
                 </Field>
 
                 {level.sky !== null && <SkyPreview sky={level.sky} />}
+            </section>
+
+            <section className="flex flex-col gap-3 border-t border-slate-800 pt-4">
+                <h2 className="text-xs tracking-widest text-slate-400 uppercase">
+                    Wireframe colours
+                </h2>
+
+                <p className="text-xs leading-relaxed text-slate-500">
+                    Used for any surface that has no texture yet.
+                </p>
+
+                <ColorField
+                    label="Wall"
+                    value={level.wallColor}
+                    onChange={(wallColor) => onChangeLevel({ wallColor })}
+                />
+                <ColorField
+                    label="Floor"
+                    value={level.floorColor}
+                    onChange={(floorColor) => onChangeLevel({ floorColor })}
+                />
+                <ColorField
+                    label="Accent"
+                    value={level.accentColor}
+                    onChange={(accentColor) => onChangeLevel({ accentColor })}
+                />
+
+                {/* Not three swatches. The engine dims a solid fill to a ninth
+                    of its brightness and draws the grid over it at full
+                    strength, so a swatch shows a colour the game never paints —
+                    and how the three read together is the whole decision. */}
+                <WireframePreview
+                    wall={level.wallColor}
+                    floor={level.floorColor}
+                    accent={level.accentColor}
+                />
             </section>
 
             <p className="text-xs leading-relaxed text-slate-500">
