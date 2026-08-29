@@ -9,88 +9,116 @@ use Illuminate\Support\Str;
 use Livewire\Livewire;
 
 /**
- * A sky is one choice, not two.
+ * One file is one sky.
  *
- * The art is packed four panoramas to a strip, so `sky_image` and `sky_variant`
- * are two columns. Which strip a panorama landed in is a fact about the file
- * and not a decision anybody makes, and asking for it as a second question made
- * a twelve-item list read as three. `Level::$sky` is the one choice over the
- * two columns; the columns stay because the engine and every level already
- * drawn read them.
+ * The panoramas used to be packed four to a 4096x512 strip and picked as a file
+ * plus a cell number. That quietly assumed every sky file held exactly four of
+ * them — so `sky-city.png`, a single image dropped into the folder, was sliced
+ * into quarters and each quarter stretched around the whole dome. Paul: *looks
+ * like you are inferring there are 4 cities, but it is one image?*
+ *
+ * So the strips are cut up, `sky_variant` is gone, and what makes a file a sky
+ * is the file's own shape rather than a naming convention it cannot break.
  */
 beforeEach(function (): void {
     $this->actingAs(User::factory()->create());
 });
 
-it('reads the two columns as one choice', function (): void {
-    $level = Level::factory()->create(['sky_image' => 'sky-night', 'sky_variant' => 3]);
+it('takes a sky to be a whole file, named after it', function (): void {
+    $level = Level::factory()->create(['sky_image' => 'sky-night-4']);
 
-    expect($level->sky)->toBe('sky-night:3');
+    expect($level->sky_image)->toBe('sky-night-4')
+        ->and(public_path('sprites/bg/sky-night-4.png'))->toBeFile();
 });
 
-it('writes one choice back into the two columns', function (): void {
-    $level = Level::factory()->create();
+it('only counts a file as a sky if it is shaped like one', function (): void {
+    // Equirectangular means 360 across against 180 up and down, so 2:1. The
+    // check is the file's own shape rather than a list of names, so a rejected
+    // file re-exported at the right shape appears with nothing else to do.
+    //
+    // `sky-city.png` is the case that taught us this: 4096x512, one flat
+    // photograph that does not even join up with itself. Under the old scheme
+    // it was offered as City 1 to City 4 — four quarters of one picture, each
+    // stretched around the whole sky.
+    $assets = app(LevelAssets::class);
 
-    $level->update(['sky' => 'sky-sunset:1']);
+    expect($assets->skies())->not->toContain('sky-city');
 
-    expect($level->fresh()->sky_image)->toBe('sky-sunset')
-        ->and($level->fresh()->sky_variant)->toBe(1);
+    foreach ($assets->skies() as $image) {
+        $size = getimagesize(public_path("sprites/bg/{$image}.png"));
+
+        expect($size)->not->toBeFalse()
+            ->and($size[0])->toBe($size[1] * 2, "{$image} is not 2:1");
+    }
 });
 
-it('reads and writes no sky as nothing at all', function (): void {
-    $level = Level::factory()->create(['sky_image' => 'sky-day', 'sky_variant' => 2]);
+it('does not offer the retired strips or horizon layers', function (): void {
+    // `File::files()` does not recurse, so moving art into `retired` is all it
+    // takes to take it out of the editor without deleting it.
+    $skies = app(LevelAssets::class)->skies();
 
-    expect($level->sky)->toBe('sky-day:2');
-
-    $level->update(['sky' => null]);
-
-    expect($level->fresh()->sky)->toBeNull()
-        ->and($level->fresh()->sky_image)->toBeNull()
-        // Back to the first cell rather than left pointing at the third of a
-        // strip that is no longer named.
-        ->and($level->fresh()->sky_variant)->toBe(0);
+    expect($skies)->not->toContain('sky-day', 'sky-night', 'sky-sunset')
+        ->and($skies)->toContain('sky-day-1', 'sky-day-4')
+        ->and(public_path('sprites/bg/retired/strips/sky-day.png'))->toBeFile()
+        ->and(public_path('sprites/bg/retired/layers/hills_1.png'))->toBeFile();
 });
 
 it('opens the edit form on the sky the level already has', function (): void {
-    $level = Level::factory()->create(['sky_image' => 'sky-sunset', 'sky_variant' => 2]);
+    $level = Level::factory()->create(['sky_image' => 'sky-sunset-3']);
 
     Livewire::test(EditLevel::class, ['record' => $level->getRouteKey()])
-        ->assertSchemaStateSet(['sky' => 'sky-sunset:2']);
+        ->assertSchemaStateSet(['sky_image' => 'sky-sunset-3']);
 });
 
 it('changes the sky from the edit form', function (): void {
-    $level = Level::factory()->create(['sky_image' => 'sky-day', 'sky_variant' => 0]);
+    $level = Level::factory()->create(['sky_image' => 'sky-day-1']);
 
     Livewire::test(EditLevel::class, ['record' => $level->getRouteKey()])
-        ->fillForm(['sky' => 'sky-night:1'])
+        ->fillForm(['sky_image' => 'sky-night-2'])
         ->call('save')
         ->assertHasNoFormErrors();
 
-    expect($level->fresh()->sky_image)->toBe('sky-night')
-        ->and($level->fresh()->sky_variant)->toBe(1);
+    expect($level->fresh()->sky_image)->toBe('sky-night-2');
 });
 
-it('refuses a sky that is not one of the twelve', function (): void {
+it('lets a level have no sky at all', function (): void {
+    $level = Level::factory()->create(['sky_image' => 'sky-day-1']);
+
+    Livewire::test(EditLevel::class, ['record' => $level->getRouteKey()])
+        ->fillForm(['sky_image' => null])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect($level->fresh()->sky_image)->toBeNull();
+});
+
+it('refuses a sky that is not a file on disk', function (): void {
     $level = Level::factory()->create();
 
     Livewire::test(EditLevel::class, ['record' => $level->getRouteKey()])
-        ->fillForm(['sky' => 'sky-eclipse:9'])
+        ->fillForm(['sky_image' => 'sky-eclipse'])
         ->call('save')
-        ->assertHasFormErrors(['sky']);
+        ->assertHasFormErrors(['sky_image']);
 });
 
-it('offers every cell of every strip, and nothing that is not on disk', function (): void {
+it('refuses the city, which is offered nowhere', function (): void {
+    $level = Level::factory()->create();
+
+    Livewire::test(EditLevel::class, ['record' => $level->getRouteKey()])
+        ->fillForm(['sky_image' => 'sky-city'])
+        ->call('save')
+        ->assertHasFormErrors(['sky_image']);
+});
+
+it('offers one line per file, and nothing that is not on disk', function (): void {
     $assets = app(LevelAssets::class);
     $choices = $assets->skyChoices();
 
-    expect($choices)->toHaveCount(count($assets->skies()) * LevelAssets::SKY_VARIANTS)
-        ->and(array_column($choices, 'value'))
-        ->toBe(array_unique(array_column($choices, 'value')));
+    expect($choices)->toHaveCount(count($assets->skies()))
+        ->and(array_column($choices, 'image'))->toBe($assets->skies());
 
     foreach ($choices as $choice) {
-        expect($choice['value'])->toBe($choice['image'].':'.$choice['variant'])
-            ->and($choice['variant'])->toBeLessThan(LevelAssets::SKY_VARIANTS)
-            ->and(public_path("sprites/bg/{$choice['image']}.png"))->toBeFile();
+        expect(public_path("sprites/bg/{$choice['image']}.png"))->toBeFile();
     }
 });
 
@@ -104,9 +132,7 @@ it('names a panorama the way a person would say it', function (): void {
     $expected = [];
 
     foreach ($assets->skies() as $image) {
-        foreach (range(1, LevelAssets::SKY_VARIANTS) as $number) {
-            $expected[] = Str::headline(Str::after($image, 'sky-')).' '.$number;
-        }
+        $expected[] = Str::headline(Str::after($image, 'sky-'));
     }
 
     expect(array_column($assets->skyChoices(), 'label'))->toBe($expected)
@@ -116,23 +142,18 @@ it('names a panorama the way a person would say it', function (): void {
 
 it('shows the chosen panorama, and follows the picker to another one', function (): void {
     // The preview is the point of the whole change: nobody can tell Day 2 from
-    // Day 3 by name. The cell is cut out of the strip by sliding a background
-    // four times too wide, so what is asserted is the file and the offset.
-    $level = Level::factory()->create(['sky_image' => 'sky-day', 'sky_variant' => 0]);
+    // Day 3 by name.
+    $level = Level::factory()->create(['sky_image' => 'sky-day-1']);
 
     Livewire::test(EditLevel::class, ['record' => $level->getRouteKey()])
-        ->assertSee('sprites/bg/sky-day.png', escape: false)
-        ->assertSee('background-position:0% 50%', escape: false)
-        ->fillForm(['sky' => 'sky-night:3'])
-        ->assertSee('sprites/bg/sky-night.png', escape: false)
-        // The last of four cells sits at 100%, because a percentage lines the
-        // image's right edge up with the box's right edge.
-        ->assertSee('background-position:100% 50%', escape: false)
-        ->assertDontSee('sprites/bg/sky-day.png', escape: false);
+        ->assertSee('sprites/bg/sky-day-1.png', escape: false)
+        ->fillForm(['sky_image' => 'sky-night-4'])
+        ->assertSee('sprites/bg/sky-night-4.png', escape: false)
+        ->assertDontSee('sprites/bg/sky-day-1.png', escape: false);
 });
 
 it('shows no preview at all when the level has no sky', function (): void {
     Livewire::test(CreateLevel::class)
-        ->fillForm(['sky' => null])
+        ->fillForm(['sky_image' => null])
         ->assertDontSee('sprites/bg/sky-', escape: false);
 });

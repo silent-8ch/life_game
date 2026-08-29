@@ -50,10 +50,7 @@ class LevelPayload
             'wallColor' => $level->wall_color,
             'floorColor' => $level->floor_color,
             'accentColor' => $level->accent_color,
-            'sky' => $level->sky_image === null ? null : [
-                'image' => $level->sky_image,
-                'variant' => $level->sky_variant,
-            ],
+            'sky' => $level->sky_image === null ? null : ['image' => $level->sky_image],
             'sectors' => $level->sectors->map(fn (LevelSector $sector): array => [
                 'slug' => $sector->slug,
                 'name' => $sector->name,

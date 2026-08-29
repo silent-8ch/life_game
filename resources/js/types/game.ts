@@ -201,20 +201,13 @@ export type Sector = {
 };
 
 export type Sky = {
-    /** sky-day, sky-night, sky-sunset. */
+    /** The file, without folder or extension: sky-day-1, sky-night-3. */
     image: string;
-    /** Which of the four cells in the sky strip. */
-    variant: number;
 };
 
-/**
- * One sky as it is offered: a panorama, not a file. `value` is the two halves
- * the level stores, joined, and is what a picker's option is worth.
- */
+/** One sky as it is offered, named the way a person would say it. */
 export type SkyChoice = {
-    value: string;
     image: string;
-    variant: number;
     label: string;
 };
 

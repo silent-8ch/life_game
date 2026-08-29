@@ -40,7 +40,6 @@ class LevelWriter
                 // untouched. Nothing draws a horizon any more, so a save has
                 // no opinion about one and should not wipe what is stored.
                 'sky_image' => $sky['image'] ?? null,
-                'sky_variant' => $sky['variant'] ?? 0,
             ]);
 
             $this->writeThings($level, $map['things'] ?? []);

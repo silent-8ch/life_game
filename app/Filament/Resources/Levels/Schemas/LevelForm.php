@@ -101,20 +101,20 @@ class LevelForm
                             ->helperText('0 faces north, 90 faces east.'),
                     ]),
 
-                // One list of twelve rather than a file and a cell number.
-                // Which strip a panorama is packed into is a fact about the
-                // art, not a decision anybody makes.
+                // One line per panorama, named after its own file. There is
+                // no second question about which cell of which strip, because
+                // there are no strips any more.
                 Section::make('Sky')
                     ->description('Shown by any sector marked as open to the sky.')
                     ->schema([
-                        Select::make('sky')
+                        Select::make('sky_image')
                             ->label('Sky')
-                            ->options(array_column($assets->skyChoices(), 'label', 'value'))
+                            ->options(array_column($assets->skyChoices(), 'label', 'image'))
                             ->placeholder('No sky')
-                            ->default('sky-day:0')
+                            ->default('sky-day-1')
                             ->live(),
                         Html::make(fn (Get $get): Htmlable => self::skyPreview(
-                            is_string($get('sky')) ? $get('sky') : null,
+                            is_string($get('sky_image')) ? $get('sky_image') : null,
                         )),
                     ]),
 
@@ -133,37 +133,20 @@ class LevelForm
     /**
      * The chosen panorama, shown as wide as the form is.
      *
-     * A cell is equirectangular and 2:1, so laid out flat like this it is very
+     * A sky is equirectangular and 2:1, so laid out flat like this it is very
      * nearly what you would see turning a full circle on the spot: the left
      * edge and the right edge are the same direction. That is worth more than
      * a thumbnail, which at postage-stamp size cannot tell dusk from night.
-     *
-     * The strip holds `SKY_VARIANTS` cells side by side, so the box is filled
-     * with a background that many times too wide and slid along. In CSS
-     * percentages that is `variant / (cells - 1)`, because 100% means the
-     * right edge of the image against the right edge of the box rather than
-     * anything about the image's own width.
      */
-    private static function skyPreview(?string $sky): Htmlable
+    private static function skyPreview(?string $image): Htmlable
     {
-        if ($sky === null) {
+        if ($image === null) {
             return new HtmlString('');
         }
 
-        $image = Str::before($sky, ':');
-        $variant = (int) Str::after($sky, ':');
-        $across = LevelAssets::SKY_VARIANTS;
-
-        $style = sprintf(
-            'aspect-ratio:2/1;background-image:url(%s);background-size:%d%% 100%%;background-position:%s%% 50%%;background-repeat:no-repeat;',
-            e(asset('sprites/bg/'.$image.'.png')),
-            $across * 100,
-            round($variant * 100 / ($across - 1), 4),
-        );
-
         return new HtmlString(sprintf(
-            '<div class="w-full overflow-hidden rounded-lg ring-1 ring-gray-950/10 dark:ring-white/20" style="%s"></div>',
-            $style,
+            '<div class="w-full overflow-hidden rounded-lg ring-1 ring-gray-950/10 dark:ring-white/20" style="aspect-ratio:2/1;background-image:url(%s);background-size:100%% 100%%;background-repeat:no-repeat;"></div>',
+            e(asset('sprites/bg/'.$image.'.png')),
         ));
     }
 }

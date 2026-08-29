@@ -42,10 +42,7 @@ function drawnMap(): array
         'spriteStyle' => 'realistic',
         'spawn' => ['x' => 1.0, 'z' => 1.0, 'angle' => 90],
         'ceilingHeight' => 3.0,
-        'sky' => [
-            'image' => 'sky-night',
-            'variant' => 2,
-        ],
+        'sky' => ['image' => 'sky-night-3'],
         'things' => [
             [
                 'slug' => 'krystal',
@@ -205,8 +202,7 @@ it('saves a drawn map over the one that was there', function (): void {
 
     expect($level->name)->toBe('Drawn')
         ->and($level->spawn_angle)->toBe(90.0)
-        ->and($level->sky_image)->toBe('sky-night')
-        ->and($level->sky_variant)->toBe(2)
+        ->and($level->sky_image)->toBe('sky-night-3')
         ->and($level->sectors)->toHaveCount(2)
         ->and($level->sectors->pluck('slug')->all())->toBe(['west', 'east'])
         ->and($level->sectors->firstWhere('slug', 'east')->is_sky)->toBeTrue()
@@ -357,8 +353,7 @@ it('clears the sky when a level is saved without one', function (): void {
 
     $level = $this->level->fresh();
 
-    expect($level->sky_image)->toBeNull()
-        ->and($level->sky_variant)->toBe(0);
+    expect($level->sky_image)->toBeNull();
 });
 
 it('leaves the retired horizon columns alone rather than wiping them', function (): void {
@@ -378,30 +373,26 @@ it('leaves the retired horizon columns alone rather than wiping them', function 
         ->and($level->backdrop_layers)->toBe([1, 2, 3]);
 });
 
-it('offers every panorama as its own choice rather than a file and a cell', function (): void {
+it('offers one line per sky file, and nothing that is not shaped like one', function (): void {
     $this->actingAs($this->editor)
         ->get(route('levels.editor', $this->level))
         ->assertInertia(function (AssertableInertia $page): void {
-            /** @var list<array{value: string, image: string, variant: int, label: string}> $skies */
+            /** @var list<array{image: string, label: string}> $skies */
             $skies = $page->toArray()['props']['assets']['skies'];
 
             $assets = app(LevelAssets::class);
             $first = $assets->skies()[0];
 
-            expect($skies)
-                ->toHaveCount(count($assets->skies()) * LevelAssets::SKY_VARIANTS)
+            expect($skies)->toHaveCount(count($assets->skies()))
                 ->and($skies[0])->toBe([
-                    'value' => $first.':0',
                     'image' => $first,
-                    'variant' => 0,
-                    'label' => Str::headline(Str::after($first, 'sky-')).' 1',
+                    'label' => Str::headline(Str::after($first, 'sky-')),
                 ])
                 ->and(array_column($skies, 'label'))
-                ->toContain('Day 4', 'Night 1', 'Sunset 4');
-
-            foreach ($skies as $sky) {
-                expect(public_path("sprites/bg/{$sky['image']}.png"))->toBeFile();
-            }
+                ->toContain('Day 4', 'Night 1', 'Sunset 4')
+                // One flat photograph, 4096x512. It is not a panorama and is
+                // offered nowhere until it is re-exported at 2:1.
+                ->and(array_column($skies, 'image'))->not->toContain('sky-city');
         });
 });
 
@@ -416,7 +407,7 @@ it('saves a map the game can be played from straight away', function (): void {
             ->component('game/explore')
             ->has('level.sectors', 2)
             ->where('level.sectors.0.points.0.x', 0)
-            ->where('level.sky.image', 'sky-night')
+            ->where('level.sky.image', 'sky-night-3')
         );
 });
 

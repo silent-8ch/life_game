@@ -69,8 +69,8 @@ it('sends the sky, and nothing about a horizon', function (): void {
     // cannot see it cannot draw it.
     $this->get(route('games.show', $this->game))
         ->assertInertia(fn (AssertableInertia $page) => $page
-            ->where('level.sky.image', 'sky-day')
-            ->where('level.sky.variant', 0)
+            ->where('level.sky.image', 'sky-day-1')
+            ->missing('level.sky.variant')
             ->missing('level.sky.theme')
             ->missing('level.sky.layers')
         );

@@ -34,8 +34,7 @@ class LifeSeeder extends Seeder
             spawnZ: 4.4,
             spawnAngle: 45,
             ceilingHeight: 3.0,
-            sky: 'sky-day',
-            skyVariant: 0,
+            sky: 'sky-day-1',
             backdrop: 'hills',
             backdropLayers: [1, 2, 3],
         );

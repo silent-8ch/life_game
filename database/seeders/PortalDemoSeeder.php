@@ -38,7 +38,7 @@ class PortalDemoSeeder extends Seeder
             spawnZ: 6,
             spawnAngle: 0,
             ceilingHeight: 3.0,
-            sky: 'sky-day',
+            sky: 'sky-day-1',
             backdrop: 'hills',
         );
 

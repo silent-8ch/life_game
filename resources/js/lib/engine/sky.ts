@@ -7,17 +7,20 @@ import type { Sky } from '@/types';
  * can never be reached — the trick Doom and Duke Nukem both used — which is
  * what makes it read as infinitely far off rather than as a wall.
  *
- * There were parallax horizon layers inside it once: bands of hills or rooftops
- * standing on the horizon, each trailing a little further behind the player
- * than the last. Paul's ruling was that they did not look good, and they are
- * gone. The `backdrop_theme` and `backdrop_layers` columns and the layer art
- * are still there and still hold what levels were given; nothing reads them.
+ * One file is one sky, whole. The panoramas used to be packed four to a strip
+ * and a cell slid onto the dome with `repeat`/`offset`, which assumed every sky
+ * file held exactly four of them — so a single-image sky dropped into the
+ * folder was cut into quarters and each quarter stretched around the whole sky.
+ *
+ * There were parallax horizon layers inside the dome once, too: bands of hills
+ * or rooftops standing on the horizon, each trailing a little further behind
+ * the player than the last. Paul's ruling was that they did not look good. The
+ * art is in `public/sprites/bg/retired/layers`, and the `backdrop_theme` and
+ * `backdrop_layers` columns still hold what levels were given; nothing reads
+ * them.
  */
 
 const BACKDROP_PATH = '/sprites/bg';
-
-/** The sky strips hold four panoramas side by side. */
-const SKY_VARIANTS = 4;
 
 export type SkyDome = {
     object: THREE.Object3D;
@@ -32,6 +35,8 @@ export function createSky(sky: Sky): SkyDome {
 
     const gradient = loader.load(`${BACKDROP_PATH}/${sky.image}.png`);
     gradient.colorSpace = THREE.SRGBColorSpace;
+    // Wrapped across, because an equirectangular panorama joins up with
+    // itself: the left edge and the right edge are the same direction.
     gradient.wrapS = THREE.RepeatWrapping;
     gradient.wrapT = THREE.ClampToEdgeWrapping;
     // Smoothed, unlike everything else. The sprites and the wall textures are
@@ -43,9 +48,6 @@ export function createSky(sky: Sky): SkyDome {
     gradient.magFilter = THREE.LinearFilter;
     gradient.minFilter = THREE.LinearMipmapLinearFilter;
     gradient.generateMipmaps = true;
-    // One cell of the strip, wrapped once around the whole sky.
-    gradient.repeat.set(1 / SKY_VARIANTS, 1);
-    gradient.offset.x = sky.variant / SKY_VARIANTS;
 
     const gradientMaterial = new THREE.MeshBasicMaterial({
         map: gradient,

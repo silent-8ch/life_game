@@ -31,7 +31,7 @@ it('fills the whole create form in', function (): void {
             'spawn_x' => 0,
             'spawn_z' => 0,
             'spawn_angle' => 0,
-            'sky' => 'sky-day:0',
+            'sky_image' => 'sky-day-1',
             'description' => 'A level waiting to be drawn.',
         ]);
 });
@@ -71,31 +71,24 @@ it('names whoever is signed in, not whoever drew the last one', function (): voi
         ->toBe($someoneElse->id);
 });
 
-it('picks a sky from one list of panoramas, not a file and then a cell', function (): void {
-    // Which strip a panorama is packed into is a fact about the art rather
-    // than a decision anybody makes, so it is not asked as a second question.
+it('picks a sky from one list, one line per file', function (): void {
     Livewire::test(CreateLevel::class)
-        ->fillForm(['sky' => 'sky-sunset:2'])
+        ->fillForm(['sky_image' => 'sky-sunset-3'])
         ->call('create')
         ->assertHasNoFormErrors();
 
-    $level = Level::query()->where('slug', 'new-level')->sole();
-
-    expect($level->sky_image)->toBe('sky-sunset')
-        ->and($level->sky_variant)->toBe(2)
-        ->and($level->sky)->toBe('sky-sunset:2');
+    expect(Level::query()->where('slug', 'new-level')->sole()->sky_image)
+        ->toBe('sky-sunset-3');
 });
 
 it('lets a level have no sky at all', function (): void {
     Livewire::test(CreateLevel::class)
-        ->fillForm(['sky' => null])
+        ->fillForm(['sky_image' => null])
         ->call('create')
         ->assertHasNoFormErrors();
 
-    $level = Level::query()->where('slug', 'new-level')->sole();
-
-    expect($level->sky_image)->toBeNull()
-        ->and($level->sky)->toBeNull();
+    expect(Level::query()->where('slug', 'new-level')->sole()->sky_image)
+        ->toBeNull();
 });
 
 it('offers no horizon or layers to set', function (): void {
@@ -106,6 +99,7 @@ it('offers no horizon or layers to set', function (): void {
         ->assertFormFieldDoesNotExist('backdrop_theme')
         ->assertFormFieldDoesNotExist('backdrop_layers')
         ->assertFormFieldDoesNotExist('sky_variant')
+        ->assertFormFieldDoesNotExist('variant')
         ->call('create')
         ->assertHasNoFormErrors();
 

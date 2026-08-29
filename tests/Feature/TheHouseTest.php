@@ -135,7 +135,7 @@ it('lets the player out into the yard', function (): void {
 it('shows the neighbourhood over the fence', function (): void {
     $yard = $this->house->sectors->firstWhere('slug', 'yard');
 
-    expect($this->house->sky_image)->toBe('sky-day')
+    expect($this->house->sky_image)->toBe('sky-day-2')
         ->and($this->house->backdrop_theme)->toBe('suburbs')
         ->and($this->house->backdrop_layers)->toBe([1, 2, 3])
         // A fence you cannot see over would hide all of it.

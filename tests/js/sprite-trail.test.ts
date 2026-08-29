@@ -8,7 +8,11 @@ import { createSpriteActor } from '@/lib/engine/sprite-actor';
  * the scene beside the body, so they are the scene's mesh children that are not
  * the body itself.
  */
-function run(speed: number): { ghosts: number; visible: number; maxOpacity: number } {
+function run(speed: number): {
+    ghosts: number;
+    visible: number;
+    maxOpacity: number;
+} {
     const scene = new THREE.Scene();
     const actor = createSpriteActor('paul-toon', 1.85, 'realistic');
     scene.add(actor.object);

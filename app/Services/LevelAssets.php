@@ -54,9 +54,6 @@ class LevelAssets
     /** Who a level gets if nobody has said who the player is. */
     public const PLAYER = 'paul';
 
-    /** How many panoramas are packed side by side into one sky strip. */
-    public const SKY_VARIANTS = 4;
-
     /**
      * The residents a new level is populated with, tallest first. The player is
      * one of them: which is being played is a matter for the level, and there
@@ -91,6 +88,14 @@ class LevelAssets
         ));
     }
 
+    /**
+     * Cached because `skies()` opens every candidate file to check its shape,
+     * and the editor asks for them more than once a request.
+     *
+     * @var list<string>|null
+     */
+    private ?array $skies = null;
+
     private const TEXTURE_PATH = 'sprites/textures';
 
     private const BACKDROP_PATH = 'sprites/bg';
@@ -123,52 +128,59 @@ class LevelAssets
     }
 
     /**
-     * The sky strips, by file. Each is four variants side by side, and a
-     * variant is one equirectangular panorama: it wraps the whole dome, so the
-     * horizon sits at eye level rather than underfoot the way a plain
-     * gradient's did.
+     * The skies, by file. One equirectangular panorama each: it wraps the
+     * whole dome, so the horizon sits at eye level rather than underfoot the
+     * way a plain gradient's did.
      *
-     * This is the storage, not the menu — see `skyChoices()` for that.
+     * A sky must be **2:1**, because that is what equirectangular means — 360
+     * degrees across against 180 up and down. Anything else in the folder is
+     * not a sky and is left out rather than stretched over the dome and shown
+     * to somebody as one. `sky-city.png` is the case that taught us: 4096x512,
+     * a single flat photograph that does not even join up with itself.
+     *
+     * The check is the file's own shape rather than a list, so re-exporting a
+     * rejected file at the right shape is all it takes to make it appear.
      *
      * @return list<string>
      */
     public function skies(): array
     {
-        return array_values(array_filter(
+        return $this->skies ??= array_values(array_filter(
             $this->pngNamesIn(self::BACKDROP_PATH),
-            fn (string $name): bool => Str::startsWith($name, 'sky-'),
+            function (string $name): bool {
+                if (! Str::startsWith($name, 'sky-')) {
+                    return false;
+                }
+
+                $size = getimagesize(public_path(self::BACKDROP_PATH."/{$name}.png"));
+
+                return $size !== false && $size[0] === $size[1] * 2;
+            },
         ));
     }
 
     /**
-     * Every sky a level can be given, one entry per panorama rather than one
-     * per file: `Day 1`, `Day 2`, `Night 1`, and so on down one list.
+     * The skies as a menu: one line per panorama, named the way a person would
+     * say it. `sky-day-2.png` is `Day 2`.
      *
-     * Which strip a panorama is packed into is a fact about the art and not a
-     * decision anybody makes, so it is not asked as a second question. The
-     * `value` carries both halves, `image:variant`, because both halves are
-     * still what gets stored.
+     * They used to be packed four to a file and picked as a file plus a cell
+     * number. Which file a panorama landed in is a fact about the art and not
+     * a decision anybody makes, and the packing quietly assumed every sky file
+     * held exactly four — so a single-image sky dropped into the folder was
+     * sliced into four quarters and each quarter stretched around the whole
+     * sky. One panorama per file cannot go wrong that way.
      *
-     * @return list<array{value: string, image: string, variant: int, label: string}>
+     * @return list<array{image: string, label: string}>
      */
     public function skyChoices(): array
     {
-        $choices = [];
-
-        foreach ($this->skies() as $image) {
-            $name = Str::headline(Str::after($image, 'sky-'));
-
-            for ($variant = 0; $variant < self::SKY_VARIANTS; $variant++) {
-                $choices[] = [
-                    'value' => $image.':'.$variant,
-                    'image' => $image,
-                    'variant' => $variant,
-                    'label' => $name.' '.($variant + 1),
-                ];
-            }
-        }
-
-        return $choices;
+        return array_map(
+            fn (string $image): array => [
+                'image' => $image,
+                'label' => Str::headline(Str::after($image, 'sky-')),
+            ],
+            $this->skies(),
+        );
     }
 
     /**

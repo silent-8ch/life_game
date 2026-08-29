@@ -113,7 +113,7 @@ it('opens the outdoor sectors to the sky', function (): void {
     expect($sectors['terrace']->is_sky)->toBeTrue()
         ->and($sectors['pond']->is_sky)->toBeTrue()
         ->and($sectors['hall']->is_sky)->toBeFalse()
-        ->and($this->level->sky_image)->toBe('sky-day')
+        ->and($this->level->sky_image)->toBe('sky-day-1')
         ->and($this->level->backdrop_theme)->toBe('hills')
         ->and($this->level->backdrop_layers)->toBe([1, 2, 3]);
 });

@@ -44,7 +44,7 @@ class HallOfMirrorsSeeder extends Seeder
             spawnX: 0,
             spawnZ: 2,
             spawnAngle: 0,
-            sky: 'sky-day',
+            sky: 'sky-day-1',
         );
 
         // Every side, which is what makes it the hard case: each pane can see

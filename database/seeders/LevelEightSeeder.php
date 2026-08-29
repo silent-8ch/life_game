@@ -51,8 +51,12 @@ class LevelEightSeeder extends Seeder
             spawnZ: $plan['level']['spawnZ'],
             spawnAngle: $plan['level']['spawnAngle'],
             ceilingHeight: $plan['level']['ceilingHeight'],
-            sky: $plan['level']['sky'],
-            skyVariant: $plan['level']['skyVariant'],
+            // The JSON is an export of the level as it was drawn, back when a
+            // sky was a strip plus a cell number. Left as exported and folded
+            // into the one-file name here.
+            sky: $plan['level']['sky'] === null
+                ? null
+                : $plan['level']['sky'].'-'.((int) $plan['level']['skyVariant'] + 1),
             backdrop: $plan['level']['backdrop'],
             backdropLayers: [],
             wallColor: $plan['level']['wallColor'],

@@ -66,8 +66,10 @@ class ImportedLevelsSeeder extends Seeder
             spawnZ: (float) $meta['spawnZ'],
             spawnAngle: (float) $meta['spawnAngle'],
             ceilingHeight: (float) $meta['ceilingHeight'],
-            sky: $meta['sky'],
-            skyVariant: (int) $meta['skyVariant'],
+            // As above: the export still names a strip and a cell.
+            sky: $meta['sky'] === null
+                ? null
+                : $meta['sky'].'-'.((int) $meta['skyVariant'] + 1),
             backdrop: $meta['backdrop'],
             backdropLayers: $backdropLayers,
             wallColor: (string) $meta['wallColor'],

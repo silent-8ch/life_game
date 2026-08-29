@@ -12,18 +12,12 @@ import type { Level, LevelAssets, Sky } from '@/types';
  * or nothing at all, and it is picked from one list of panoramas rather than
  * from a file and then a cell within it.
  */
-/** How many panoramas are packed side by side into one sky strip. */
-const SKY_VARIANTS = 4;
-
 /**
  * The chosen panorama, laid out flat and as wide as the panel is.
  *
- * A cell is equirectangular and 2:1, so this is very nearly what you would see
+ * A sky is equirectangular and 2:1, so this is very nearly what you would see
  * turning a full circle on the spot — the left edge and the right edge are the
- * same direction. The strip holds four cells side by side, so the box is given
- * a background four times too wide and slid along: in CSS percentages that is
- * `variant / (cells - 1)`, since 100% means the image's right edge against the
- * box's right edge rather than anything about the image's own width.
+ * same direction.
  */
 function SkyPreview({ sky }: { sky: Sky }) {
     return (
@@ -32,11 +26,7 @@ function SkyPreview({ sky }: { sky: Sky }) {
             style={{
                 aspectRatio: '2 / 1',
                 backgroundImage: `url(/sprites/bg/${sky.image}.png)`,
-                backgroundSize: `${SKY_VARIANTS * 100}% 100%`,
-                backgroundPosition: `${(
-                    (sky.variant * 100) /
-                    (SKY_VARIANTS - 1)
-                ).toFixed(4)}% 50%`,
+                backgroundSize: '100% 100%',
                 backgroundRepeat: 'no-repeat',
             }}
         />
@@ -195,25 +185,20 @@ export default function LevelPanel({
 
                 <Field label="Sky">
                     <select
-                        value={
-                            level.sky === null
-                                ? ''
-                                : `${level.sky.image}:${level.sky.variant}`
-                        }
+                        value={level.sky?.image ?? ''}
                         onChange={(event) =>
                             onChangeLevel({
                                 sky:
-                                    assets.skies.find(
-                                        (sky) =>
-                                            sky.value === event.target.value,
-                                    ) ?? null,
+                                    event.target.value === ''
+                                        ? null
+                                        : { image: event.target.value },
                             })
                         }
                         className={inputClass}
                     >
                         <option value="">Indoors, no sky</option>
                         {assets.skies.map((sky) => (
-                            <option key={sky.value} value={sky.value}>
+                            <option key={sky.image} value={sky.image}>
                                 {sky.label}
                             </option>
                         ))}

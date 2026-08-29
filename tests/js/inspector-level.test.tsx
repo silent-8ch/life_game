@@ -9,9 +9,8 @@ import { level, showInspector } from './inspector-support';
  * whole object or nothing at all, so it is the only place here where a control
  * can appear, disappear, or write into a thing that is not there.
  *
- * It is picked from one list of twelve panoramas rather than a file and then a
- * cell within it, and the chosen one is shown, because nobody can tell Day 2
- * from Day 3 by name.
+ * It is picked from one list, one line per file, and the chosen one is shown,
+ * because nobody can tell Day 2 from Day 3 by name.
  */
 
 const showLevel = (changes: Parameters<typeof level>[0] = {}) =>
@@ -43,8 +42,8 @@ describe('the level', () => {
     });
 
     it('offers every panorama as its own line, not a file and then a cell', () => {
-        // Which strip a panorama is packed into is a fact about the art rather
-        // than a decision anybody makes, so there is no second question.
+        // One file is one sky. There is no second question about which cell of
+        // which strip, because there are no strips.
         showLevel();
 
         expect(screen.queryByLabelText('Variant')).not.toBeInTheDocument();
@@ -57,43 +56,36 @@ describe('the level', () => {
     });
 
     it('shows the panorama that is picked', () => {
-        showLevel({ sky: { image: 'sky-day', variant: 1 } });
+        showLevel({ sky: { image: 'sky-day-2' } });
 
-        expect(screen.getByLabelText('Sky')).toHaveValue('sky-day:1');
+        expect(screen.getByLabelText('Sky')).toHaveValue('sky-day-2');
 
         const preview = document.querySelector<HTMLElement>(
             '[style*="sprites/bg"]',
         );
 
+        // The whole file, not a slice of one. Slicing is what turned a
+        // single-image sky into four stretched quarters of itself.
         expect(preview?.style.backgroundImage).toContain(
-            '/sprites/bg/sky-day.png',
+            '/sprites/bg/sky-day-2.png',
         );
-        // Four cells across, so the second sits a third of the way along: a
-        // background percentage lines the image's edge up with the box's.
-        expect(preview?.style.backgroundPosition).toBe('33.3333% 50%');
+        expect(preview?.style.backgroundSize).toBe('100% 100%');
     });
 
-    it('sets both halves of the sky from one choice', () => {
+    it('names the file it was given and nothing else', () => {
         const { handlers } = showLevel({ sky: null });
 
         fireEvent.change(screen.getByLabelText('Sky'), {
-            target: { value: 'sky-night:3' },
+            target: { value: 'sky-night-4' },
         });
 
         expect(handlers.onChangeLevel).toHaveBeenCalledWith({
-            sky: {
-                value: 'sky-night:3',
-                image: 'sky-night',
-                variant: 3,
-                label: 'Night 4',
-            },
+            sky: { image: 'sky-night-4' },
         });
     });
 
     it('clears the sky rather than leaving half of one behind', () => {
-        const { handlers } = showLevel({
-            sky: { image: 'sky-day', variant: 1 },
-        });
+        const { handlers } = showLevel({ sky: { image: 'sky-day-2' } });
 
         fireEvent.change(screen.getByLabelText('Sky'), {
             target: { value: '' },

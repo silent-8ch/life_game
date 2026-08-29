@@ -53,8 +53,7 @@ class TheHouseSeeder extends Seeder
             spawnZ: 8.4,
             spawnAngle: 0,
             ceilingHeight: self::GROUND_CEILING,
-            sky: 'sky-day',
-            skyVariant: 1,
+            sky: 'sky-day-2',
             backdrop: 'suburbs',
             backdropLayers: [1, 2, 3],
         );
