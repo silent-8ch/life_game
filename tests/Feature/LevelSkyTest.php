@@ -5,6 +5,7 @@ use App\Filament\Resources\Levels\Pages\EditLevel;
 use App\Models\Level;
 use App\Models\User;
 use App\Services\LevelAssets;
+use Illuminate\Support\Str;
 use Livewire\Livewire;
 
 /**
@@ -94,12 +95,23 @@ it('offers every cell of every strip, and nothing that is not on disk', function
 });
 
 it('names a panorama the way a person would say it', function (): void {
-    expect(array_column(app(LevelAssets::class)->skyChoices(), 'label'))
-        ->toBe([
-            'Day 1', 'Day 2', 'Day 3', 'Day 4',
-            'Night 1', 'Night 2', 'Night 3', 'Night 4',
-            'Sunset 1', 'Sunset 2', 'Sunset 3', 'Sunset 4',
-        ]);
+    // Derived from the folder rather than pinned to a list, because dropping a
+    // file in and having it turn up is the whole design of LevelAssets, and a
+    // test that has to be edited to add a sky is a test that punishes that.
+    // `sky-city` arrived while this was being written and needed no change.
+    $assets = app(LevelAssets::class);
+
+    $expected = [];
+
+    foreach ($assets->skies() as $image) {
+        foreach (range(1, LevelAssets::SKY_VARIANTS) as $number) {
+            $expected[] = Str::headline(Str::after($image, 'sky-')).' '.$number;
+        }
+    }
+
+    expect(array_column($assets->skyChoices(), 'label'))->toBe($expected)
+        // Not just any list: the strips on disk today, named as a person would.
+        ->and($expected)->toContain('Day 1', 'Night 4', 'Sunset 2');
 });
 
 it('shows the chosen panorama, and follows the picker to another one', function (): void {

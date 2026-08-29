@@ -6,9 +6,11 @@ use App\Models\Level;
 use App\Models\LevelSector;
 use App\Models\LevelVertex;
 use App\Models\User;
+use App\Services\LevelAssets;
 use App\Services\PersonStats;
 use Database\Seeders\LifeSeeder;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia;
 
 beforeEach(function (): void {
@@ -383,12 +385,16 @@ it('offers every panorama as its own choice rather than a file and a cell', func
             /** @var list<array{value: string, image: string, variant: int, label: string}> $skies */
             $skies = $page->toArray()['props']['assets']['skies'];
 
-            expect($skies)->toHaveCount(12)
+            $assets = app(LevelAssets::class);
+            $first = $assets->skies()[0];
+
+            expect($skies)
+                ->toHaveCount(count($assets->skies()) * LevelAssets::SKY_VARIANTS)
                 ->and($skies[0])->toBe([
-                    'value' => 'sky-day:0',
-                    'image' => 'sky-day',
+                    'value' => $first.':0',
+                    'image' => $first,
                     'variant' => 0,
-                    'label' => 'Day 1',
+                    'label' => Str::headline(Str::after($first, 'sky-')).' 1',
                 ])
                 ->and(array_column($skies, 'label'))
                 ->toContain('Day 4', 'Night 1', 'Sunset 4');
