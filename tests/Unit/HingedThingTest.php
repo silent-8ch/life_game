@@ -106,9 +106,15 @@ function hingedThing(string $things, string $body): array
             };
         };
 
-        /** Whether a walk straight at the panel gets through. */
-        const walkThrough = () => {
-            let at = { x: 5, z: 7 };
+        /**
+         * How far north a walk down a given line gets.
+         *
+         * `x` because an open door is no longer in the doorway: it has swung
+         * out of it and is standing somewhere else, still solid. Which line you
+         * walk down is now the whole question.
+         */
+        const walkThrough = (x = 5) => {
+            let at = { x, z: 7 };
 
             for (let step = 0; step < 200; step++) {
                 at = moveWithCollisions(at, 0, -0.05, built.colliders, PLAYER_RADIUS);
@@ -205,7 +211,12 @@ it('lets go of the way before it has moved and takes it back at once', function 
         // And the other way: told to block, still standing wide open, already
         // solid. This is the case the rule exists for — a collider that waited
         // for the swing could close on somebody standing in the doorway.
-        const shuttingAt = { angle: endsOf('panel').high[0], through: walkThrough() };
+        //
+        // Down x 4 rather than x 5, because solid no longer means *in the
+        // doorway*: the panel is hinged at x 4 and swung 90 degrees, so it is
+        // lying along that line and the doorway itself is clear. What is being
+        // asserted is that it is solid at once, wherever it is.
+        const shuttingAt = { angle: endsOf('panel').high[0], through: walkThrough(4) };
 
         process.stdout.write(JSON.stringify({ stoppedAt, openedAt, shuttingAt }));
         JS);
@@ -267,4 +278,46 @@ it('leaves a thing with no hinge exactly where it was drawn', function (): void 
     // Nothing to turn, so nothing turned, and the panel is where it was drawn.
     expect($answer['moved'])->toBe([false, false])
         ->and($answer['stillThere'])->toEqual([6, 2.1, 5]);
+});
+
+it('stops blocking the doorway once it has swung out of it', function (): void {
+    // Paul: *it still blocks the way when it is open.* The collider was built
+    // from the angle the thing was drawn at and never moved again — only
+    // switched on and off — so a door swung flat against the wall went on
+    // filling the doorway, and the only way to walk through was to give up
+    // having a door that blocks at all.
+    //
+    // Nothing here touches `block`. The point is that a door which is where
+    // its picture is needs no second binding to say so.
+    $answer = hingedThing('[panel()]', <<<'JS'
+        const shut = walkThrough();
+
+        built.props.moving.turn('panel', 90);
+        settle();
+
+        process.stdout.write(JSON.stringify({ shut, open: walkThrough() }));
+        JS);
+
+    // Shut, it stops you short of its own plane at z 5.
+    expect($answer['shut'])->toBeGreaterThan(5.0);
+
+    // Open, the way is clear and the walk runs on to the far wall.
+    expect($answer['open'])->toBeLessThan(1.0);
+});
+
+it('takes its footprint with it, rather than leaving one behind', function (): void {
+    // The other half: an open door is still solid, just somewhere else. Walking
+    // along the wall it has swung against must still be stopped by it, or a
+    // door that opens is a door that has vanished.
+    //
+    // Hinged on the left at x 4, so swung 90 degrees it lies along x 4 running
+    // north from the hinge. A walk down that line has to meet it.
+    $answer = hingedThing('[panel()]', <<<'JS'
+        built.props.moving.turn('panel', 90);
+        settle();
+
+        process.stdout.write(JSON.stringify({ alongIt: walkThrough(4) }));
+        JS);
+
+    expect($answer['alongIt'])->toBeGreaterThan(4.0);
 });

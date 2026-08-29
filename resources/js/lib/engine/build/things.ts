@@ -135,6 +135,10 @@ type Movable = {
     /** Where it is going, in degrees. */
     want: number;
     holder: THREE.Object3D;
+    /** Where its hinge sits along its own width, in metres from the middle. */
+    hingeX: number;
+    /** The angle it was drawn at, in radians. */
+    drawnAngle: number;
     /** Where it has been slid to, and where it is heading, from where drawn. */
     shifted: THREE.Vector3;
     heading: THREE.Vector3;
@@ -182,6 +186,18 @@ const TURN_RATE = 220;
 
 /** How fast a thing slides when a binding moves it, in metres a second. */
 const SLIDE_RATE = 1.6;
+
+/**
+ * How thick a flat thing is to walk into, in metres.
+ *
+ * Paul: *the clipping test for a flat image should be the image itself.* A
+ * picture has no depth, so its `depth` is only ever what somebody typed, and a
+ * door drawn 0.8m deep stopped you 40cm short of it on both sides. Not nought,
+ * because a box with no thickness is one a fast walker can step over in a
+ * single frame; five centimetres is thin enough to read as the picture and
+ * thick enough to catch anybody.
+ */
+const FLAT_DEPTH = 0.05;
 
 export function buildThings(ctx: BuildContext): PropSet {
     const { level, scene, materials, textures } = ctx;
@@ -425,7 +441,12 @@ export function buildThings(ctx: BuildContext): PropSet {
                   x: thing.x,
                   z: thing.z,
                   halfWidth: thing.width / 2,
-                  halfDepth: thing.depth / 2,
+                  // A flat thing is a picture, and a picture has no depth. Its
+                  // authored one is only ever what somebody typed.
+                  halfDepth:
+                      thing.render === 'flat'
+                          ? FLAT_DEPTH / 2
+                          : thing.depth / 2,
                   angle: THREE.MathUtils.degToRad(thing.angle),
                   slug: thing.slug,
               }
@@ -444,6 +465,8 @@ export function buildThings(ctx: BuildContext): PropSet {
                 leaf,
                 swings,
                 collider,
+                hingeX: leaf.position.x,
+                drawnAngle: THREE.MathUtils.degToRad(thing.angle),
                 want: 0,
                 at: 0,
                 shifted: new THREE.Vector3(),
@@ -452,6 +475,65 @@ export function buildThings(ctx: BuildContext): PropSet {
             });
         }
     }
+
+    /**
+     * Puts a hinged thing's footprint where its picture has got to.
+     *
+     * Paul: *it still blocks the way when it is open.* The collider was built
+     * once from the angle the thing was drawn at and never moved again — only
+     * switched on and off — so a door swung flat against the wall went on
+     * filling the doorway. Nothing about it was wrong except that it stayed
+     * still.
+     *
+     * Worked out from the swing rather than read off the leaf, because the
+     * collider lives on the floor plan in two dimensions and the leaf lives in
+     * the scene graph in three. The leaf sits on the hinge edge and the picture
+     * hangs back off it, so the picture's middle swings round the hinge on a
+     * circle of half the thing's width.
+     *
+     * `holder.rotation.y` is the negative of the drawn angle while the
+     * collider's is the angle itself, so the two turns subtract rather than
+     * add. That sign is the whole of what makes an open door stop blocking the
+     * doorway instead of blocking a different part of it.
+     *
+     * Only side hinges move the footprint. A hatch or a drawbridge turns about
+     * a horizontal edge, so it leaves the floor rather than sweeping across it,
+     * and what it covers on the plan is very nearly what it covered shut.
+     */
+    const settleFootprint = (moving: Movable): void => {
+        const collider = moving.collider;
+
+        if (collider === null) {
+            return;
+        }
+
+        const drawn = moving.drawnAngle;
+
+        if (!moving.swings) {
+            collider.x = moving.thing.x + moving.shifted.x;
+            collider.z = moving.thing.z + moving.shifted.z;
+            collider.angle = drawn;
+
+            return;
+        }
+
+        const turned = THREE.MathUtils.degToRad(moving.at);
+        const hinge = moving.hingeX;
+
+        // The picture's middle, in the holder's own frame: it starts over the
+        // holder's origin and swings round the hinge as the leaf turns.
+        const localX = hinge * (1 - Math.cos(turned));
+        const localZ = hinge * Math.sin(turned);
+
+        const cos = Math.cos(drawn);
+        const sin = Math.sin(drawn);
+
+        collider.x =
+            moving.thing.x + localX * cos - localZ * sin + moving.shifted.x;
+        collider.z =
+            moving.thing.z + localX * sin + localZ * cos + moving.shifted.z;
+        collider.angle = drawn - turned;
+    };
 
     /** Puts a hinged thing where it has got to, this frame. */
     const place = (moving: Movable): void => {
@@ -465,6 +547,8 @@ export function buildThings(ctx: BuildContext): PropSet {
             moving.swings ? turned : 0,
             0,
         );
+
+        settleFootprint(moving);
     };
 
     for (const moving of movable.values()) {
@@ -636,6 +720,7 @@ export function buildThings(ctx: BuildContext): PropSet {
             }
 
             moving.holder.position.copy(moving.drawnAt).add(moving.shifted);
+            settleFootprint(moving);
         }
 
         for (const running of animated) {
