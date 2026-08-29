@@ -36,7 +36,7 @@ const BACKDROP_PATH = '/sprites/bg';
  * The extension every sky file has. Written down once here and once in
  * `LevelAssets::SKY_EXTENSION`; `ConstantsMatchTest` holds the two together.
  */
-export const SKY_EXTENSION = 'png';
+export const SKY_EXTENSION = 'jpg';
 
 /** Where a sky's art lives, for the engine and for the editor's preview. */
 export function skyUrl(image: string): string {

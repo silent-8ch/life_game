@@ -62,7 +62,7 @@ class LevelAssets
      * URL from it: this one for the editor's preview, the engine's for the
      * texture. `ConstantsMatchTest` holds the two together.
      */
-    public const SKY_EXTENSION = 'png';
+    public const SKY_EXTENSION = 'jpg';
 
     /**
      * The residents a new level is populated with, tallest first. The player is

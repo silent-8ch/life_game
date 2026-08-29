@@ -13,7 +13,7 @@ use Livewire\Livewire;
  *
  * The panoramas used to be packed four to a 4096x512 strip and picked as a file
  * plus a cell number. That quietly assumed every sky file held exactly four of
- * them — so `sky-city.png`, a single image dropped into the folder, was sliced
+ * them — so `sky-city`, a single image dropped into the folder, was sliced
  * into quarters and each quarter stretched around the whole dome. Paul: *looks
  * like you are inferring there are 4 cities, but it is one image?*
  *
@@ -28,7 +28,7 @@ it('takes a sky to be a whole file, named after it', function (): void {
     $level = Level::factory()->create(['sky_image' => 'sky-night-4']);
 
     expect($level->sky_image)->toBe('sky-night-4')
-        ->and(public_path('sprites/bg/sky-night-4.png'))->toBeFile();
+        ->and(public_path(app(LevelAssets::class)->skyPath('sky-night-4')))->toBeFile();
 });
 
 it('only counts a file as a sky if it is shaped like one', function (): void {
@@ -36,7 +36,7 @@ it('only counts a file as a sky if it is shaped like one', function (): void {
     // check is the file's own shape rather than a list of names, so a rejected
     // file re-exported at the right shape appears with nothing else to do.
     //
-    // `sky-city.png` is the case that taught us this: 4096x512, one flat
+    // `sky-city` is the case that taught us this: 4096x512, one flat
     // photograph that does not even join up with itself. Under the old scheme
     // it was offered as City 1 to City 4 — four quarters of one picture, each
     // stretched around the whole sky.
@@ -45,10 +45,28 @@ it('only counts a file as a sky if it is shaped like one', function (): void {
     expect($assets->skies())->not->toContain('sky-city');
 
     foreach ($assets->skies() as $image) {
-        $size = getimagesize(public_path("sprites/bg/{$image}.png"));
+        $size = getimagesize(public_path($assets->skyPath($image)));
 
         expect($size)->not->toBeFalse()
             ->and($size[0])->toBe($size[1] * 2, "{$image} is not 2:1");
+    }
+});
+
+it('ships the skies at the resolution they were re-sourced at', function (): void {
+    // A sky covers 360 degrees, so its width is what sharpness means. At the
+    // old 1024 each texel was stretched across about ten screen pixels on an
+    // ultrawide, which made the sky by far the softest thing in the picture.
+    // 4096 brings that to about two and a half.
+    //
+    // The 2:1 check below cannot catch a re-export at the wrong size, because
+    // half of 4096x2048 is still 2:1.
+    $assets = app(LevelAssets::class);
+
+    foreach ($assets->skies() as $image) {
+        $size = getimagesize(public_path($assets->skyPath($image)));
+
+        expect($size)->not->toBeFalse()
+            ->and($size[0])->toBe(4096, "{$image} is not 4096 across");
     }
 });
 
@@ -118,7 +136,7 @@ it('offers one line per file, and nothing that is not on disk', function (): voi
         ->and(array_column($choices, 'image'))->toBe($assets->skies());
 
     foreach ($choices as $choice) {
-        expect(public_path("sprites/bg/{$choice['image']}.png"))->toBeFile();
+        expect(public_path($assets->skyPath($choice['image'])))->toBeFile();
     }
 });
 
@@ -146,10 +164,10 @@ it('shows the chosen panorama, and follows the picker to another one', function 
     $level = Level::factory()->create(['sky_image' => 'sky-day-1']);
 
     Livewire::test(EditLevel::class, ['record' => $level->getRouteKey()])
-        ->assertSee('sprites/bg/sky-day-1.png', escape: false)
+        ->assertSee('sprites/bg/sky-day-1.'.LevelAssets::SKY_EXTENSION, escape: false)
         ->fillForm(['sky_image' => 'sky-night-4'])
-        ->assertSee('sprites/bg/sky-night-4.png', escape: false)
-        ->assertDontSee('sprites/bg/sky-day-1.png', escape: false);
+        ->assertSee('sprites/bg/sky-night-4.'.LevelAssets::SKY_EXTENSION, escape: false)
+        ->assertDontSee('sprites/bg/sky-day-1.'.LevelAssets::SKY_EXTENSION, escape: false);
 });
 
 it('shows no preview at all when the level has no sky', function (): void {
