@@ -1,5 +1,6 @@
 import { Field, inputClass } from '@/components/editor/inspector/controls';
-import type { LevelThing, ThingBinding } from '@/types';
+import TexturePicker from '@/components/editor/texture-picker';
+import type { LevelAssets, LevelThing, ThingBinding } from '@/types';
 
 /**
  * What a thing does while it is on, and while it is off.
@@ -25,11 +26,102 @@ import type { LevelThing, ThingBinding } from '@/types';
  *
  * Swapping the two values is a NOT, which is why there is no sense to choose.
  */
+/**
+ * The pair of controls a response is worth editing with.
+ *
+ * Paul: *selected shows alt pic, should see a texture picker. still see
+ * angles.* Every response used to be two plain text boxes, so picking one that
+ * takes a picture still asked for a number and picking one that takes a yes or
+ * a no let you type anything at all. What a value means is decided entirely by
+ * the response beside it, so the control should be too.
+ */
+function Value({
+    response,
+    label,
+    value,
+    assets,
+    thing,
+    onChange,
+}: {
+    response: ThingBinding['response'];
+    label: string;
+    value: string;
+    assets: LevelAssets;
+    thing: LevelThing;
+    onChange: (next: string) => void;
+}) {
+    if (response === 'texture') {
+        return (
+            <TexturePicker
+                label={label}
+                value={value === '' ? null : value}
+                textures={
+                    thing.render === 'box' ? assets.textures : assets.props
+                }
+                folder={thing.render === 'box' ? 'textures' : 'props'}
+                onChange={(texture) => onChange(texture ?? '')}
+            />
+        );
+    }
+
+    if (response === 'blocking' || response === 'visible') {
+        return (
+            <Field label={label}>
+                <select
+                    value={value === '1' || value === 'true' ? '1' : '0'}
+                    onChange={(event) => onChange(event.target.value)}
+                    className={inputClass}
+                >
+                    <option value="1">Yes</option>
+                    <option value="0">No</option>
+                </select>
+            </Field>
+        );
+    }
+
+    if (response === 'move') {
+        return (
+            <Field label={`${label} (x, z, up)`}>
+                <input
+                    type="text"
+                    value={value}
+                    placeholder="0,0,0"
+                    onChange={(event) => onChange(event.target.value)}
+                    className={inputClass}
+                />
+            </Field>
+        );
+    }
+
+    return (
+        <Field label={`${label} (°)`}>
+            <input
+                type="number"
+                step="1"
+                value={value}
+                onChange={(event) => onChange(event.target.value)}
+                className={inputClass}
+            />
+        </Field>
+    );
+}
+
+/** What each response wants its two values to start out as. */
+const STARTS: Record<ThingBinding['response'], { on: string; off: string }> = {
+    rotate: { on: '90', off: '0' },
+    move: { on: '0,0,3', off: '0,0,0' },
+    blocking: { on: '0', off: '1' },
+    texture: { on: '', off: '' },
+    visible: { on: '0', off: '1' },
+};
+
 export default function BindingsPanel({
     thing,
+    assets,
     onChangeThing,
 }: {
     thing: LevelThing;
+    assets: LevelAssets;
     onChangeThing: (change: Partial<LevelThing>) => void;
 }) {
     const bindings = thing.bindings ?? [];
@@ -64,12 +156,21 @@ export default function BindingsPanel({
                         <Field label="Does">
                             <select
                                 value={binding.response}
-                                onChange={(event) =>
+                                onChange={(event) => {
+                                    // The old pair means nothing under the new
+                                    // response: 90 degrees is not a texture and
+                                    // an offset is not a yes. Start it on
+                                    // something that reads as that response
+                                    // rather than leaving a number in a
+                                    // picture's place.
+                                    const response = event.target
+                                        .value as ThingBinding['response'];
+
                                     change(at, {
-                                        response: event.target
-                                            .value as ThingBinding['response'],
-                                    })
-                                }
+                                        response,
+                                        ...STARTS[response],
+                                    });
+                                }}
                                 className={inputClass}
                             >
                                 <option value="rotate">Turns to</option>
@@ -84,27 +185,23 @@ export default function BindingsPanel({
                     </div>
 
                     <div className="grid grid-cols-2 gap-2">
-                        <Field label="While on">
-                            <input
-                                type="text"
-                                value={binding.on}
-                                onChange={(event) =>
-                                    change(at, { on: event.target.value })
-                                }
-                                className={inputClass}
-                            />
-                        </Field>
+                        <Value
+                            response={binding.response}
+                            label="While on"
+                            value={binding.on}
+                            assets={assets}
+                            thing={thing}
+                            onChange={(on) => change(at, { on })}
+                        />
 
-                        <Field label="While off">
-                            <input
-                                type="text"
-                                value={binding.off}
-                                onChange={(event) =>
-                                    change(at, { off: event.target.value })
-                                }
-                                className={inputClass}
-                            />
-                        </Field>
+                        <Value
+                            response={binding.response}
+                            label="While off"
+                            value={binding.off}
+                            assets={assets}
+                            thing={thing}
+                            onChange={(off) => change(at, { off })}
+                        />
                     </div>
 
                     <button
@@ -129,11 +226,7 @@ export default function BindingsPanel({
                     onChangeThing({
                         bindings: [
                             ...bindings,
-                            {
-                                response: 'rotate',
-                                on: '90',
-                                off: '0',
-                            },
+                            { response: 'rotate', ...STARTS.rotate },
                         ],
                     })
                 }

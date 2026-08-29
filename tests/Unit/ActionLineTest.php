@@ -428,7 +428,7 @@ it('slides, swaps a picture and disappears as well as swinging', function (): vo
     $answer = actionLines(
         "[thing({ slug: 'gate', emitWhen: 'used', bindings: [
             { response: 'move', on: '0,0,3', off: '0,0,0' },
-            { response: 'texture', on: '1', off: '0' },
+            { response: 'texture', on: 'oak-door-open', off: '' },
             { response: 'visible', on: '0', off: '1' },
             { response: 'blocking', on: '0', off: '1' },
         ] })]",
@@ -443,7 +443,7 @@ it('slides, swaps a picture and disappears as well as swinging', function (): vo
 
     expect($answer['told'])->toBe([
         ['move', 'gate', 0, 0, 3],
-        ['swap', 'gate', true],
+        ['swap', 'gate', 'oak-door-open'],
         ['show', 'gate', false],
         ['block', 'gate', false],
     ]);

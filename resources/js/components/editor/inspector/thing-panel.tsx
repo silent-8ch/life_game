@@ -89,7 +89,11 @@ export default function ThingPanel({
                 </div>
             </section>
 
-            <BindingsPanel thing={held} onChangeThing={onChangeThing} />
+            <BindingsPanel
+                thing={held}
+                assets={assets}
+                onChangeThing={onChangeThing}
+            />
 
             {isPerson ? (
                 <section className="flex flex-col gap-3 border-t border-slate-800 pt-4">
@@ -240,7 +244,11 @@ export default function ThingPanel({
                 </section>
             )}
 
-            <BindingsPanel thing={held} onChangeThing={onChangeThing} />
+            <BindingsPanel
+                thing={held}
+                assets={assets}
+                onChangeThing={onChangeThing}
+            />
 
             {isPerson ? (
                 <StatsPanel thing={held} onChangeThing={onChangeThing} />

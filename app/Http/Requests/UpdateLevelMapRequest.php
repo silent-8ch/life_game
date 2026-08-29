@@ -167,8 +167,11 @@ class UpdateLevelMapRequest extends FormRequest
             // Strings rather than numbers because the two responses want
             // different kinds: degrees for a rotate, on or off for a blocking.
             // The engine reads each one the way its own response means it.
-            'things.*.bindings.*.on' => ['required', 'string', 'max:32'],
-            'things.*.bindings.*.off' => ['required', 'string', 'max:32'],
+            // `present` rather than `required`: a texture response says *the
+            // picture it was drawn with* by naming nothing, and both sides are
+            // still always authored. Long enough for a texture name.
+            'things.*.bindings.*.on' => ['present', 'string', 'max:64'],
+            'things.*.bindings.*.off' => ['present', 'string', 'max:64'],
 
             // The wiring, by slug. That both ends name a thing in this same
             // save is a question about the map as a whole, so it is checked

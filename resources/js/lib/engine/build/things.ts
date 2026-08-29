@@ -103,8 +103,16 @@ export type MovedThings = {
      * where firing it once did. It eases there, like the swing does.
      */
     move: (slug: string, x: number, z: number, up: number) => boolean;
-    /** Shows a thing's alternate picture, the same one a flag would show. */
-    swap: (slug: string, alternate: boolean) => boolean;
+    /**
+     * Shows a named picture, or the one the thing was drawn with when empty.
+     *
+     * A name rather than a yes or a no. It was the latter at first, reusing the
+     * `textureAlt` a light switch already carries — but that made the editor
+     * offer a tick box where the thing being chosen is a picture, and left the
+     * picture itself to be set somewhere else entirely. Paul: *selected shows
+     * alt pic, should see a texture picker.*
+     */
+    swap: (slug: string, texture: string) => boolean;
     /** Whether it is drawn. Collision is `block`, and deliberately separate. */
     show: (slug: string, shown: boolean) => boolean;
     /** What a save should be told, for everything anything has moved. */
@@ -613,7 +621,7 @@ export function buildThings(ctx: BuildContext): PropSet {
             return true;
         },
 
-        swap: (slug, alternate) => {
+        swap: (slug, texture) => {
             const moving = movable.get(slug);
             const material = thingMaterials.get(slug);
 
@@ -621,13 +629,10 @@ export function buildThings(ctx: BuildContext): PropSet {
                 return false;
             }
 
-            // The same alternate a flag would show. A thing with no
-            // `textureAlt` has nothing to swap to and is left alone rather
-            // than blanked.
+            // Empty means the picture it was drawn with, which is what makes
+            // an `off` value of nothing read as *put it back*.
             const map = textures.prop(
-                alternate && moving.thing.textureAlt !== null
-                    ? moving.thing.textureAlt
-                    : moving.thing.texture,
+                texture === '' ? moving.thing.texture : texture,
                 1,
             );
 

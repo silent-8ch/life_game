@@ -28,12 +28,14 @@ enum BindingResponse: string
      */
     case Move = 'move';
     /**
-     * Show the thing's alternate picture, `1` for on and `0` for off.
+     * Show a named picture, or the one it was drawn with when nothing is named.
      *
-     * Deliberately not a texture name. A thing already carries `texture_alt`
-     * for exactly this — it is what a light switch uses — and one alternate is
-     * the whole of what an on/off system can mean. A binding that named its own
-     * texture would be a second way to say the same thing.
+     * A name rather than a flag. This reused the `texture_alt` a light switch
+     * already carries at first, on the grounds that one alternate is the whole
+     * of what an on/off system can mean — but that put the picture being chosen
+     * somewhere other than the choice, and left the editor offering a tick box
+     * where a picker belongs. Paul: *selected shows alt pic, should see a
+     * texture picker.*
      */
     case Texture = 'texture';
     /** Whether the thing is drawn at all, `1` or `0`. Collision is separate. */

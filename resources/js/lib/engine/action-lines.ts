@@ -55,7 +55,7 @@ export type Responders = {
     turn: (slug: string, degrees: number) => void;
     block: (slug: string, blocking: boolean) => void;
     move: (slug: string, x: number, z: number, up: number) => void;
-    swap: (slug: string, alternate: boolean) => void;
+    swap: (slug: string, texture: string) => void;
     show: (slug: string, shown: boolean) => void;
 };
 
@@ -214,7 +214,7 @@ export function createActionLines(level: Level): ActionLines {
             } else if (binding.response === 'move') {
                 responders.move(node.thing.slug, ...offset(value));
             } else if (binding.response === 'texture') {
-                responders.swap(node.thing.slug, yes(value));
+                responders.swap(node.thing.slug, value);
             } else if (binding.response === 'visible') {
                 responders.show(node.thing.slug, yes(value));
             } else {
