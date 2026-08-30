@@ -109,6 +109,18 @@ class LevelWriter
      *
      * @param  array<int, array<string, mixed>>  $lines
      */
+    /**
+     * The wires, replaced wholesale.
+     *
+     * There is no leaving them alone. `writeThings` deletes and recreates
+     * every thing on every save, and a line points at two of them with
+     * `cascadeOnDelete` — so the lines are gone before this runs, whatever it
+     * decides. A save that omits them is a save that loses them, and no guard
+     * here can change that. **The editor has to send them every time**, the
+     * same rule `things.*.interactions` already lives under.
+     *
+     * @param  list<array{from: string, to: string}>  $lines
+     */
     private function writeLines(Level $level, array $lines): void
     {
         $level->actionLines()->delete();

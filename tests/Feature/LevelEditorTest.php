@@ -750,3 +750,35 @@ it('hands the wireframe colours back to the editor to draw with', function (): v
             ->where('level.accentColor', '#abcdef')
         );
 });
+
+it('saves a line drawn between two things, and hands it back', function (): void {
+    // The bug this exists for: the editor never sent `lines`, and every save
+    // replaces them wholesale — so drawing a wire, saving and reloading lost
+    // the wire. It read as *action lines do not work* rather than as a save
+    // deleting them, which is what Paul reported.
+    //
+    // There is no guarding against it in the writer either: things are deleted
+    // and recreated on every save and a line points at two of them with
+    // `cascadeOnDelete`, so the lines are gone before the writer decides
+    // anything. Sending them every time is the whole of the fix.
+    // The two things drawnMap already builds are wired together, so the wire
+    // is the only thing this test introduces.
+    $map = drawnMap();
+    $map['lines'] = [['from' => 'krystal', 'to' => 'crate']];
+
+    $this->actingAs($this->editor)
+        ->put(route('levels.editor.update', $this->level), $map)
+        ->assertSessionHasNoErrors()
+        ->assertRedirect();
+
+    $level = $this->level->fresh();
+
+    expect($level->actionLines()->count())->toBe(1);
+
+    $this->actingAs($this->editor)
+        ->get(route('levels.editor', $level))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('level.lines.0.from', 'krystal')
+            ->where('level.lines.0.to', 'crate')
+        );
+});

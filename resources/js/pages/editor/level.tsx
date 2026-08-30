@@ -347,8 +347,17 @@ export default function LevelEditor({
                 spawn: draft.spawn,
                 ceilingHeight: draft.ceilingHeight,
                 sky: draft.sky,
+                wallColor: draft.wallColor,
+                floorColor: draft.floorColor,
+                accentColor: draft.accentColor,
                 sectors: draft.sectors,
                 things: draft.things,
+                // Every save replaces the lines wholesale, so leaving them out
+                // deleted every wire in the level on the way past. Two features
+                // were unusable because of it and neither looked like a save
+                // bug: an action line vanished the moment you saved, and the
+                // wireframe colours above never took.
+                lines: draft.lines ?? [],
             },
             {
                 preserveScroll: true,
